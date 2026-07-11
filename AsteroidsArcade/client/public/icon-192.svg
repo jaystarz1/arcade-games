@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Black background -->
+  <rect width="192" height="192" fill="#000000"/>
+
+  <!-- Large centered ship in light gray/white -->
+  <!-- Ship is centered at 96,96 and scaled up to be prominent -->
+  <g transform="translate(96, 96)">
+    <!-- Main ship triangle - pointing up, much larger -->
+    <polygon
+      points="0,-50 -30,40 30,40"
+      fill="none"
+      stroke="#CCCCCC"
+      stroke-width="4"
+      stroke-linejoin="miter"
+    />
+
+    <!-- Cockpit detail line -->
+    <line
+      x1="-15" y1="20"
+      x2="15" y2="20"
+      stroke="#CCCCCC"
+      stroke-width="3"
+    />
+
+    <!-- Small thrust flames at the back for character -->
+    <polygon
+      points="-12,40 -18,50 -6,50"
+      fill="none"
+      stroke="#888888"
+      stroke-width="2"
+    />
+    <polygon
+      points="12,40 6,50 18,50"
+      fill="none"
+      stroke="#888888"
+      stroke-width="2"
+    />
+  </g>
+</svg>

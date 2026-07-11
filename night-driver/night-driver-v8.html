@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<!-- Version: Distance-based spawning v2 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+  <meta name="apple-mobile-web-app-title" content="Night Driver">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000000">
+  <title>Night Driver (1976)</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="./manifest.json">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+      position: fixed;
+      top: 0;
+      left: 0;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    canvas {
+      display: block;
+      background: #000;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      -ms-interpolation-mode: nearest-neighbor;
+      width: 100%;
+      height: 100%;
+      outline: none;
+    }
+
+    /* HUD Overlay - Analog cluster */
+    #hud {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 60px;
+      z-index: 100;
+      font-family: 'Courier New', monospace;
+      color: #fff;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    #primary-metrics {
+      position: fixed;
+      top: 36px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 120px;
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+      letter-spacing: 6px;
+      color: #fff;
+      z-index: 140;
+      pointer-events: none;
+      text-shadow: 0 0 18px rgba(0, 0, 0, 0.7);
+    }
+
+    .primary-metric {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .primary-metric-label {
+      font-size: 22px;
+      opacity: 0.8;
+    }
+
+    .primary-metric-value {
+      font-size: 64px;
+      font-weight: 700;
+      letter-spacing: 4px;
+    }
+
+    .primary-metric-value span {
+      display: inline-block;
+      min-width: 4ch;
+      text-align: center;
+    }
+
+    .primary-metric-value #distance-unit {
+      font-size: 36px;
+      min-width: auto;
+      margin-left: 12px;
+      opacity: 0.85;
+    }
+
+    #time-display {
+      font-variant-numeric: tabular-nums;
+      min-width: 8ch;
+      text-align: center;
+    }
+
+    #distance-display {
+      font-variant-numeric: tabular-nums;
+      min-width: 5ch;
+      text-align: right;
+    }
+
+    .gauge-container {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      pointer-events: none;
+    }
+
+    .gauge-container canvas {
+      width: 220px;
+      height: 220px;
+      display: block;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+    }
+
+    .gauge-overlay {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      text-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
+    }
+
+    .gauge-label {
+      font-size: 14px;
+      letter-spacing: 6px;
+      margin-bottom: 6px;
+    }
+
+    .gauge-value {
+      font-size: 32px;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .gauge-value span {
+      display: inline-block;
+      min-width: 3ch;
+      text-align: center;
+    }
+
+    .gauge-subvalue {
+      margin-top: 8px;
+      font-size: 14px;
+      letter-spacing: 4px;
+    }
+
+    .center-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      pointer-events: auto;
+    }
+
+    #game-status {
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: 12px;
+      text-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+    }
+
+    #unit-toggle {
+      padding: 8px 18px;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.4);
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s ease, border 0.2s ease;
+    }
+
+    #unit-toggle:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.7);
+    }
+
+    #unit-toggle:active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Landscape prompt for mobile portrait */
+    #landscape-prompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      color: white;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      text-align: center;
+      z-index: 9999;
+    }
+
+    #landscape-prompt p {
+      margin: 20px;
+      font-size: 48px;
+    }
+
+    #landscape-prompt p:last-child {
+      font-size: 20px;
+    }
+
+    /* Show landscape prompt on portrait mobile */
+    @media (max-width: 768px) and (orientation: portrait) {
+      #landscape-prompt {
+        display: flex;
+      }
+
+      #game-container {
+        display: none;
+      }
+    }
+
+    /* Debug info */
+    #debug {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      color: #0f0;
+      font-size: 12px;
+      font-family: monospace;
+      z-index: 100;
+      pointer-events: none;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <!-- Landscape Prompt (for mobile portrait) -->
+  <div id="landscape-prompt">
+    <p>🔄 📱</p>
+    <p>Please rotate your device to landscape</p>
+  </div>
+
+  <!-- Game Container -->
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <div id="primary-metrics">
+      <div class="primary-metric">
+        <span class="primary-metric-label">Time</span>
+        <span class="primary-metric-value" id="time-display">3:00.00</span>
+      </div>
+      <div class="primary-metric">
+        <span class="primary-metric-label">Distance</span>
+        <span class="primary-metric-value">
+          <span id="distance-display">0.00</span>
+          <span id="distance-unit">KM</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- HUD Overlay - Analog cluster -->
+    <div id="hud">
+      <div class="gauge-container">
+        <canvas id="speed-gauge" width="220" height="220"></canvas>
+        <div class="gauge-overlay">
+          <div class="gauge-label">Speed</div>
+          <div class="gauge-value"><span id="speed-value">000</span> <span id="speed-unit">KMH</span></div>
+        </div>
+      </div>
+
+      <div class="center-stack">
+        <div id="game-status">READY</div>
+        <button id="unit-toggle">MPH MODE</button>
+      </div>
+
+      <div class="gauge-container">
+        <canvas id="avg-gauge" width="220" height="220"></canvas>
+        <div class="gauge-overlay">
+          <div class="gauge-label">Average</div>
+          <div class="gauge-value"><span id="avg-value">000</span> <span id="avg-unit">KMH</span></div>
+          <div class="gauge-subvalue">Top <span id="top-avg-value">000</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div id="debug">
+      FPS: <span id="fps-display">60</span><br>
+      Phase 1: Road Rendering Test
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // PHASE 1: FOUNDATION & CORE RENDERING ENGINE
+    // ============================================================================
+
+    // Canvas setup
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game constants
+    const KMH_PER_VELOCITY_UNIT = 0.05; // Internal velocity units → km/h
+    const MPH_PER_KMH = 0.621371;
+    const SPEED_GAUGE_TOP_KMH = 220;
+    const SPEED_GAUGE_MAX_KMH = 300;
+    const SPEED_GAUGE_TOP_MPH = Math.round(SPEED_GAUGE_TOP_KMH * MPH_PER_KMH);
+    const SPEED_GAUGE_MAX_MPH = Math.round(SPEED_GAUGE_MAX_KMH * MPH_PER_KMH);
+    const PLAYER_WORLD_WIDTH = 1400; // Approximate car width in world units
+    const PLAYER_WORLD_HALF_WIDTH = PLAYER_WORLD_WIDTH / 2;
+    const PLAYER_WORLD_LENGTH = 2200; // Approximate car length in world units
+    const PLAYER_WORLD_HALF_LENGTH = PLAYER_WORLD_LENGTH / 2;
+    const AI_WORLD_HALF_WIDTH = PLAYER_WORLD_HALF_WIDTH;
+    const CRASH_RESPAWN_DELAY = 4.0; // Seconds before traffic resumes after crash
+    const CRASH_EXPLOSION_DURATION = 1.5; // Explosion visual duration
+    const CRASH_RECOVERY_DURATION = 2.0; // Time before player regains control
+    const SHOULDER_PARTIAL_FACTOR = 0.30; // 30% reduction
+    const SHOULDER_FULL_FACTOR = 0.60; // 60% reduction
+    const SHOULDER_DEEP_SPEED_KMH = 50; // Forced speed when far off-road
+
+    // Set canvas to full window size
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // ============================================================================
+    // ROAD SEGMENT SYSTEM
+    // ============================================================================
+
+    class RoadSegment {
+      constructor(index) {
+        this.index = index;
+        this.z = index; // Distance from camera (0 = closest)
+        this.curve = 0; // Horizontal curve amount
+        this.y = 0; // Height (for hills - future feature)
+      }
+    }
+
+    // ============================================================================
+    // ROAD RENDERER - Authentic 1976 Night Driver Style
+    // ============================================================================
+
+    class RoadRenderer {
+      constructor(canvas, ctx) {
+        this.canvas = canvas;
+        this.ctx = ctx;
+
+        // Road configuration (simpler for 1976 style)
+        this.roadLength = 1000; // Number of road posts (1000 × 100 = 100,000 unit track)
+        this.postSpacing = 100; // Distance between posts in world units
+        this.roadWidth = 5000; // Width of road in world units (2 cars + 1/3 extra = 2.33x car width)
+
+        // Camera/Player position
+        this.cameraZ = 0; // Player position on track (increases as we drive)
+        this.cameraX = 0; // Horizontal position (for steering) - ACTUAL camera position with lag
+        this.cameraY = 800; // Camera height above road
+        this.nearPlane = 50; // Minimum forward distance factored into projection (stops pop-in)
+
+        // Camera lag system for realistic physics
+        this.cameraLagFactor = 8.0; // How quickly camera catches up to car (higher = slower)
+
+        // Vanishing point animation
+        this.vanishingPointOffset = 0; // Current offset from center (-200 to +200)
+        this.vanishingPointTimer = 0; // Timer for animation sequence
+        this.vanishingPointPhase = 'linger-center'; // Current phase of animation
+
+        // Drawing parameters
+        this.drawDistance = 5000; // How many posts to draw ahead - extend to horizon
+        this.postWidth = 36; // Width of road edge posts (3x larger)
+        this.postHeight = 90; // Height of road edge posts (3x larger)
+
+        // Curve wrapping range - prevents breaks when track loops
+        this.curveWrapRange = 6000; // Wrap curves between -3000 and +3000
+
+        // AI Cars
+        this.aiCars = []; // Array of AI car objects
+        this.aiCarColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00']; // Red, Green, Blue, Yellow
+        this.lanePositions = [
+          -this.roadWidth / 3,
+          0,
+          this.roadWidth / 3
+        ]; // Left, center, right lanes
+        this.enableLaneChanges = false; // Disable AI lane changes for straight-line traffic
+        this.sessionTime = 0; // Seconds elapsed in current run
+        this.sessionDuration = 180; // Total duration of traffic program (3 minutes)
+        this.currentPhaseIndex = 0;
+        this.phaseElapsed = 0;
+        this.nextPackSpawnTime = 0; // Spawn immediately at start
+        this.nextFillerSpawnTime = 4; // First filler appears shortly after start
+        this.packLeadDistance = 12000; // Distance ahead of camera for pack leaders
+        this.packIdCounter = 0;
+        this.packStates = new Map(); // Tracks active pack metadata
+        this.phaseStates = [];
+
+        // Traffic pacing blueprint (3 × 60s phases)
+        this.trafficPhases = [
+          {
+            name: 'Phase 1',
+            duration: 60,
+            spawnInterval: 12,
+            minimumLeadDistance: 12000,
+            minimumGapDistance: 9000,
+            packTemplates: [
+              {
+                name: 'Warmup Trio',
+                carCount: 3,
+                spacing: 6000, // 4× previous spacing
+                allowedLaneIndexes: [0, 2], // two-lane, center stays clear
+                initialLaneIndexes: [0, 2, 0],
+                laneChangeRange: [0.8, 1.4],
+                laneChangeSpeed: 720,
+                laneChangeStagger: 0.4,
+                maxConcurrentChanges: 1,
+                swapBias: 0.75,
+                postMoveCooldown: 0.8,
+                laneChangeChance: 0.7,
+                initialDelayRange: [0.2, 0.6]
+              }
+            ]
+          },
+          {
+            name: 'Phase 2',
+            duration: 60,
+            spawnInterval: 9,
+            minimumLeadDistance: 13000,
+            minimumGapDistance: 8000,
+            packTemplates: [
+              {
+                name: 'Midway Pack',
+                carCount: 4,
+                spacing: 4800,
+                allowedLaneIndexes: [0, 1, 2],
+                initialLaneIndexes: [0, 2, 1, 0],
+                laneChangeRange: [0.6, 1.2],
+                laneChangeSpeed: 860,
+                laneChangeStagger: 0.35,
+                maxConcurrentChanges: 1,
+                swapBias: 0.65,
+                postMoveCooldown: 0.6,
+                laneChangeChance: 0.85,
+                initialDelayRange: [0.1, 0.4]
+              }
+            ]
+          },
+          {
+            name: 'Phase 3',
+            duration: 60,
+            spawnInterval: 8,
+            minimumLeadDistance: 14000,
+            minimumGapDistance: 7000,
+            packTemplates: [
+              {
+                name: 'Weave Pack',
+                carCount: 3,
+                spacing: 4000,
+                allowedLaneIndexes: [0, 1, 2],
+                initialLaneIndexes: [0, 2, 1],
+                laneChangeRange: [0.4, 0.9],
+                laneChangeSpeed: 980,
+                laneChangeStagger: 0.25,
+                maxConcurrentChanges: 2,
+                swapBias: 0.7,
+                postMoveCooldown: 0.5,
+                laneChangeChance: 0.9,
+                initialDelayRange: [0.05, 0.25]
+              },
+              {
+                name: 'Tunnel Pair',
+                carCount: 2,
+                spacing: 3200,
+                allowedLaneIndexes: [0, 2],
+                initialLaneIndexes: [0, 2],
+                laneChangeRange: [0.5, 1.0],
+                laneChangeSpeed: 1020,
+                laneChangeStagger: 0.3,
+                maxConcurrentChanges: 1,
+                swapBias: 0.8,
+                postMoveCooldown: 0.4,
+                laneChangeChance: 0.85,
+                initialDelayRange: [0.05, 0.2]
+              }
+            ]
+          }
+        ];
+
+        // Track per-phase template rotation state
+        this.phaseStates = this.trafficPhases.map(() => ({
+          templateIndex: 0
+        }));
+
+        // Filler traffic (singletons / duos between major packs)
+        this.fillerTemplates = [
+          {
+            name: 'Solo Cruiser',
+            carCount: 1,
+            spacing: 0,
+            allowedLaneIndexes: [0, 1, 2],
+            initialLaneIndexes: [1],
+            laneChangeRange: [0.6, 1.5],
+            laneChangeSpeed: 760,
+            laneChangeStagger: 0,
+            maxConcurrentChanges: 1,
+            swapBias: 0.5,
+            postMoveCooldown: 0.7,
+            laneChangeChance: 0.6,
+            initialDelayRange: [0.2, 0.8]
+          },
+          {
+            name: 'Offset Duo',
+            carCount: 2,
+            spacing: 5000,
+            allowedLaneIndexes: [0, 1, 2],
+            initialLaneIndexes: [0, 2],
+            laneChangeRange: [0.6, 1.4],
+            laneChangeSpeed: 800,
+            laneChangeStagger: 0.3,
+            maxConcurrentChanges: 1,
+            swapBias: 0.6,
+            postMoveCooldown: 0.6,
+            laneChangeChance: 0.75,
+            initialDelayRange: [0.2, 0.6]
+          }
+        ];
+
+        // HAND-CRAFTED TRACK - Alternating curves (left-right-left-right)
+        const track1 = [
+          { length: 140, turn: 0 },        // Warm-up straight
+          { length: 70, turn: -0.8 },      // Sweep into LEFT
+          { length: 240, turn: -0.95 },    // Sustained left curve
+          { length: 90, turn: -0.55 },     // Hold apex
+          { length: 70, turn: -0.22 },     // Ease back toward center
+          { length: 140, turn: 0 },        // Reset straight
+          { length: 70, turn: 0.8 },       // Sweep into RIGHT
+          { length: 240, turn: 0.95 },     // Sustained right curve
+          { length: 90, turn: 0.55 },      // Hold apex
+          { length: 70, turn: 0.22 },      // Ease back toward center
+          { length: 140, turn: 0 },        // Neutral straight
+          { length: 60, turn: -0.65 },     // Secondary left sequence
+          { length: 200, turn: -0.8 },     // Long left bend
+          { length: 80, turn: -0.3 },      // Exit left
+          { length: 60, turn: -0.15 },     // Settle
+          { length: 120, turn: 0 },        // Reset straight
+          { length: 60, turn: 0.65 },      // Secondary right sequence
+          { length: 200, turn: 0.8 },      // Long right bend
+          { length: 80, turn: 0.3 },       // Exit right
+          { length: 60, turn: 0.15 },      // Settle
+          { length: 160, turn: 0 }         // Cool-down straight
+        ];
+
+        // Build the track
+        this.posts = [];
+        let cumulativeCurve = 0;
+        let postIndex = 0;
+
+        // Repeat track to fill road length
+        while (postIndex < this.roadLength) {
+          for (let section of track1) {
+            for (let i = 0; i < section.length && postIndex < this.roadLength; i++) {
+              cumulativeCurve += section.turn;
+
+              this.posts.push({
+                z: postIndex * this.postSpacing,
+                curve: cumulativeCurve
+              });
+
+              postIndex++;
+            }
+          }
+        }
+
+        // Aesthetic mode (1970s by default)
+        this.aesthetic = '1970s';
+
+        // Load car sprite image
+        this.carImage = new Image();
+        this.carImage.src = 'car.png';
+
+        // Camera state helpers
+        this.cameraYaw = 0;
+        this.currentCurve = 0;
+        this.lookAheadCurve = 0;
+
+        // Alphabet spot system handles all spawning - no initial spawn needed
+      }
+
+      computeCarPlacement(car) {
+        const relativeZ = car.z - this.cameraZ;
+        if (relativeZ <= 0) return null;
+
+        const maxDrawDistance = this.drawDistance * this.postSpacing;
+        const depthFactor = Math.min(1.0, relativeZ / maxDrawDistance);
+
+        const roadWidth = this.roadWidth;
+        const baseShiftAmount = roadWidth / 2;
+        const rawCurve = this.sampleSmoothedCurve(car.z, 260, 5);
+        const curveNormalized = Math.max(-1.4, Math.min(1.4, rawCurve / 1200));
+        const horizonShiftAmount = (this.vanishingPointOffset * 3.2) + curveNormalized * baseShiftAmount * 0.7;
+        const baseShiftCurve = curveNormalized * baseShiftAmount * 1.2;
+        const baseShiftVanishing = -baseShiftAmount * Math.max(-1.2, Math.min(1.2, this.vanishingPointOffset / 200)) * 0.35;
+        const baseShift = baseShiftCurve + baseShiftVanishing;
+        const sCurveFactor = Math.pow(depthFactor, 2.2);
+        const lateralShift = baseShift + (horizonShiftAmount - baseShift) * sCurveFactor;
+
+        const edges = this.computeRoadEdgesProfile({
+          lateralShift,
+          depthFactor,
+          curveNormalized
+        });
+        const leftPostX = edges.leftX;
+        const rightPostX = edges.rightX;
+        const roadMidpoint = (leftPostX + rightPostX) / 2;
+        const leftBoundary = leftPostX + 500;
+        const rightBoundary = rightPostX - 1000;
+
+        let carX = Math.max(leftBoundary, Math.min(rightBoundary, roadMidpoint + car.laneOffset));
+
+        if (relativeZ < 100) {
+          const proximityFactor = relativeZ / 100;
+          carX *= proximityFactor;
+        }
+
+        const roadCenter = (leftBoundary + rightBoundary) / 2;
+
+        return {
+          carX,
+          relativeZ,
+          depthFactor,
+          leftBoundary,
+          rightBoundary,
+          lateralShift,
+          roadCenter
+        };
+      }
+
+      clearTrafficAfterCrash() {
+        this.aiCars = [];
+        this.packStates.clear();
+      }
+
+      pauseTrafficFor(delaySeconds) {
+        const delay = Math.max(0, delaySeconds);
+        this.nextPackSpawnTime = Math.max(this.nextPackSpawnTime, this.sessionTime + delay);
+        this.nextFillerSpawnTime = Math.max(this.nextFillerSpawnTime, this.sessionTime + delay * 0.7);
+      }
+
+      // Spawn a single AI car with explicit configuration
+      spawnAICar(options) {
+        const color = options.color || this.aiCarColors[Math.floor(Math.random() * this.aiCarColors.length)];
+        const laneIndex = options.laneIndex;
+        const laneOffset = typeof options.laneOffset === 'number'
+          ? options.laneOffset
+          : this.lanePositions[laneIndex];
+
+        const laneChangeRange = options.laneChangeRange || [5, 7];
+        const startDelay = options.startDelay || 0;
+        const initialDelayRange = options.initialDelayRange;
+        const initialDelay = initialDelayRange
+          ? this.randomRange(initialDelayRange[0], initialDelayRange[1])
+          : 0;
+        const firstChangeWindow = this.randomRange(laneChangeRange[0], laneChangeRange[1]);
+
+        const car = {
+          z: options.z,
+          laneOffset: laneOffset,
+          laneIndex: laneIndex,
+          targetLaneOffset: laneOffset,
+          targetLaneIndex: laneIndex,
+          speed: 0,
+          color: color,
+          laneChangeTimer: startDelay + initialDelay + firstChangeWindow,
+          laneChangeRange: laneChangeRange,
+          laneChangeSpeed: options.laneChangeSpeed || 700,
+          packState: options.packState || null,
+          isChanging: false,
+          laneChangeChance: options.laneChangeChance ?? 1.0,
+          initialDelayRange: initialDelayRange || null
+        };
+
+        this.aiCars.push(car);
+        return car;
+      }
+
+      // Update AI cars (called each frame)
+      updateAICars(deltaTime) {
+        // Update pacing timeline
+        this.sessionTime += deltaTime;
+
+        // Determine current phase
+        const phase = this.trafficPhases[this.currentPhaseIndex] || this.trafficPhases[this.trafficPhases.length - 1];
+        const phaseState = this.phaseStates[this.currentPhaseIndex] || this.phaseStates[this.phaseStates.length - 1];
+
+        // Spawn packs while within program duration
+        if (this.sessionTime < this.sessionDuration) {
+          while (this.sessionTime >= this.nextPackSpawnTime) {
+            this.spawnTrafficPack(phase, phaseState);
+            this.nextPackSpawnTime += phase.spawnInterval;
+          }
+          while (this.sessionTime >= this.nextFillerSpawnTime) {
+            this.spawnFillerGroup(phase);
+            this.nextFillerSpawnTime += this.randomRange(6, 9);
+          }
+        }
+
+        // Step timers for lane changes
+        for (const car of this.aiCars) {
+          if (!this.enableLaneChanges) {
+            car.isChanging = false;
+            car.targetLaneOffset = car.laneOffset;
+            car.laneChangeTimer = Number.POSITIVE_INFINITY;
+            continue;
+          }
+
+          const placement = this.computeCarPlacement(car);
+          if (!placement) {
+            continue;
+          }
+
+          const relativeZ = placement.relativeZ;
+          const playerX = typeof this.playerX === 'number' ? this.playerX : 0;
+          const playerLateralGap = Math.abs(playerX - placement.carX);
+          const playerIsNearby = relativeZ < 4500 && playerLateralGap < PLAYER_WORLD_WIDTH * 2.2;
+
+          if (!car.packState) continue;
+
+          if (car.isChanging) {
+            if (playerIsNearby) {
+              car.isChanging = false;
+              car.targetLaneOffset = car.laneOffset;
+              car.targetLaneIndex = car.laneIndex;
+              car.packState.activeChanging = Math.max(0, car.packState.activeChanging - 1);
+              car.laneChangeTimer = this.randomRange(car.laneChangeRange[0], car.laneChangeRange[1]) + 0.8;
+              continue;
+            }
+
+            const targetOffset = car.targetLaneOffset;
+            const direction = Math.sign(targetOffset - car.laneOffset);
+            const moveAmount = car.laneChangeSpeed * deltaTime;
+
+            if (Math.abs(targetOffset - car.laneOffset) <= moveAmount) {
+              car.laneOffset = targetOffset;
+              car.laneIndex = car.targetLaneIndex;
+              car.isChanging = false;
+              car.packState.activeChanging = Math.max(0, car.packState.activeChanging - 1);
+              car.laneChangeTimer = this.randomRange(car.laneChangeRange[0], car.laneChangeRange[1]) + car.packState.template.postMoveCooldown;
+            } else {
+              car.laneOffset += direction * moveAmount;
+            }
+          } else {
+            car.laneChangeTimer -= deltaTime;
+
+            if (car.laneChangeTimer <= 0) {
+              const packState = car.packState;
+              const template = packState.template;
+
+              // Defer lane changes when player is alongside or too close behind
+              if (playerIsNearby || relativeZ < 3200) {
+                car.laneChangeTimer = this.randomRange(car.laneChangeRange[0], car.laneChangeRange[1]) + 0.6;
+                continue;
+              }
+
+              if (Math.random() <= (car.laneChangeChance ?? 1.0)) {
+                const maxConcurrentChanges = template.maxConcurrentChanges ?? Math.max(1, template.carCount || 1);
+                if (packState.activeChanging < maxConcurrentChanges) {
+                  const nextIndex = this.pickLaneChangeTarget(car, template);
+
+                  if (nextIndex !== car.laneIndex) {
+                    const targetLaneOffset = this.lanePositions[nextIndex];
+                    const targetX = Math.max(
+                      placement.leftBoundary,
+                      Math.min(placement.rightBoundary, placement.roadCenter + targetLaneOffset)
+                    );
+
+                    const movingTowardPlayerLeft = playerX <= placement.carX && targetX < placement.carX;
+                    const movingTowardPlayerRight = playerX >= placement.carX && targetX > placement.carX;
+                    const willCutOffPlayer = relativeZ < 6000 &&
+                      Math.abs(playerX - targetX) < PLAYER_WORLD_WIDTH * 1.4 &&
+                      (movingTowardPlayerLeft || movingTowardPlayerRight);
+
+                    if (willCutOffPlayer) {
+                      car.laneChangeTimer = this.randomRange(car.laneChangeRange[0], car.laneChangeRange[1]) + 0.8;
+                      continue;
+                    }
+
+                    car.targetLaneIndex = nextIndex;
+                    car.targetLaneOffset = this.lanePositions[nextIndex];
+                    car.isChanging = true;
+                    packState.activeChanging += 1;
+                    console.log(`[LANE CHANGE] Group ${packState.id}: ${car.color} Z=${Math.floor(car.z)} lane ${car.laneIndex}→${nextIndex}`);
+                  } else {
+                    car.laneChangeTimer = this.randomRange(car.laneChangeRange[0], car.laneChangeRange[1]);
+                  }
+                } else {
+                  // Wait briefly and try again once current changer finishes
+                  car.laneChangeTimer = 0.5;
+                }
+              } else {
+                // Skip this cycle, schedule next attempt
+                car.laneChangeTimer = this.randomRange(car.laneChangeRange[0], car.laneChangeRange[1]);
+              }
+            }
+          }
+        }
+
+        // Advance phase timeline
+        this.phaseElapsed += deltaTime;
+        if (phase && this.phaseElapsed >= phase.duration && this.currentPhaseIndex < this.trafficPhases.length - 1) {
+          this.currentPhaseIndex += 1;
+          this.phaseElapsed = 0;
+
+          const nextPhase = this.trafficPhases[this.currentPhaseIndex];
+          this.nextPackSpawnTime = Math.max(this.sessionTime, this.sessionTime + nextPhase.spawnInterval * 0.5);
+        }
+      }
+
+      spawnTrafficPack(phase, phaseState) {
+        if (!phase || phase.packTemplates.length === 0) return;
+
+        const template = phase.packTemplates[phaseState.templateIndex % phase.packTemplates.length];
+        phaseState.templateIndex = (phaseState.templateIndex + 1) % phase.packTemplates.length;
+
+        this.spawnTrafficGroup({
+          template,
+          minimumLeadDistance: phase.minimumLeadDistance,
+          minimumGapDistance: phase.minimumGapDistance,
+          phaseName: phase.name
+        });
+      }
+
+      spawnFillerGroup(phase) {
+        if (!phase || this.fillerTemplates.length === 0) return;
+
+        const template = this.fillerTemplates[Math.floor(Math.random() * this.fillerTemplates.length)];
+
+        const minimumLeadDistance = Math.max(8000, (phase.minimumLeadDistance || 10000) - 2000);
+        const minimumGapDistance = Math.max(5000, (phase.minimumGapDistance || 8000) - 2000);
+
+        this.spawnTrafficGroup({
+          template,
+          minimumLeadDistance,
+          minimumGapDistance,
+          phaseName: `${phase.name} filler`
+        });
+      }
+
+      spawnTrafficGroup({ template, minimumLeadDistance, minimumGapDistance, phaseName }) {
+        if (!template) return;
+
+        const farthestCarZ = this.aiCars.length > 0
+          ? Math.max(...this.aiCars.map(car => car.z))
+          : this.cameraZ;
+
+        const baseZ = Math.max(
+          this.cameraZ + minimumLeadDistance,
+          farthestCarZ + minimumGapDistance
+        );
+
+        const packId = this.packIdCounter++;
+        const packState = {
+          id: packId,
+          template,
+          activeChanging: 0,
+          remainingCars: template.carCount
+        };
+
+        this.packStates.set(packId, packState);
+
+        console.log(`[TRAFFIC] Spawn ${template.name} (group ${packId}) at Z=${Math.floor(baseZ)} [${phaseName}]`);
+
+        const lanesInUse = new Set();
+
+        for (let i = 0; i < template.carCount; i++) {
+          const laneIndex = this.selectInitialLaneIndex(template, i, lanesInUse);
+          lanesInUse.add(laneIndex);
+
+          const carZ = baseZ + i * template.spacing;
+
+          this.spawnAICar({
+            z: carZ,
+            laneIndex,
+            laneOffset: this.lanePositions[laneIndex],
+            laneChangeRange: template.laneChangeRange,
+            laneChangeSpeed: template.laneChangeSpeed,
+            packState,
+            startDelay: template.laneChangeStagger * i,
+            laneChangeChance: template.laneChangeChance,
+            initialDelayRange: template.initialDelayRange
+          });
+        }
+      }
+
+      selectInitialLaneIndex(template, carIndex, lanesInUse) {
+        const allowed = template.allowedLaneIndexes && template.allowedLaneIndexes.length > 0
+          ? template.allowedLaneIndexes
+          : [0, 1, 2];
+
+        if (Array.isArray(template.initialLaneIndexes) && carIndex < template.initialLaneIndexes.length) {
+          return template.initialLaneIndexes[carIndex];
+        }
+
+        const uniqueCount = new Set(allowed).size;
+        let laneIndex = allowed[carIndex % allowed.length];
+
+        if (lanesInUse.has(laneIndex) && lanesInUse.size < uniqueCount) {
+          for (const candidate of allowed) {
+            if (!lanesInUse.has(candidate)) {
+              laneIndex = candidate;
+              break;
+            }
+          }
+        }
+
+        return laneIndex;
+      }
+
+      pickLaneChangeTarget(car, template) {
+        const allowed = template.allowedLaneIndexes && template.allowedLaneIndexes.length > 0
+          ? template.allowedLaneIndexes
+          : [0, 1, 2];
+
+        const otherLanes = allowed.filter(index => index !== car.laneIndex);
+        if (otherLanes.length === 0) {
+          return car.laneIndex;
+        }
+
+        // Avoid steering into a lane already targeted by another car in the same pack when alternatives exist
+        const occupiedTargets = new Set();
+        const blockedAhead = new Set();
+        const spacing = template.spacing || 0;
+        const frontBuffer = Math.max(spacing * 0.6, 2200);
+
+        for (const otherCar of this.aiCars) {
+          if (otherCar === car) continue;
+          if (otherCar.packState && otherCar.packState.id === car.packState.id) {
+            occupiedTargets.add(otherCar.targetLaneIndex);
+            const dz = otherCar.z - car.z;
+            if (dz > 0 && dz <= frontBuffer) {
+              blockedAhead.add(otherCar.laneIndex);
+              blockedAhead.add(otherCar.targetLaneIndex);
+            }
+          }
+        }
+
+        const availableLanes = otherLanes.filter(index => !occupiedTargets.has(index));
+        let candidateLanes = (availableLanes.length > 0 ? availableLanes : otherLanes)
+          .filter(index => !blockedAhead.has(index));
+
+        if (candidateLanes.length === 0) {
+          candidateLanes = availableLanes.slice();
+        }
+        if (candidateLanes.length === 0) {
+          candidateLanes = otherLanes.filter(index => !blockedAhead.has(index));
+        }
+        if (candidateLanes.length === 0) {
+          return car.laneIndex; // No safe lane to move into
+        }
+
+        let target = candidateLanes[0];
+
+        if (candidateLanes.length > 1) {
+          const preferOpposite = Math.random() < (template.swapBias ?? 0.5);
+          if (preferOpposite) {
+            target = candidateLanes.reduce((best, idx) => {
+              if (best === null) return idx;
+              const bestDistance = Math.abs(best - car.laneIndex);
+              const candidateDistance = Math.abs(idx - car.laneIndex);
+              return candidateDistance > bestDistance ? idx : best;
+            }, null);
+          } else {
+            target = candidateLanes[Math.floor(Math.random() * candidateLanes.length)];
+          }
+        }
+
+        return target;
+      }
+
+      randomRange(min, max) {
+        return min + Math.random() * (max - min);
+      }
+
+      // Wrap curve values to prevent breaks at track loop
+      wrapCurve(value) {
+        // Wraps value to range: -3000 to +3000
+        const wrapped = ((value + 3000) % this.curveWrapRange) - 3000;
+        return wrapped;
+      }
+
+      sampleSmoothedCurve(z, span = 300, samples = 5) {
+        if (!Array.isArray(this.posts) || this.posts.length === 0) {
+          return 0;
+        }
+        const halfSamples = Math.max(1, Math.floor(samples / 2));
+        const step = span / halfSamples;
+        let total = 0;
+        let count = 0;
+        for (let i = -halfSamples; i <= halfSamples; i++) {
+          const sampleZ = z + i * step;
+          const index = Math.floor(sampleZ / this.postSpacing);
+          const post = this.posts[((index % this.posts.length) + this.posts.length) % this.posts.length];
+          if (post) {
+            total += this.wrapCurve(post.curve);
+            count++;
+          }
+        }
+        return count > 0 ? total / count : 0;
+      }
+
+      sampleCurveNormalized(z, span = 300, samples = 5, scale = 1200) {
+        const smoothed = this.sampleSmoothedCurve(z, span, samples);
+        const normalized = Math.max(-1.4, Math.min(1.4, smoothed / scale));
+        return Math.abs(normalized) < 0.02 ? 0 : normalized;
+      }
+
+      computeRoadEdgesProfile({ lateralShift, depthFactor, curveNormalized }) {
+        const halfWidth = this.roadWidth / 2;
+        const clampedDepth = Math.max(0, Math.min(1, depthFactor));
+        const intensity = Math.min(1.2, Math.abs(curveNormalized));
+        const taper = Math.pow(1 - clampedDepth, 1.08);
+        const effect = intensity * taper * 0.95;
+        const innerScale = Math.max(0.34, 1 - effect);
+        const outerScale = 1 + effect;
+
+        let leftOffset;
+        let rightOffset;
+        if (curveNormalized >= 0) {
+          leftOffset = -halfWidth * innerScale;
+          rightOffset = halfWidth * outerScale;
+        } else {
+          leftOffset = -halfWidth * outerScale;
+          rightOffset = halfWidth * innerScale;
+        }
+
+        const skew = curveNormalized * halfWidth * taper * 0.48;
+        let leftX = lateralShift + leftOffset - skew * (curveNormalized >= 0 ? 0.4 : 1);
+        let rightX = lateralShift + rightOffset + skew * (curveNormalized >= 0 ? 1 : 0.4);
+
+        return {
+          leftX,
+          rightX,
+          innerEdgeIsRight: curveNormalized >= 0
+        };
+      }
+
+      project3D(x, y, z, depthFactor = null) {
+        // Project 3D world coordinates to 2D screen coordinates
+        const relativeZ = z - this.cameraZ;
+
+        if (relativeZ <= 0) return null; // Behind or at camera plane
+        // Clamp close objects to a near-plane distance so perspective stays stable
+
+        // Perspective factor - as Z increases, things get closer to horizon
+        // Cap perspective to prevent extreme off-screen projection at close range
+        const clampedZ = Math.max(relativeZ, this.nearPlane);
+        const rawPerspective = 1 / (clampedZ * 0.01);
+        const perspective = Math.min(rawPerspective, 3.0); // Cap at 3x to keep cars on screen
+
+        // Calculate depth factor if not provided
+        if (depthFactor === null) {
+          const maxDrawDistance = this.drawDistance * this.postSpacing;
+          depthFactor = Math.min(1.0, relativeZ / maxDrawDistance);
+        }
+
+        // Vanishing point offset only affects distant posts
+        // Near posts (depthFactor < 0.0335): use center as vanishing point (halfway between car and previous position)
+        // Far posts (depthFactor >= 0.0335): blend toward offset vanishing point
+        let effectiveVanishingOffset = 0;
+        const curveStartDepth = 0.0335; // Halfway between 0% and 6.7%
+        if (depthFactor > curveStartDepth) {
+          const offsetBlend = (depthFactor - curveStartDepth) / (1.0 - curveStartDepth);
+          effectiveVanishingOffset = this.vanishingPointOffset * offsetBlend;
+        }
+
+        const vanishingPointX = this.canvas.width / 2 + (this.horizonShift || 0) + effectiveVanishingOffset;
+        const horizonY = this.canvas.height * 0.35; // Horizon line
+
+        // X converges toward vanishing point
+        const yaw = this.cameraYaw || 0;
+        const projectedX = vanishingPointX + (x - this.cameraX) * perspective + yaw * relativeZ;
+
+        // Don't reject based on off-screen position - let canvas clipping handle it
+        // Cars can project far off-screen when close, that's normal
+
+        // Y rises from bottom (near) to horizon (far)
+        // Near posts: at bottom of screen
+        // Far posts: at horizon line
+        const screenBottom = this.canvas.height * 0.9;
+        const projectedY = horizonY + (screenBottom - horizonY) / (1 + clampedZ * 0.002);
+
+        // Post size
+        const projectedW = this.postWidth * perspective;
+        const projectedH = this.postHeight * perspective;
+
+        return { x: projectedX, y: projectedY, w: projectedW, h: projectedH, scale: perspective };
+      }
+
+      updateVanishingPoint(deltaTime, velocity = 0) {
+        if (!Array.isArray(this.posts) || this.posts.length === 0) {
+          this.vanishingPointOffset *= 0.9;
+          this.cameraYaw *= 0.85;
+          return;
+        }
+
+        const basePost = Math.floor(this.cameraZ / this.postSpacing);
+        const lookAheadOffset = 14;
+        const lookAheadZ = (basePost + lookAheadOffset) * this.postSpacing;
+        const lookAheadCurveNorm = this.sampleCurveNormalized(lookAheadZ, 320, 7, 1300);
+
+        const desiredOffset = Math.max(-240, Math.min(240, lookAheadCurveNorm * 240));
+        const speed = Math.abs(velocity);
+        const followRate = speed > 1
+          ? Math.min(1, deltaTime * (2.8 + speed / 1800))
+          : Math.min(1, deltaTime * 1.6);
+
+        this.vanishingPointOffset += (desiredOffset - this.vanishingPointOffset) * followRate;
+
+        const desiredYaw = lookAheadCurveNorm * 0.08;
+        this.cameraYaw += (desiredYaw - this.cameraYaw) * (followRate * 0.8);
+
+        if (speed < 1) {
+          this.vanishingPointOffset *= 0.92;
+          this.cameraYaw *= 0.8;
+        }
+      }
+
+      render() {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, width, height);
+
+        const basePost = Math.floor(this.cameraZ / this.postSpacing);
+        const currentZ = basePost * this.postSpacing;
+        const currentCurveNorm = this.sampleCurveNormalized(currentZ, 260, 5, 1300);
+        const lookAheadOffset = 12;
+        const lookAheadZ = (basePost + lookAheadOffset) * this.postSpacing;
+        const lookAheadCurveNorm = this.sampleCurveNormalized(lookAheadZ, 320, 7, 1300);
+
+        this.currentCurve = currentCurveNorm;
+        this.lookAheadCurve = lookAheadCurveNorm;
+        this.horizonShift = lookAheadCurveNorm * 260;
+
+        const horizonY = height * 0.35;
+        this.ctx.strokeStyle = '#444444';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, horizonY);
+        this.ctx.lineTo(width, horizonY);
+        this.ctx.stroke();
+
+        const moonY = height * 0.15;
+        const moonX = width / 2 + (lookAheadCurveNorm * 420);
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.beginPath();
+        this.ctx.arc(moonX, moonY, 30, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        const vanishingPointY = height * 0.20;
+        const vanishingPointX = width / 2 + (this.horizonShift || 0) + this.vanishingPointOffset;
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.beginPath();
+        this.ctx.arc(vanishingPointX, vanishingPointY, 5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        let postsDrawn = 0;
+        let prevLeftEdge = null;
+        let prevRightEdge = null;
+
+        let dynamicDrawDistance = this.drawDistance;
+        const curvatureThreshold = 0.05;
+        if (Math.abs(currentCurveNorm) < curvatureThreshold) {
+          for (let i = 1; i <= this.drawDistance; i++) {
+            const sampleZ = (basePost + i) * this.postSpacing;
+            const curveAhead = Math.abs(this.sampleCurveNormalized(sampleZ, 320, 7, 1300));
+            if (curveAhead > curvatureThreshold) {
+              dynamicDrawDistance = Math.min(this.drawDistance, Math.max(i + 80, 130));
+              break;
+            }
+          }
+        }
+
+        for (let n = dynamicDrawDistance; n > 0; n--) {
+          const postIndex = (basePost + n) % this.posts.length;
+          const post = this.posts[postIndex];
+          if (!post) continue;
+
+          const postZ = (basePost + n) * this.postSpacing;
+          const depthCurveNorm = this.sampleCurveNormalized(postZ, 320, 7, 1300);
+          const relativeZ = postZ - this.cameraZ;
+          const maxDrawDistance = this.drawDistance * this.postSpacing;
+          const depthFactor = Math.min(1.0, relativeZ / maxDrawDistance);
+
+          const baseShiftAmount = this.roadWidth / 2;
+          const horizonShiftAmount = (this.vanishingPointOffset * 3.2) + depthCurveNorm * baseShiftAmount * 0.7;
+          const baseShiftCurve = depthCurveNorm * baseShiftAmount * 1.2;
+          const baseShiftVanishing = -baseShiftAmount * Math.max(-1.2, Math.min(1.2, this.vanishingPointOffset / 200)) * 0.35;
+          const baseShift = baseShiftCurve + baseShiftVanishing;
+          const sCurveFactor = Math.pow(depthFactor, 2.2);
+          const lateralShift = baseShift + (horizonShiftAmount - baseShift) * sCurveFactor;
+
+          const edges = this.computeRoadEdgesProfile({
+            lateralShift,
+            depthFactor,
+            curveNormalized: depthCurveNorm
+          });
+
+          const leftPost = this.project3D(edges.leftX, 0, postZ, depthFactor);
+          const rightPost = this.project3D(edges.rightX, 0, postZ, depthFactor);
+          if (!leftPost || !rightPost) continue;
+
+          const bankIntensity = Math.abs(depthCurveNorm) * Math.pow(Math.max(0, 1 - depthFactor), 1.15);
+          const bankPixels = bankIntensity * 120;
+          if (depthCurveNorm > 0) {
+            leftPost.y -= bankPixels * 0.5;
+            rightPost.y += bankPixels;
+          } else if (depthCurveNorm < 0) {
+            leftPost.y += bankPixels;
+            rightPost.y -= bankPixels * 0.5;
+          }
+
+          let leftEdge = {
+            x: leftPost.x + leftPost.w * 0.5,
+            y: leftPost.y + leftPost.h
+          };
+          let rightEdge = {
+            x: rightPost.x - rightPost.w * 0.5,
+            y: rightPost.y + rightPost.h
+          };
+
+          if (prevLeftEdge && prevRightEdge) {
+            const smoothing = Math.max(0.25, 1 - Math.pow(depthFactor, 2.6) * 0.7);
+            leftEdge = {
+              x: prevLeftEdge.x + (leftEdge.x - prevLeftEdge.x) * smoothing,
+              y: prevLeftEdge.y + (leftEdge.y - prevLeftEdge.y) * smoothing
+            };
+            rightEdge = {
+              x: prevRightEdge.x + (rightEdge.x - prevRightEdge.x) * smoothing,
+              y: prevRightEdge.y + (rightEdge.y - prevRightEdge.y) * smoothing
+            };
+
+            leftPost.x = leftEdge.x - leftPost.w * 0.5;
+            leftPost.y = leftEdge.y - leftPost.h;
+            rightPost.x = rightEdge.x - rightPost.w * 0.5;
+            rightPost.y = rightEdge.y - rightPost.h;
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(prevLeftEdge.x, prevLeftEdge.y);
+            this.ctx.lineTo(prevRightEdge.x, prevRightEdge.y);
+            this.ctx.lineTo(rightEdge.x, rightEdge.y);
+            this.ctx.lineTo(leftEdge.x, leftEdge.y);
+            this.ctx.closePath();
+
+            const roadWidthPx = Math.max(1, Math.abs(rightEdge.x - leftEdge.x));
+            const depthAlpha = Math.max(0.18, Math.min(0.78, 0.9 - depthFactor * 0.65));
+            const gradient = this.ctx.createLinearGradient(prevLeftEdge.x, prevLeftEdge.y, prevRightEdge.x, prevRightEdge.y);
+            gradient.addColorStop(0, 'rgba(16, 20, 30, ' + (depthAlpha * 1.1) + ')');
+            gradient.addColorStop(0.5, 'rgba(28, 30, 36, ' + depthAlpha + ')');
+            gradient.addColorStop(1, 'rgba(16, 20, 30, ' + (depthAlpha * 1.1) + ')');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fill();
+
+            if (Math.abs(depthCurveNorm) > 0.02) {
+              const insideRight = edges.innerEdgeIsRight;
+              const highlightPrev = insideRight ? prevRightEdge : prevLeftEdge;
+              const highlightCurrent = insideRight ? rightEdge : leftEdge;
+              const previousCap = this.ctx.lineCap;
+              this.ctx.lineCap = 'round';
+              this.ctx.beginPath();
+              this.ctx.moveTo(highlightPrev.x, highlightPrev.y);
+              this.ctx.lineTo(highlightCurrent.x, highlightCurrent.y);
+              this.ctx.strokeStyle = 'rgba(120, 180, 255, ' + Math.max(0.12, 0.42 - depthFactor * 0.26) + ')';
+              this.ctx.lineWidth = Math.max(1.2, roadWidthPx * 0.03);
+              this.ctx.stroke();
+              this.ctx.lineCap = previousCap;
+            }
+          }
+
+          prevLeftEdge = Object.assign({}, leftEdge);
+          prevRightEdge = Object.assign({}, rightEdge);
+
+          if (n % 3 !== 0) continue;
+
+          this.ctx.fillStyle = '#FFFFFF';
+          this.ctx.fillRect(leftPost.x - leftPost.w / 2, leftPost.y, leftPost.w, leftPost.h);
+          this.ctx.fillRect(rightPost.x - rightPost.w / 2, rightPost.y, rightPost.w, rightPost.h);
+
+          postsDrawn++;
+        }
+
+        this.drawAICars();
+        this.drawCockpit();
+      }
+
+
+      // Draw AI cars with 3D projection
+      drawAICars() {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        // FIRST PASS: Remove cars that are behind camera (passed by player)
+        this.aiCars = this.aiCars.filter(car => {
+          const relativeZ = car.z - this.cameraZ;
+          // Remove cars IMMEDIATELY when they go behind camera (relZ <= 0)
+          // Don't wait - if it's behind us, it needs to be removed NOW
+          if (relativeZ <= 0) {
+            const spotIndex = Math.floor(car.z / 8000);
+            const spotLetter = String.fromCharCode(65 + (spotIndex % 26));
+            console.log(`[REMOVE] Spot ${spotLetter} (Z=${car.z}) passed and removed (${Math.floor(-relativeZ)} units behind)`);
+
+            // Car removal feeds pack scheduling logic; track remaining members
+            if (car.packState) {
+              if (car.isChanging) {
+                car.packState.activeChanging = Math.max(0, car.packState.activeChanging - 1);
+              }
+              car.packState.remainingCars -= 1;
+              if (car.packState.remainingCars <= 0) {
+                this.packStates.delete(car.packState.id);
+              }
+            }
+            return false; // Remove from array
+          }
+          return true; // Keep in array
+        });
+
+        // SECOND PASS: Draw remaining cars
+        let carsDrawn = 0;
+        for (const car of this.aiCars) {
+          const placement = this.computeCarPlacement(car);
+          if (!placement) continue;
+
+          const { carX, relativeZ, depthFactor } = placement;
+
+          // Project car position to screen coordinates
+          const projected = this.project3D(carX, 0, car.z, depthFactor);
+          if (!projected) {
+            // Log all projection failures to debug disappearing cars
+            console.warn(`[CAR SKIP] ${car.color} Z=${Math.floor(car.z)} relZ=${Math.floor(relativeZ)} carX=${Math.floor(carX)} - projection FAILED`);
+            continue;
+          }
+
+          // CRITICAL FIX: Clamp projected screen X to keep cars visible
+          // When cars get very close (relZ < 100), extreme perspective can project them WAY off-screen
+          // Instead of skipping them, clamp their screen position to remain visible
+          const originalProjX = projected.x;
+          const screenMargin = 100; // Small margin from screen edges
+          const minScreenX = screenMargin;
+          const maxScreenX = width - screenMargin;
+
+          // Clamp the projected X position to screen bounds
+          projected.x = Math.max(minScreenX, Math.min(maxScreenX, projected.x));
+
+          // Log when we clamp a car to keep it visible
+          if (projected.x !== originalProjX) {
+            console.log(`[CAR CLAMPED] ${car.color} relZ=${Math.floor(relativeZ)} projX: ${Math.floor(originalProjX)} → ${Math.floor(projected.x)} (clamped to screen)`);
+          }
+
+          // Log close cars to debug positioning
+          if (relativeZ > 0 && relativeZ < 1000) {
+            console.log(`[CLOSE CAR] ${car.color} relZ=${Math.floor(relativeZ)} projX=${Math.floor(projected.x)} projY=${Math.floor(projected.y)} scale=${projected.scale.toFixed(3)}`);
+          }
+
+          // Car dimensions (scaled by distance)
+          // Make cars BIG when you're close to them - 1.5x original size
+          // Clamp to minimum 1 pixel to prevent negative values
+          const carWidth = Math.max(1, 1500 * projected.scale);  // 75% of double size
+          const carHeight = Math.max(1, 900 * projected.scale); // 75% of double height
+
+          // Skip drawing if car is too small (not worth rendering - less than 1 pixel)
+          if (carWidth < 1 || carHeight < 1) {
+            console.log(`[CAR TOO SMALL] Z=${Math.floor(car.z)} width=${carWidth.toFixed(2)} height=${carHeight.toFixed(2)}`);
+            continue; // Car too far away or scale too small
+          }
+
+          // Match posts: projected.y is the road surface (where post TOP sits)
+          // For cars to sit ON road, car BOTTOM should be at projected.y + carHeight
+          // This puts the car's bottom edge at the road level
+          const carBottom = projected.y + carHeight; // Bottom of car AT road surface
+
+          // Draw Porsche 911-inspired car from rear view
+          const centerX = projected.x;
+
+          const bodyWidth = Math.max(1, carWidth * 0.85);
+          const bodyHeight = Math.max(1, carHeight * 0.55);
+          const bodyTop = carBottom - bodyHeight;
+
+          // Special black detailing for red cars
+          const isRedCar = car.color === '#FF0000';
+
+          // Main body - rounded bubble shape (iconic 911 profile)
+          this.ctx.beginPath();
+          const cornerRadius = Math.max(0.1, bodyWidth * 0.15); // Never negative
+          this.ctx.moveTo(centerX - bodyWidth / 2 + cornerRadius, carBottom);
+          this.ctx.arcTo(centerX - bodyWidth / 2, carBottom, centerX - bodyWidth / 2, carBottom - cornerRadius, cornerRadius);
+          this.ctx.lineTo(centerX - bodyWidth / 2, bodyTop + cornerRadius);
+          this.ctx.arcTo(centerX - bodyWidth / 2, bodyTop, centerX - bodyWidth / 2 + cornerRadius, bodyTop, cornerRadius);
+          this.ctx.lineTo(centerX + bodyWidth / 2 - cornerRadius, bodyTop);
+          this.ctx.arcTo(centerX + bodyWidth / 2, bodyTop, centerX + bodyWidth / 2, bodyTop + cornerRadius, cornerRadius);
+          this.ctx.lineTo(centerX + bodyWidth / 2, carBottom - cornerRadius);
+          this.ctx.arcTo(centerX + bodyWidth / 2, carBottom, centerX + bodyWidth / 2 - cornerRadius, carBottom, cornerRadius);
+          this.ctx.closePath();
+          this.ctx.fillStyle = car.color;
+          this.ctx.fill();
+
+          // Roof/cabin - sleek sloped design
+          const roofWidth = Math.max(1, bodyWidth * 0.65);
+          const roofHeight = Math.max(1, carHeight * 0.35);
+          const roofTop = bodyTop - roofHeight;
+          const roofRadius = Math.max(0.1, roofWidth * 0.2);
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(centerX - roofWidth / 2 + roofRadius, roofTop);
+          this.ctx.arcTo(centerX - roofWidth / 2, roofTop, centerX - roofWidth / 2, roofTop + roofRadius, roofRadius);
+          this.ctx.lineTo(centerX - roofWidth / 2, bodyTop);
+          this.ctx.lineTo(centerX + roofWidth / 2, bodyTop);
+          this.ctx.lineTo(centerX + roofWidth / 2, roofTop + roofRadius);
+          this.ctx.arcTo(centerX + roofWidth / 2, roofTop, centerX + roofWidth / 2 - roofRadius, roofTop, roofRadius);
+          this.ctx.closePath();
+          this.ctx.fillStyle = car.color;
+          this.ctx.fill();
+
+          // Rear windshield - sloped glass (signature 911 slope)
+          const windowWidth = roofWidth * 0.8;
+          const windowHeight = roofHeight * 0.65;
+          const windowTop = roofTop + roofHeight * 0.12;
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(centerX - windowWidth / 2, bodyTop);
+          this.ctx.lineTo(centerX - windowWidth / 2 + windowWidth * 0.1, windowTop);
+          this.ctx.lineTo(centerX + windowWidth / 2 - windowWidth * 0.1, windowTop);
+          this.ctx.lineTo(centerX + windowWidth / 2, bodyTop);
+          this.ctx.closePath();
+          this.ctx.fillStyle = isRedCar ? 'rgba(30, 30, 40, 0.95)' : 'rgba(50, 50, 80, 0.9)';
+          this.ctx.fill();
+
+          // Iconic 911 horizontal tail light bar
+          const lightBarHeight = bodyHeight * 0.08;
+          const lightBarY = bodyTop + bodyHeight * 0.35;
+
+          this.ctx.fillStyle = '#FF3333'; // Bright red
+          this.ctx.fillRect(centerX - bodyWidth / 2 + 5, lightBarY, bodyWidth - 10, lightBarHeight);
+
+          // Individual tail light sections within the bar (classic 911 style)
+          const tailLightWidth = bodyWidth * 0.18;
+          this.ctx.fillStyle = '#FF0000';
+          this.ctx.fillRect(centerX - bodyWidth / 2 + 8, lightBarY, tailLightWidth, lightBarHeight);
+          this.ctx.fillRect(centerX + bodyWidth / 2 - tailLightWidth - 8, lightBarY, tailLightWidth, lightBarHeight);
+
+          // Engine grille/vents (horizontal slats over rear engine)
+          const grilleTop = bodyTop + bodyHeight * 0.5;
+          const grilleHeight = bodyHeight * 0.3;
+          const grilleWidth = bodyWidth * 0.6;
+
+          this.ctx.fillStyle = isRedCar ? '#1a1a1a' : '#2a2a2a'; // Black for red cars
+          this.ctx.fillRect(centerX - grilleWidth / 2, grilleTop, grilleWidth, grilleHeight);
+
+          // Horizontal slats in grille
+          this.ctx.strokeStyle = isRedCar ? '#0a0a0a' : '#1a1a1a';
+          this.ctx.lineWidth = Math.max(1, bodyHeight * 0.02);
+          for (let i = 1; i < 4; i++) {
+            const slotY = grilleTop + (grilleHeight / 4) * i;
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX - grilleWidth / 2, slotY);
+            this.ctx.lineTo(centerX + grilleWidth / 2, slotY);
+            this.ctx.stroke();
+          }
+
+          // Lower diffuser/bumper (black for red cars)
+          const bumperHeight = bodyHeight * 0.15;
+          this.ctx.fillStyle = isRedCar ? '#0d0d0d' : '#333333';
+          this.ctx.fillRect(centerX - bodyWidth / 2, carBottom - bumperHeight, bodyWidth, bumperHeight);
+
+          // Dual exhaust tips (911 signature)
+          const exhaustWidth = bodyWidth * 0.08;
+          const exhaustHeight = bumperHeight * 0.4;
+          const exhaustY = carBottom - bumperHeight / 2 - exhaustHeight / 2;
+          const exhaustSpacing = bodyWidth * 0.25;
+
+          this.ctx.fillStyle = isRedCar ? '#000000' : '#1a1a1a'; // Black for red cars
+          // Left exhaust
+          this.ctx.beginPath();
+          this.ctx.arc(centerX - exhaustSpacing, exhaustY + exhaustHeight / 2, exhaustWidth / 2, 0, Math.PI * 2);
+          this.ctx.fill();
+          // Right exhaust
+          this.ctx.beginPath();
+          this.ctx.arc(centerX + exhaustSpacing, exhaustY + exhaustHeight / 2, exhaustWidth / 2, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // License plate
+          const plateWidth = bodyWidth * 0.22;
+          const plateHeight = bumperHeight * 0.35;
+          this.ctx.fillStyle = '#FFFFFF';
+          this.ctx.fillRect(centerX - plateWidth / 2, carBottom - bumperHeight + bumperHeight * 0.3, plateWidth, plateHeight);
+
+          carsDrawn++;
+        }
+
+        // Log cars drawn every 60 frames (once per second at 60fps)
+        if (Math.floor(this.cameraZ / 100) % 60 === 0) {
+          console.log(`[RENDER] Total cars in array: ${this.aiCars.length}, Cars drawn: ${carsDrawn}`);
+        }
+      }
+
+      drawCockpit() {
+        // Draw car sprite as a static image at bottom center
+        if (!this.carImage.complete) return; // Wait for image to load
+
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        // Scale car to fit screen (responsive) - 2.5x size
+        const carWidth = Math.min(width * 1.05, 1100);
+        const carHeight = carWidth * (this.carImage.height / this.carImage.width);
+
+        const carY = height - carHeight;
+        const curveNorm = this.currentCurve || 0;
+        const leanAngle = Math.max(-0.18, Math.min(0.18, curveNorm * 0.18));
+        const lateralBias = Math.max(-1, Math.min(1, (this.vanishingPointOffset / 260)));
+        const carCenterX = width / 2 + lateralBias * carWidth * 0.12;
+        const pivotY = carY + carHeight * 0.66;
+
+        this.ctx.save();
+        this.ctx.translate(carCenterX, pivotY);
+        this.ctx.rotate(leanAngle);
+        this.ctx.drawImage(this.carImage, -carWidth / 2, -carHeight * 0.66, carWidth, carHeight);
+        this.ctx.restore();
+      }
+    }
+
+    // ============================================================================
+    // INPUT MANAGER - Handles keyboard and touch controls
+    // ============================================================================
+
+    class InputManager {
+      constructor(canvas) {
+        this.canvas = canvas;
+
+        // Input states
+        this.steerLeft = false;
+        this.steerRight = false;
+        this.gas = false;
+        this.brake = false;
+        this.pause = false;
+
+        // Steering value (-1 to 1)
+        this.steeringValue = 0;
+
+        // Touch tracking
+        this.touches = {
+          steering: null,  // Touch ID for steering zone
+          gas: null        // Touch ID for gas zone
+        };
+
+        // Handedness preference (load from localStorage)
+        this.handedness = localStorage.getItem('nightDriverHandedness') || 'right';
+
+        // Bind event listeners
+        this.setupKeyboard();
+        this.setupTouch();
+      }
+
+      setupKeyboard() {
+        // Keyboard controls
+        window.addEventListener('keydown', (e) => {
+          const key = e.key;
+          switch(key) {
+            case 'a':
+            case 'A':
+            case 'ArrowLeft':
+              this.steerLeft = true;
+              e.preventDefault();
+              break;
+            case 'd':
+            case 'D':
+            case 'ArrowRight':
+              this.steerRight = true;
+              e.preventDefault();
+              break;
+            case 'ArrowUp':
+            case 'Space':
+            case 'Spacebar':
+            case ' ':
+              this.gas = true;
+              e.preventDefault();
+              break;
+            case 'ArrowDown':
+              this.brake = true;
+              e.preventDefault();
+              break;
+            case 'Escape':
+              this.pause = !this.pause;
+              e.preventDefault();
+              break;
+          }
+        });
+
+        window.addEventListener('keyup', (e) => {
+          const key = e.key;
+          switch(key) {
+            case 'a':
+            case 'A':
+            case 'ArrowLeft':
+              this.steerLeft = false;
+              break;
+            case 'd':
+            case 'D':
+            case 'ArrowRight':
+              this.steerRight = false;
+              break;
+            case 'ArrowUp':
+            case 'Space':
+            case 'Spacebar':
+            case ' ':
+              this.gas = false;
+              break;
+            case 'ArrowDown':
+              this.brake = false;
+              break;
+          }
+        });
+      }
+
+      setupTouch() {
+        // Prevent iOS text selection
+        this.canvas.style.webkitUserSelect = 'none';
+        this.canvas.style.userSelect = 'none';
+        this.canvas.style.webkitTouchCallout = 'none';
+
+        // Touch zones based on handedness
+        this.canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+
+          for (let touch of e.changedTouches) {
+            const rect = this.canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const isLeftSide = x < rect.width / 2;
+
+            // Right-handed: steering left, gas right
+            // Left-handed: gas left, steering right
+            if (this.handedness === 'right') {
+              if (isLeftSide && !this.touches.steering) {
+                this.touches.steering = touch.identifier;
+              } else if (!isLeftSide && !this.touches.gas) {
+                this.touches.gas = touch.identifier;
+                this.gas = true;
+              }
+            } else {
+              if (isLeftSide && !this.touches.gas) {
+                this.touches.gas = touch.identifier;
+                this.gas = true;
+              } else if (!isLeftSide && !this.touches.steering) {
+                this.touches.steering = touch.identifier;
+              }
+            }
+          }
+        });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+
+          for (let touch of e.changedTouches) {
+            if (touch.identifier === this.touches.steering) {
+              const rect = this.canvas.getBoundingClientRect();
+              const x = touch.clientX - rect.left;
+              const centerX = rect.width / 2;
+
+              // Calculate steering (-1 to 1)
+              const steerZoneWidth = rect.width / 2;
+              if (this.handedness === 'right') {
+                this.steeringValue = (x - 0) / steerZoneWidth * 2 - 1;
+              } else {
+                this.steeringValue = (x - centerX) / steerZoneWidth * 2 - 1;
+              }
+
+              // Clamp to -1 to 1
+              this.steeringValue = Math.max(-1, Math.min(1, this.steeringValue));
+            }
+          }
+        });
+
+        this.canvas.addEventListener('touchend', (e) => {
+          e.preventDefault();
+
+          for (let touch of e.changedTouches) {
+            if (touch.identifier === this.touches.steering) {
+              this.touches.steering = null;
+              this.steeringValue = 0;
+            }
+            if (touch.identifier === this.touches.gas) {
+              this.touches.gas = null;
+              this.gas = false;
+            }
+          }
+        });
+
+        this.canvas.addEventListener('touchcancel', (e) => {
+          e.preventDefault();
+
+          for (let touch of e.changedTouches) {
+            if (touch.identifier === this.touches.steering) {
+              this.touches.steering = null;
+              this.steeringValue = 0;
+            }
+            if (touch.identifier === this.touches.gas) {
+              this.touches.gas = null;
+              this.gas = false;
+            }
+          }
+        });
+      }
+
+      getSteeringInput() {
+        // Keyboard steering (digital)
+        if (this.steerLeft) return -1;
+        if (this.steerRight) return 1;
+
+        // Touch steering (analog)
+        return this.steeringValue;
+      }
+
+      isGasPressed() {
+        return this.gas;
+      }
+
+      isBrakePressed() {
+        return this.brake;
+      }
+
+      isPaused() {
+        return this.pause;
+      }
+    }
+
+    // ============================================================================
+    // GAME STATE MANAGER
+    // ============================================================================
+
+    class Game {
+      constructor() {
+        this.roadRenderer = new RoadRenderer(canvas, ctx);
+        this.inputManager = new InputManager(canvas);
+        this.roadRenderer.playerX = 0;
+        this.lastTime = 0;
+        this.fps = 60;
+        this.frameCount = 0;
+        this.fpsTime = 0;
+
+        // Game values for HUD (authentic 1976 style)
+        this.timeRemaining = 180; // 3 minute run
+        this.totalDistanceKm = 0;
+        this.elapsedRunTime = 0;
+        this.averageSpeedKmh = 0;
+        this.topAverageSpeedKmh = 0;
+        this.currentSpeedKmh = 0;
+        this.currentSpeedMph = 0;
+
+        // Run state
+        this.runFinished = false;
+        this.isCrashed = false;
+        this.crashTimer = 0;
+        this.crashRecoveryTimer = 0;
+        this.gameStatus = 'READY';
+        this.lastCrashSide = 'left';
+
+        // Physics values
+        this.carX = 0; // Horizontal position (-roadWidth/2 to +roadWidth/2)
+        this.velocity = 0; // Forward velocity
+        this.maxSpeed = 6000; // Maximum speed (20x faster - markers will blur past)
+        this.acceleration = 6000 / 13; // ~461.5 u/s² → 0-300 km/h in 13 seconds
+        this.deceleration = 800; // Deceleration rate (coasting)
+        this.braking = 1500; // Braking rate
+        this.steeringSpeed = 2200; // Horizontal steering speed
+        this.curveDriftFactor = 0.000015; // Outward drift coefficient based on speed and curvature
+
+        // HUD references
+        this.hud = {
+          time: document.getElementById('time-display'),
+          status: document.getElementById('game-status'),
+          distance: document.getElementById('distance-display'),
+          distanceUnit: document.getElementById('distance-unit'),
+          speedValue: document.getElementById('speed-value'),
+          speedUnit: document.getElementById('speed-unit'),
+          avgValue: document.getElementById('avg-value'),
+          avgUnit: document.getElementById('avg-unit'),
+          topAvgValue: document.getElementById('top-avg-value')
+        };
+
+        this.speedGaugeCanvas = document.getElementById('speed-gauge');
+        this.avgGaugeCanvas = document.getElementById('avg-gauge');
+        this.speedGaugeCtx = this.speedGaugeCanvas ? this.speedGaugeCanvas.getContext('2d') : null;
+        this.avgGaugeCtx = this.avgGaugeCanvas ? this.avgGaugeCanvas.getContext('2d') : null;
+
+        this.unitToggleButton = document.getElementById('unit-toggle');
+        this.speedUnit = 'kmh';
+        if (this.unitToggleButton) {
+          this.unitToggleButton.addEventListener('click', () => this.toggleSpeedUnit());
+        }
+
+        this.contactPenaltyStep = 0;
+        this.smoothedSpeedKmh = 0;
+        this.smoothedAvgKmh = 0;
+
+        if (this.hud.status) {
+          this.hud.status.textContent = this.gameStatus;
+        }
+
+        this.syncGaugeNeedles();
+        this.updateHud();
+
+        // Start game loop
+        this.isRunning = true;
+        requestAnimationFrame((time) => this.gameLoop(time));
+      }
+
+      gameLoop(currentTime) {
+        if (!this.isRunning) return;
+
+        // Calculate delta time (in seconds)
+        const deltaTime = this.lastTime ? (currentTime - this.lastTime) / 1000 : 0;
+        this.lastTime = currentTime;
+
+        // Cap delta time to prevent huge jumps
+        const safeDeltaTime = Math.min(deltaTime, 0.1);
+
+        // Update FPS counter
+        this.frameCount++;
+        this.fpsTime += deltaTime;
+        if (this.fpsTime >= 1.0) {
+          this.fps = this.frameCount;
+          this.frameCount = 0;
+          this.fpsTime = 0;
+          document.getElementById('fps-display').textContent = this.fps.toFixed(0);
+        }
+
+        // Update game state
+        this.update(safeDeltaTime);
+
+        // Render
+        this.render();
+
+        // Continue loop
+        requestAnimationFrame((time) => this.gameLoop(time));
+      }
+
+      update(deltaTime) {
+        if (this.inputManager.isPaused()) {
+          return;
+        }
+
+        this.roadRenderer.playerX = this.carX;
+
+        this.roadRenderer.updateVanishingPoint(deltaTime, this.velocity);
+        this.roadRenderer.updateAICars(deltaTime);
+
+        this.handleCrashTimers(deltaTime);
+
+        if (!this.runFinished && this.timeRemaining > 0) {
+          this.timeRemaining = Math.max(0, this.timeRemaining - deltaTime);
+          this.elapsedRunTime += deltaTime;
+          if (this.timeRemaining === 0) {
+            this.finishRun();
+          }
+        }
+
+        if (!this.isCrashed && !this.runFinished) {
+          this.handleInputs(deltaTime);
+        } else {
+          // Gentle deceleration while recovering or finished
+          this.velocity = Math.max(0, this.velocity - this.braking * deltaTime);
+        }
+
+        this.applyShoulderDrag(deltaTime);
+
+        // Camera follow
+        const targetCameraX = this.carX;
+        this.roadRenderer.cameraX += (targetCameraX - this.roadRenderer.cameraX) * this.roadRenderer.cameraLagFactor * deltaTime;
+
+        this.roadRenderer.cameraZ += this.velocity * deltaTime;
+
+        const trackLength = this.roadRenderer.roadLength * this.roadRenderer.postSpacing;
+        if (this.roadRenderer.cameraZ >= trackLength) {
+          this.roadRenderer.cameraZ -= trackLength;
+          this.roadRenderer.aiCars.forEach(car => {
+            car.z -= trackLength;
+          });
+        }
+
+        this.updateSpeedMetrics(deltaTime);
+        this.updateGaugeNeedles(deltaTime);
+
+        // Collision checks disabled for physics testing
+
+        this.updateHud();
+      }
+
+      handleInputs(deltaTime) {
+        if (this.inputManager.isGasPressed()) {
+          this.velocity += this.acceleration * deltaTime;
+          if (this.velocity > this.maxSpeed) {
+            this.velocity = this.maxSpeed;
+          }
+        } else if (this.inputManager.isBrakePressed()) {
+          this.velocity -= this.braking * deltaTime;
+          if (this.velocity < 0) {
+            this.velocity = 0;
+          }
+        } else {
+          this.velocity -= this.deceleration * deltaTime;
+          if (this.velocity < 0) {
+            this.velocity = 0;
+          }
+        }
+
+        const steerInput = this.inputManager.getSteeringInput();
+
+        const curveSampleZ = this.roadRenderer.cameraZ + PLAYER_WORLD_LENGTH * 0.5;
+        const curveNormalized = this.roadRenderer.sampleCurveNormalized(curveSampleZ, 320, 7, 1200);
+        const speed = Math.abs(this.velocity);
+
+        const outwardDrift = curveNormalized * this.curveDriftFactor * speed * speed;
+        const heavyMultiplier = 1 + Math.max(0, Math.abs(curveNormalized) - 0.2) * 3.0;
+        const driftVelocity = outwardDrift * heavyMultiplier;
+
+        const effectiveVelocity = (steerInput * this.steeringSpeed) + driftVelocity;
+        this.carX += effectiveVelocity * deltaTime;
+      }
+
+      getRoadEdges() {
+        const roadWidth = this.roadRenderer.roadWidth;
+        const baseShiftAmount = roadWidth / 2;
+        const horizonShiftAmount = this.roadRenderer.vanishingPointOffset * 3;
+        const vanishingNormalized = this.roadRenderer.vanishingPointOffset / 200;
+        const baseShift = -baseShiftAmount * vanishingNormalized;
+        const collisionDepthFactor = 0.05;
+        const sCurveFactor = Math.pow(collisionDepthFactor, 4);
+        const lateralShiftAtBase = baseShift + (horizonShiftAmount - baseShift) * sCurveFactor;
+
+        const leftRoadEdge = -roadWidth / 2 + lateralShiftAtBase + 500;
+        const rightRoadEdge = roadWidth / 2 + lateralShiftAtBase - 500;
+
+        return { leftRoadEdge, rightRoadEdge };
+      }
+
+      applyShoulderDrag(deltaTime) {
+        const { leftRoadEdge, rightRoadEdge } = this.getRoadEdges();
+        const leftCarEdge = this.carX - PLAYER_WORLD_HALF_WIDTH;
+        const rightCarEdge = this.carX + PLAYER_WORLD_HALF_WIDTH;
+
+        const leftOverlap = Math.max(0, leftRoadEdge - leftCarEdge);
+        const rightOverlap = Math.max(0, rightCarEdge - rightRoadEdge);
+
+        if (leftOverlap === 0 && rightOverlap === 0) {
+          return;
+        }
+
+        const overlapDistance = Math.max(leftOverlap, rightOverlap);
+        const bothSides = leftOverlap > 0 && rightOverlap > 0;
+        const deepOffRoad = overlapDistance > PLAYER_WORLD_WIDTH * 2;
+
+        if (deepOffRoad) {
+          const targetVelocity = SHOULDER_DEEP_SPEED_KMH / KMH_PER_VELOCITY_UNIT;
+          if (this.velocity > targetVelocity) {
+            this.velocity = Math.max(targetVelocity, this.velocity - this.braking * deltaTime);
+          }
+          return;
+        }
+
+        if (bothSides) {
+          this.velocity -= this.velocity * SHOULDER_FULL_FACTOR * deltaTime;
+        } else {
+          this.velocity -= this.velocity * SHOULDER_PARTIAL_FACTOR * deltaTime;
+        }
+
+        if (this.velocity < 0) {
+          this.velocity = 0;
+        }
+      }
+
+      updateSpeedMetrics(deltaTime) {
+        this.currentSpeedKmh = Math.max(0, this.velocity * KMH_PER_VELOCITY_UNIT);
+        this.currentSpeedMph = this.currentSpeedKmh * MPH_PER_KMH;
+
+        if (!this.runFinished) {
+          const kmAdvanced = (this.velocity * deltaTime * KMH_PER_VELOCITY_UNIT) / 3600;
+          this.totalDistanceKm += kmAdvanced;
+          if (this.elapsedRunTime > 0) {
+            const hours = this.elapsedRunTime / 3600;
+            this.averageSpeedKmh = hours > 0 ? this.totalDistanceKm / hours : 0;
+            if (this.averageSpeedKmh > this.topAverageSpeedKmh) {
+              this.topAverageSpeedKmh = this.averageSpeedKmh;
+            }
+          }
+        }
+      }
+
+      checkCollisions() {
+        for (const car of this.roadRenderer.aiCars) {
+          const placement = this.roadRenderer.computeCarPlacement(car);
+          if (!placement) continue;
+
+          const { carX, relativeZ } = placement;
+          if (relativeZ > PLAYER_WORLD_LENGTH) continue;
+
+          const aiBackZ = relativeZ - PLAYER_WORLD_HALF_LENGTH;
+          if (aiBackZ < 0) continue; // AI car is not fully ahead; treat as side contact
+
+          const overlapRatio = this.computeOverlapRatio(carX);
+          const MIN_OVERLAP_RATIO = 0.3;
+          if (overlapRatio < MIN_OVERLAP_RATIO) continue;
+
+          const lateralSeparation = Math.abs(this.carX - carX);
+          const directionalRatio = relativeZ / Math.max(1, lateralSeparation);
+          const MIN_DIRECTIONAL_RATIO = 1.2; // Require car to be more ahead than beside
+
+          if (directionalRatio >= MIN_DIRECTIONAL_RATIO) {
+            this.enterCrashState();
+            return;
+          }
+        }
+
+        this.contactPenaltyStep = 0;
+      }
+
+      computeOverlapRatio(otherCarX) {
+        const combinedHalfWidth = PLAYER_WORLD_HALF_WIDTH + AI_WORLD_HALF_WIDTH;
+        const lateralSeparation = Math.abs(this.carX - otherCarX);
+        if (lateralSeparation >= combinedHalfWidth) {
+          return 0;
+        }
+        return (combinedHalfWidth - lateralSeparation) / combinedHalfWidth;
+      }
+
+      enterCrashState() {
+        if (this.isCrashed || this.runFinished) {
+          return;
+        }
+
+        this.gameStatus = 'CRASH';
+        this.isCrashed = true;
+        this.crashTimer = CRASH_EXPLOSION_DURATION;
+        this.crashRecoveryTimer = CRASH_RECOVERY_DURATION;
+        this.velocity = 0;
+        this.contactPenaltyStep = 0;
+
+        const { leftRoadEdge, rightRoadEdge } = this.getRoadEdges();
+        this.lastCrashSide = this.carX >= 0 ? 'right' : 'left';
+        const shoulderOffset = PLAYER_WORLD_HALF_WIDTH + 400;
+        this.carX = this.lastCrashSide === 'right'
+          ? rightRoadEdge + shoulderOffset
+          : leftRoadEdge - shoulderOffset;
+
+        this.roadRenderer.cameraX = this.carX;
+
+        this.roadRenderer.clearTrafficAfterCrash();
+        this.roadRenderer.pauseTrafficFor(CRASH_RESPAWN_DELAY);
+      }
+
+      finishRun() {
+        if (this.runFinished) return;
+        this.runFinished = true;
+        this.velocity = 0;
+        this.gameStatus = 'TIME!';
+        this.contactPenaltyStep = 0;
+        this.roadRenderer.pauseTrafficFor(9999);
+      }
+
+      handleCrashTimers(deltaTime) {
+        if (!this.isCrashed) {
+          if (!this.runFinished && this.gameStatus === 'READY') {
+            this.gameStatus = 'GO!';
+          }
+          return;
+        }
+
+        if (this.crashTimer > 0) {
+          this.crashTimer = Math.max(0, this.crashTimer - deltaTime);
+        }
+        if (this.crashRecoveryTimer > 0) {
+          this.crashRecoveryTimer = Math.max(0, this.crashRecoveryTimer - deltaTime);
+        }
+
+        if (this.crashRecoveryTimer === 0) {
+          this.isCrashed = false;
+          if (!this.runFinished) {
+            this.gameStatus = 'GO!';
+          }
+        }
+      }
+
+      formatTime(value) {
+        const minutes = Math.floor(value / 60);
+        const seconds = Math.floor(value % 60);
+        const hundredths = Math.floor((value - Math.floor(value)) * 100);
+        return `${String(minutes).padStart(1, '0')}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+      }
+
+      updateHud() {
+        const useMph = this.speedUnit === 'mph';
+        const speedValue = useMph ? this.currentSpeedMph : this.currentSpeedKmh;
+        const avgValue = useMph ? this.averageSpeedKmh * MPH_PER_KMH : this.averageSpeedKmh;
+        const topAvgValue = useMph ? this.topAverageSpeedKmh * MPH_PER_KMH : this.topAverageSpeedKmh;
+        const distanceValue = useMph ? this.totalDistanceKm * MPH_PER_KMH : this.totalDistanceKm;
+        const speedUnitLabel = useMph ? 'MPH' : 'KMH';
+        const distanceUnitLabel = useMph ? 'MI' : 'KM';
+
+        if (this.hud.time) {
+          this.hud.time.textContent = this.formatTime(this.timeRemaining);
+        }
+        if (this.hud.status) {
+          this.hud.status.textContent = this.gameStatus;
+        }
+        if (this.hud.distance) {
+          this.hud.distance.textContent = distanceValue.toFixed(2);
+        }
+        if (this.hud.distanceUnit) {
+          this.hud.distanceUnit.textContent = distanceUnitLabel;
+        }
+        if (this.hud.speedValue) {
+          const display = Math.round(speedValue);
+          this.hud.speedValue.textContent = String(display).padStart(3, '0');
+        }
+        if (this.hud.speedUnit) {
+          this.hud.speedUnit.textContent = speedUnitLabel;
+        }
+        if (this.hud.avgValue) {
+          const display = Math.round(avgValue);
+          this.hud.avgValue.textContent = String(display).padStart(3, '0');
+        }
+        if (this.hud.avgUnit) {
+          this.hud.avgUnit.textContent = speedUnitLabel;
+        }
+        if (this.hud.topAvgValue) {
+          const display = Math.round(topAvgValue);
+          this.hud.topAvgValue.textContent = String(display).padStart(3, '0');
+        }
+        if (this.unitToggleButton) {
+          this.unitToggleButton.textContent = useMph ? 'KMH MODE' : 'MPH MODE';
+        }
+
+        const gaugeSpeed = useMph ? this.smoothedSpeedKmh * MPH_PER_KMH : this.smoothedSpeedKmh;
+        const gaugeAvg = useMph ? this.smoothedAvgKmh * MPH_PER_KMH : this.smoothedAvgKmh;
+        this.drawAnalogGauges(gaugeSpeed, gaugeAvg);
+      }
+
+      render() {
+        // Render road
+        this.roadRenderer.render();
+
+        if (this.crashTimer > 0) {
+          this.drawExplosion();
+        }
+      }
+
+      toggleSpeedUnit() {
+        this.speedUnit = this.speedUnit === 'kmh' ? 'mph' : 'kmh';
+        this.updateHud();
+      }
+
+      drawAnalogGauges(speedValue, avgValue) {
+        if (!this.speedGaugeCtx || !this.avgGaugeCtx) return;
+
+        const useMph = this.speedUnit === 'mph';
+        const gaugeTop = useMph ? SPEED_GAUGE_TOP_MPH : SPEED_GAUGE_TOP_KMH;
+        const gaugeMax = useMph ? SPEED_GAUGE_MAX_MPH : SPEED_GAUGE_MAX_KMH;
+        const gaugeUnit = useMph ? 'MPH' : 'KMH';
+
+        const safeSpeed = Number.isFinite(speedValue) ? speedValue : 0;
+        const safeAvg = Number.isFinite(avgValue) ? avgValue : 0;
+
+        this.drawGauge(this.speedGaugeCtx, {
+          value: safeSpeed,
+          topValue: gaugeTop,
+          maxValue: gaugeMax,
+          unitLabel: gaugeUnit,
+          needleColor: '#00d9ff'
+        });
+        this.drawGauge(this.avgGaugeCtx, {
+          value: safeAvg,
+          topValue: gaugeTop,
+          maxValue: gaugeMax,
+          unitLabel: gaugeUnit,
+          needleColor: '#ffcf40'
+        });
+      }
+
+      drawGauge(ctx, { value, topValue, maxValue, unitLabel, needleColor }) {
+        const { width, height } = ctx.canvas;
+        ctx.clearRect(0, 0, width, height);
+
+        const centerX = width / 2;
+        const centerY = height * 0.8;
+        const radius = Math.min(width, height) * 0.42;
+        const safeMax = Math.max(1, maxValue);
+        const safeTop = Math.min(Math.max(1, topValue), safeMax);
+        const clampedValue = Math.max(0, Math.min(safeMax, Number.isFinite(value) ? value : 0));
+
+        const zeroAngle = (150 * Math.PI) / 180;   // 8 o'clock
+        const peakAngle = (270 * Math.PI) / 180;   // 12 o'clock
+        const maxAngle = (330 * Math.PI) / 180;    // 2 o'clock
+        const labelRadius = radius + 28;
+
+        const computeAngle = (val) => {
+          if (val <= 0) {
+            return zeroAngle;
+          }
+          if (val >= safeMax) {
+            return maxAngle;
+          }
+          if (val <= safeTop) {
+            const t = safeTop > 0 ? val / safeTop : 0;
+            return zeroAngle + (peakAngle - zeroAngle) * t;
+          }
+          const extraRange = safeMax - safeTop;
+          const extraRatio = extraRange > 0 ? (val - safeTop) / extraRange : 0;
+          return peakAngle + (maxAngle - peakAngle) * extraRatio;
+        };
+
+        const needleAngle = computeAngle(clampedValue);
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.lineWidth = 16;
+        ctx.arc(0, 0, radius, zeroAngle, maxAngle, false);
+        ctx.stroke();
+
+        const gradient = ctx.createLinearGradient(-radius, 0, radius, 0);
+        gradient.addColorStop(0, 'rgba(0, 200, 255, 0.2)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0.3)');
+        ctx.beginPath();
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 12;
+        ctx.arc(0, 0, radius, zeroAngle, maxAngle, false);
+        ctx.stroke();
+
+        const tickCount = 10;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        for (let i = 0; i <= tickCount; i++) {
+          const t = i / tickCount;
+          const tickValue = safeMax * t;
+          const angle = computeAngle(tickValue);
+          const inner = radius - 16;
+          const outer = radius + 6;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+          ctx.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+          ctx.stroke();
+        }
+
+        // Top label (e.g., 200 KMH)
+        ctx.font = '16px "Courier New", monospace';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(String(Math.round(safeTop)), Math.cos(peakAngle) * labelRadius, Math.sin(peakAngle) * labelRadius);
+
+        if (unitLabel) {
+          ctx.font = '12px "Courier New", monospace';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+          ctx.textBaseline = 'top';
+          ctx.fillText(unitLabel, Math.cos(peakAngle) * (labelRadius - 2), Math.sin(peakAngle) * (labelRadius - 2));
+        }
+
+        // Zero label at sweep end
+        ctx.font = '14px "Courier New", monospace';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('0', Math.cos(zeroAngle) * labelRadius, Math.sin(zeroAngle) * labelRadius);
+
+        // Max label (e.g., 300)
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(Math.round(safeMax)), Math.cos(maxAngle) * (labelRadius - 2), Math.sin(maxAngle) * (labelRadius - 2));
+
+        ctx.beginPath();
+        ctx.strokeStyle = needleColor;
+        ctx.lineWidth = 6;
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(needleAngle) * (radius - 24), Math.sin(needleAngle) * (radius - 24));
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.fillStyle = '#111';
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      updateGaugeNeedles(deltaTime) {
+        if (!Number.isFinite(deltaTime) || deltaTime <= 0) {
+          this.syncGaugeNeedles();
+          return;
+        }
+
+        const smoothing = 1 - Math.exp(-deltaTime * 8);
+        const targetSpeed = this.currentSpeedKmh;
+        const targetAvg = this.averageSpeedKmh;
+
+        this.smoothedSpeedKmh += (targetSpeed - this.smoothedSpeedKmh) * smoothing;
+        this.smoothedAvgKmh += (targetAvg - this.smoothedAvgKmh) * smoothing;
+      }
+
+      syncGaugeNeedles() {
+        this.smoothedSpeedKmh = this.currentSpeedKmh;
+        this.smoothedAvgKmh = this.averageSpeedKmh;
+      }
+
+      drawExplosion() {
+        const alpha = Math.max(0, this.crashTimer / CRASH_EXPLOSION_DURATION);
+        const radius = Math.max(canvas.width, canvas.height) * 0.25 * (2 - alpha);
+
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height * 0.7);
+        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+        gradient.addColorStop(0, `rgba(255, 255, 200, ${alpha})`);
+        gradient.addColorStop(0.4, `rgba(255, 150, 0, ${alpha * 0.8})`);
+        gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // ============================================================================
+    // INITIALIZE GAME
+    // ============================================================================
+
+    // Start game when page loads
+    window.addEventListener('load', () => {
+      console.log('Night Driver - Phase 1: Foundation & Rendering');
+      console.log('Testing pseudo-3D road rendering...');
+
+      const game = new Game();
+
+      console.log('Game initialized. Road should be scrolling toward camera.');
+    });
+  </script>
+</body>
+</html>

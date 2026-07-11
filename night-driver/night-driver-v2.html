@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<!-- Version: Distance-based spawning v2 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+  <meta name="apple-mobile-web-app-title" content="Night Driver">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000000">
+  <title>Night Driver (1976)</title>
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="./manifest.json">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100vw;
+      position: fixed;
+      top: 0;
+      left: 0;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    canvas {
+      display: block;
+      background: #000;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      -ms-interpolation-mode: nearest-neighbor;
+      width: 100%;
+      height: 100%;
+      outline: none;
+    }
+
+    /* HUD Overlay - EXACT 1976 Arcade Style */
+    #hud {
+      position: fixed;
+      top: 10px;
+      left: 20px;
+      right: 20px;
+      color: white;
+      font-family: 'Courier New', monospace;
+      font-size: 18px;
+      font-weight: bold;
+      pointer-events: none;
+      z-index: 100;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    #hud-line-1, #hud-line-2 {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    #hud-line-1 span, #hud-line-2 span {
+      white-space: nowrap;
+    }
+
+    #game-status {
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    /* Landscape prompt for mobile portrait */
+    #landscape-prompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      color: white;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      text-align: center;
+      z-index: 9999;
+    }
+
+    #landscape-prompt p {
+      margin: 20px;
+      font-size: 48px;
+    }
+
+    #landscape-prompt p:last-child {
+      font-size: 20px;
+    }
+
+    /* Show landscape prompt on portrait mobile */
+    @media (max-width: 768px) and (orientation: portrait) {
+      #landscape-prompt {
+        display: flex;
+      }
+
+      #game-container {
+        display: none;
+      }
+    }
+
+    /* Debug info */
+    #debug {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      color: #0f0;
+      font-size: 12px;
+      font-family: monospace;
+      z-index: 100;
+      pointer-events: none;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <!-- Landscape Prompt (for mobile portrait) -->
+  <div id="landscape-prompt">
+    <p>🔄 📱</p>
+    <p>Please rotate your device to landscape</p>
+  </div>
+
+  <!-- Game Container -->
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD Overlay - EXACT 1976 Arcade Layout -->
+    <div id="hud">
+      <div id="hud-line-1">
+        <span>HIGH SCORE <span id="high-score-display">000</span></span>
+        <span id="game-status">GAME OVER</span>
+        <span>TOP SPEED <span id="top-speed-1">000</span></span>
+        <span>ATARI</span>
+      </div>
+      <div id="hud-line-2">
+        <span>YOUR SCORE <span id="score-display">176</span></span>
+        <span>TOP SPEED <span id="speed-display">213</span></span>
+      </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div id="debug">
+      FPS: <span id="fps-display">60</span><br>
+      Phase 1: Road Rendering Test
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // PHASE 1: FOUNDATION & CORE RENDERING ENGINE
+    // ============================================================================
+
+    // Canvas setup
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas to full window size
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // ============================================================================
+    // ROAD SEGMENT SYSTEM
+    // ============================================================================
+
+    class RoadSegment {
+      constructor(index) {
+        this.index = index;
+        this.z = index; // Distance from camera (0 = closest)
+        this.curve = 0; // Horizontal curve amount
+        this.y = 0; // Height (for hills - future feature)
+      }
+    }
+
+    // ============================================================================
+    // ROAD RENDERER - Authentic 1976 Night Driver Style
+    // ============================================================================
+
+    class RoadRenderer {
+      constructor(canvas, ctx) {
+        this.canvas = canvas;
+        this.ctx = ctx;
+
+        // Road configuration (simpler for 1976 style)
+        this.roadLength = 300; // Number of road posts
+        this.postSpacing = 100; // Distance between posts in world units
+        this.roadWidth = 5000; // Width of road in world units (2 cars + 1/3 extra = 2.33x car width)
+
+        // Camera/Player position
+        this.cameraZ = 0; // Player position on track (increases as we drive)
+        this.cameraX = 0; // Horizontal position (for steering) - ACTUAL camera position with lag
+        this.cameraY = 800; // Camera height above road
+
+        // Camera lag system for realistic physics
+        this.cameraLagFactor = 8.0; // How quickly camera catches up to car (higher = slower)
+
+        // Vanishing point animation
+        this.vanishingPointOffset = 0; // Current offset from center (-200 to +200)
+        this.vanishingPointTimer = 0; // Timer for animation sequence
+        this.vanishingPointPhase = 'linger-center'; // Current phase of animation
+
+        // Drawing parameters
+        this.drawDistance = 5000; // How many posts to draw ahead - extend to horizon
+        this.postWidth = 36; // Width of road edge posts (3x larger)
+        this.postHeight = 90; // Height of road edge posts (3x larger)
+
+        // Curve wrapping range - prevents breaks when track loops
+        this.curveWrapRange = 6000; // Wrap curves between -3000 and +3000
+
+        // AI Cars
+        this.aiCars = []; // Array of AI car objects
+        this.aiCarColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00']; // Red, Green, Blue, Yellow
+
+        // TEST TRACK - Straight road only to test horizon convergence
+        const track1 = [
+          { length: 300, turn: 0 },       // Completely straight
+        ];
+
+        // Build the track
+        this.posts = [];
+        let cumulativeCurve = 0;
+        let postIndex = 0;
+
+        // Repeat track to fill road length
+        while (postIndex < this.roadLength) {
+          for (let section of track1) {
+            for (let i = 0; i < section.length && postIndex < this.roadLength; i++) {
+              cumulativeCurve += section.turn;
+
+              this.posts.push({
+                z: postIndex * this.postSpacing,
+                curve: cumulativeCurve
+              });
+
+              postIndex++;
+            }
+          }
+        }
+
+        // Aesthetic mode (1970s by default)
+        this.aesthetic = '1970s';
+
+        // Load car sprite image
+        this.carImage = new Image();
+        this.carImage.src = 'car.png';
+
+        // Initialize AI cars - progressive difficulty system
+        this.carSpawnTimer = 0; // Track time for spawning cars
+        this.carsSpawned = 0; // Track how many cars have been spawned
+        this.spawnInitialAICars();
+      }
+
+      // Spawn initial AI cars ahead of player (progressive difficulty)
+      spawnInitialAICars() {
+        // Start with just one car at 12000 units
+        this.spawnAICar(12000);
+        this.carsSpawned = 1;
+      }
+
+      // Spawn next car in sequence (called every 30s)
+      spawnNextCar() {
+        // Max 5 cars total
+        if (this.carsSpawned >= 5) return;
+
+        // Calculate spacing based on car number
+        // Each new car spawns AHEAD of the farthest existing car
+        let spacing;
+        if (this.carsSpawned === 1) {
+          spacing = 10000; // Car 2: 10k ahead of car 1
+        } else if (this.carsSpawned === 2) {
+          spacing = 10000; // Car 3: 10k ahead of car 2
+        } else if (this.carsSpawned === 3) {
+          spacing = 8000;  // Car 4: 8k ahead of car 3
+        } else if (this.carsSpawned === 4) {
+          spacing = 6000;  // Car 5: 6k ahead of car 4
+        }
+
+        // Find the farthest car's Z position
+        const farthestCarZ = Math.max(...this.aiCars.map(c => c.z));
+        console.log(`[SPAWN] Farthest car at Z=${farthestCarZ}, Camera at Z=${this.cameraZ}`);
+
+        // Spawn new car AHEAD of the farthest car
+        const newCarZ = farthestCarZ + spacing;
+        console.log(`[SPAWN] New car will be at Z=${newCarZ}, spacing=${spacing}`);
+
+        // Spawn the car at absolute Z position
+        this.spawnAICar(newCarZ - this.cameraZ); // Convert to relative distance
+
+        // Set opposite lane from previous car
+        if (this.aiCars.length >= 2) {
+          const prevCarLane = this.aiCars[this.aiCars.length - 2].laneOffset;
+          this.aiCars[this.aiCars.length - 1].laneOffset = -prevCarLane;
+          console.log(`[SPAWN] Set lane to ${this.aiCars[this.aiCars.length - 1].laneOffset} (opposite of ${prevCarLane})`);
+        }
+
+        this.carsSpawned++;
+      }
+
+      // Spawn a single AI car at specified distance (or random if not specified)
+      spawnAICar(distance = null) {
+        // Position ahead - either specified or random far distance
+        let spawnZ;
+        if (distance !== null) {
+          spawnZ = this.cameraZ + distance;
+        } else {
+          // For respawn, place far ahead
+          const minSpawnDistance = 8000;
+          const maxSpawnDistance = 15000;
+          spawnZ = this.cameraZ + minSpawnDistance + Math.random() * (maxSpawnDistance - minSpawnDistance);
+        }
+
+        // Random lane position - LEFT or RIGHT only, NO CENTER
+        // Cars are either in one lane or the other, never blocking the middle
+        // Push them well to the sides (closer to the road edges)
+        const lanePositions = [
+          -this.roadWidth / 3,  // Left lane (further left)
+          this.roadWidth / 3     // Right lane (further right)
+        ];
+        const laneOffset = lanePositions[Math.floor(Math.random() * lanePositions.length)];
+
+        // AI cars stay at FIXED positions on track (speed = 0)
+        // Player overtakes them by moving forward
+        // This creates the illusion they're driving 0-250 km/h
+        const speed = 0; // Static obstacles
+
+        // Random color
+        const color = this.aiCarColors[Math.floor(Math.random() * this.aiCarColors.length)];
+
+        // Lane change behavior - change lanes every so often
+        const laneChangeTimer = 2.0 + Math.random() * 4.0; // First change after 2-6 seconds
+        const laneChangeInterval = 3.0 + Math.random() * 5.0; // Change every 3-8 seconds
+
+        this.aiCars.push({
+          z: spawnZ,
+          laneOffset: laneOffset,
+          targetLaneOffset: laneOffset, // Where car is moving toward
+          speed: speed,
+          color: color,
+          laneChangeTimer: laneChangeTimer,
+          laneChangeInterval: laneChangeInterval,
+          laneChangeSpeed: 800 // How fast car moves between lanes
+        });
+      }
+
+      // Update AI cars (called each frame)
+      updateAICars(deltaTime) {
+        // Progressive spawning: Add new car when player gets close to farthest car
+        if (this.carsSpawned < 5) {
+          // Find farthest car
+          const farthestCarZ = Math.max(...this.aiCars.map(c => c.z));
+          const distanceToFarthest = farthestCarZ - this.cameraZ;
+
+          // Spawn next car when player is within 15000 units of farthest car
+          if (distanceToFarthest < 15000) {
+            console.log(`[SPAWN] Player close to farthest car. Spawning car #${this.carsSpawned + 1}. Current car count: ${this.aiCars.length}`);
+            this.spawnNextCar();
+            console.log(`[SPAWN] After spawn: Total cars = ${this.aiCars.length}`);
+          }
+        }
+
+        // Cars stay permanently on track in their assigned lanes
+        // No lane changing - they stay where they spawn for consistent challenge
+      }
+
+      // Wrap curve values to prevent breaks at track loop
+      wrapCurve(value) {
+        // Wraps value to range: -3000 to +3000
+        const wrapped = ((value + 3000) % this.curveWrapRange) - 3000;
+        return wrapped;
+      }
+
+      project3D(x, y, z, depthFactor = null) {
+        // Project 3D world coordinates to 2D screen coordinates
+        const relativeZ = z - this.cameraZ;
+
+        if (relativeZ <= 0) return null; // Behind camera
+
+        // Perspective factor - as Z increases, things get closer to horizon
+        const perspective = 1 / (relativeZ * 0.01); // Adjusted for proper convergence
+
+        // Calculate depth factor if not provided
+        if (depthFactor === null) {
+          const maxDrawDistance = this.drawDistance * this.postSpacing;
+          depthFactor = Math.min(1.0, relativeZ / maxDrawDistance);
+        }
+
+        // Vanishing point offset only affects distant posts
+        // Near posts (depthFactor < 0.0335): use center as vanishing point (halfway between car and previous position)
+        // Far posts (depthFactor >= 0.0335): blend toward offset vanishing point
+        let effectiveVanishingOffset = 0;
+        const curveStartDepth = 0.0335; // Halfway between 0% and 6.7%
+        if (depthFactor > curveStartDepth) {
+          const offsetBlend = (depthFactor - curveStartDepth) / (1.0 - curveStartDepth);
+          effectiveVanishingOffset = this.vanishingPointOffset * offsetBlend;
+        }
+
+        const vanishingPointX = this.canvas.width / 2 + (this.horizonShift || 0) + effectiveVanishingOffset;
+        const horizonY = this.canvas.height * 0.35; // Horizon line
+
+        // X converges toward vanishing point
+        const projectedX = vanishingPointX + (x - this.cameraX) * perspective;
+
+        // Y rises from bottom (near) to horizon (far)
+        // Near posts: at bottom of screen
+        // Far posts: at horizon line
+        const screenBottom = this.canvas.height * 0.9;
+        const projectedY = horizonY + (screenBottom - horizonY) / (1 + relativeZ * 0.002);
+
+        // Post size
+        const projectedW = this.postWidth * perspective;
+        const projectedH = this.postHeight * perspective;
+
+        return { x: projectedX, y: projectedY, w: projectedW, h: projectedH, scale: perspective };
+      }
+
+      updateVanishingPoint(deltaTime) {
+        // Steady continuous sine wave motion - no pauses
+        // Oscillates smoothly between -200 and +200 over 16 seconds (50% slower)
+
+        this.vanishingPointTimer += deltaTime;
+
+        // Use sine wave for smooth continuous motion
+        // Period: 16 seconds for full cycle (50% slower than before)
+        const cycleProgress = (this.vanishingPointTimer % 16.0) / 16.0; // 0 to 1
+        const angle = cycleProgress * Math.PI * 2; // 0 to 2π
+
+        // Sine wave: -1 to +1, scaled to -200 to +200
+        this.vanishingPointOffset = Math.sin(angle) * 200;
+      }
+
+      render() {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        // Clear canvas - pure black background
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, width, height);
+
+        // Draw road posts from far to near (painter's algorithm)
+        const basePost = Math.floor(this.cameraZ / this.postSpacing);
+
+        // Calculate current road curve for visual effects
+        const currentPostIndex = basePost % this.posts.length;
+        const currentPost = this.posts[currentPostIndex];
+        const currentCurve = currentPost ? this.wrapCurve(currentPost.curve) : 0;
+
+        // Calculate LOOK-AHEAD curve for horizon shift (40 posts ahead)
+        const lookAheadPostIndex = (basePost + 40) % this.posts.length;
+        const lookAheadPost = this.posts[lookAheadPostIndex];
+        const lookAheadCurve = lookAheadPost ? this.wrapCurve(lookAheadPost.curve) : 0;
+
+        // Calculate vanishing point shift based on where road is GOING
+        this.horizonShift = lookAheadCurve * 0.3; // Scaling factor for horizon shift
+
+        // DRAW HORIZON LINE - where sky meets ground
+        const horizonY = height * 0.35; // Same as projection horizon
+        this.ctx.strokeStyle = '#444444'; // Dark gray line
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, horizonY);
+        this.ctx.lineTo(width, horizonY);
+        this.ctx.stroke();
+
+        // DRAW MOON - shifts left/right based on road curve to show turning
+        const moonY = height * 0.15; // Upper part of screen
+        const moonX = width / 2 + (lookAheadCurve * 0.8); // Moon shifts more dramatically
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.beginPath();
+        this.ctx.arc(moonX, moonY, 30, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // DRAW VANISHING POINT DOT - where road converges
+        const vanishingPointY = height * 0.20; // Above horizon
+        const vanishingPointX = width / 2 + (this.horizonShift || 0) + this.vanishingPointOffset;
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.beginPath();
+        this.ctx.arc(vanishingPointX, vanishingPointY, 5, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        let postsDrawn = 0;
+
+        for (let n = this.drawDistance; n > 0; n--) {
+          // Draw EVERY post - no skipping - 1000+ markers toward convergence
+          // (No skip logic - draw all 80 posts)
+
+          const postIndex = (basePost + n) % this.posts.length;
+          const post = this.posts[postIndex];
+
+          // Calculate post position in world space
+          const postZ = (basePost + n) * this.postSpacing;
+          const postWorldCurve = post.curve; // Raw curve value at this post
+
+          // Arc the road posts - curve them laterally
+          // Near posts (depthFactor < 0.3): Stay parallel (no curve)
+          // Middle posts (0.3-0.7): Curve gradually (S-curve)
+          // Far posts (> 0.7): Strong curve to vanishing point offset
+
+          // Calculate how much to shift posts based on depth
+          const relativeZ = postZ - this.cameraZ;
+          const maxDrawDistance = this.drawDistance * this.postSpacing;
+          const depthFactor = Math.min(1.0, relativeZ / maxDrawDistance); // 0=near, 1=far
+
+          // Multi-stage curve:
+          // Stage 1: Parallel (0-30% depth) - no shift
+          // Stage 2: S-curve (30-70% depth) - smooth transition
+          // Stage 3: Strong curve (70-100% depth) - reaches vanishing offset
+
+          // Create sweeping road that forces driver to steer
+          // Road sweeps dramatically at base - smooth sine wave motion
+          // Base shifts FASTER and MORE than the horizon
+
+          // Base shift range: one road edge comes to screen centerline
+          // roadWidth = 5000, so to shift one edge to center requires half road width
+          const baseShiftAmount = this.roadWidth / 2; // Half road width - edge to centerline!
+
+          // Horizon uses vanishing point offset
+          const horizonShiftAmount = this.vanishingPointOffset * 3;
+
+          // Steeper S-curve - make base shift more aggressively
+          // Use higher power to keep base shifting longer before transitioning
+          const sCurveFactor = Math.pow(depthFactor, 4); // Quartic - base shifts aggressively
+
+          // Base (depthFactor=0): uses full baseShiftAmount (inverted from vanishing point)
+          // Horizon (depthFactor=1): uses horizonShiftAmount (matches vanishing point)
+          // Interpolate between them
+
+          // Normalize vanishing point offset to -1 to +1 range for smooth interpolation
+          const vanishingNormalized = this.vanishingPointOffset / 200; // -200 to +200 becomes -1 to +1
+
+          // When vanishing point is LEFT (-1), base should be at RIGHT edge (+baseShiftAmount)
+          const baseShift = -baseShiftAmount * vanishingNormalized; // Opposite direction, smooth
+          const horizonShift = horizonShiftAmount; // Same direction
+
+          // Blend from base to horizon using S-curve
+          const lateralShift = baseShift + (horizonShift - baseShift) * sCurveFactor;
+
+          const leftX = -this.roadWidth / 2 + lateralShift;
+          const rightX = this.roadWidth / 2 + lateralShift;
+
+          // Project left and right posts (pass depthFactor to keep base fixed)
+          const leftPost = this.project3D(leftX, 0, postZ, depthFactor);
+          const rightPost = this.project3D(rightX, 0, postZ, depthFactor);
+
+          if (!leftPost || !rightPost) continue; // Behind camera or invalid
+
+          // Reduce marker density by 1/3 (draw every 3rd marker)
+          if (n % 3 !== 0) continue;
+
+          // Draw posts as white rectangles
+          this.ctx.fillStyle = '#FFFFFF';
+
+          // Left post
+          this.ctx.fillRect(
+            leftPost.x - leftPost.w / 2,
+            leftPost.y,
+            leftPost.w,
+            leftPost.h
+          );
+
+          // Right post
+          this.ctx.fillRect(
+            rightPost.x - rightPost.w / 2,
+            rightPost.y,
+            rightPost.w,
+            rightPost.h
+          );
+
+          postsDrawn++;
+        }
+
+        // DRAW AI CARS - after posts, before player car
+        this.drawAICars();
+
+        // Draw player's car cockpit view (LAST so it's on top)
+        this.drawCockpit();
+      }
+
+      // Draw AI cars with 3D projection
+      drawAICars() {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        // Draw each AI car
+        for (const car of this.aiCars) {
+          const carZ = car.z;
+
+          // Calculate lateral shift at this car's depth
+          const relativeZ = carZ - this.cameraZ;
+
+          // Don't render cars behind camera or too close behind player
+          if (relativeZ < -200) continue; // Behind player - don't render
+          // NO DISTANCE CULLING - render all cars ahead no matter how far
+
+          // Use SAME depthFactor calculation as posts for exact alignment
+          // This ensures car's lateral shift matches the posts at this Z position
+          const maxDrawDistance = this.drawDistance * this.postSpacing; // Same as posts
+          const depthFactor = Math.min(1.0, relativeZ / maxDrawDistance);
+
+          // Lock car between posts at this Z position - exact same calculation as posts
+          const roadWidth = this.roadWidth;
+          const baseShiftAmount = roadWidth / 2;
+          const horizonShiftAmount = this.vanishingPointOffset * 3;
+          const vanishingNormalized = this.vanishingPointOffset / 200;
+          const baseShift = -baseShiftAmount * vanishingNormalized;
+          const sCurveFactor = Math.pow(depthFactor, 4);
+          const lateralShift = baseShift + (horizonShiftAmount - baseShift) * sCurveFactor;
+
+          // Calculate where left and right posts would be at this Z position
+          const leftPostX = -roadWidth / 2 + lateralShift;
+          const rightPostX = roadWidth / 2 + lateralShift;
+
+          // Calculate midpoint between the two posts (center of road)
+          const roadMidpoint = (leftPostX + rightPostX) / 2;
+
+          // Buffer to keep car away from post edges
+          // Left side: 500 units buffer (looks good)
+          // Right side: 1000 units buffer (shorter, keeps car away from right post)
+          const leftBuffer = 500;
+          const rightBuffer = 1000;
+          const leftBoundary = leftPostX + leftBuffer;
+          const rightBoundary = rightPostX - rightBuffer;
+
+          // Apply car's lane offset from the midpoint, clamped to boundaries
+          const desiredX = roadMidpoint + car.laneOffset;
+          const carX = Math.max(leftBoundary, Math.min(rightBoundary, desiredX));
+
+          // Project car position to screen coordinates
+          const projected = this.project3D(carX, 0, carZ, depthFactor);
+          if (!projected) {
+            console.warn(`Car skipped: Z=${carZ}, camera=${this.cameraZ}, relZ=${relativeZ}, carX=${carX}`);
+            continue;
+          }
+
+          // Car dimensions (scaled by distance)
+          // Make cars BIG when you're close to them - 1.5x original size
+          const carWidth = 1500 * projected.scale;  // 75% of double size
+          const carHeight = 900 * projected.scale; // 75% of double height
+
+          // Match posts: projected.y is the road surface (where post TOP sits)
+          // For cars to sit ON road, car BOTTOM should be at projected.y + carHeight
+          // This puts the car's bottom edge at the road level
+          const carBottom = projected.y + carHeight; // Bottom of car AT road surface
+
+          // Draw Porsche 911-inspired car from rear view
+          const centerX = projected.x;
+
+          const bodyWidth = carWidth * 0.85;
+          const bodyHeight = carHeight * 0.55;
+          const bodyTop = carBottom - bodyHeight;
+
+          // Special black detailing for red cars
+          const isRedCar = car.color === '#FF0000';
+
+          // Main body - rounded bubble shape (iconic 911 profile)
+          this.ctx.beginPath();
+          const cornerRadius = bodyWidth * 0.15;
+          this.ctx.moveTo(centerX - bodyWidth / 2 + cornerRadius, carBottom);
+          this.ctx.arcTo(centerX - bodyWidth / 2, carBottom, centerX - bodyWidth / 2, carBottom - cornerRadius, cornerRadius);
+          this.ctx.lineTo(centerX - bodyWidth / 2, bodyTop + cornerRadius);
+          this.ctx.arcTo(centerX - bodyWidth / 2, bodyTop, centerX - bodyWidth / 2 + cornerRadius, bodyTop, cornerRadius);
+          this.ctx.lineTo(centerX + bodyWidth / 2 - cornerRadius, bodyTop);
+          this.ctx.arcTo(centerX + bodyWidth / 2, bodyTop, centerX + bodyWidth / 2, bodyTop + cornerRadius, cornerRadius);
+          this.ctx.lineTo(centerX + bodyWidth / 2, carBottom - cornerRadius);
+          this.ctx.arcTo(centerX + bodyWidth / 2, carBottom, centerX + bodyWidth / 2 - cornerRadius, carBottom, cornerRadius);
+          this.ctx.closePath();
+          this.ctx.fillStyle = car.color;
+          this.ctx.fill();
+
+          // Roof/cabin - sleek sloped design
+          const roofWidth = bodyWidth * 0.65;
+          const roofHeight = carHeight * 0.35;
+          const roofTop = bodyTop - roofHeight;
+          const roofRadius = roofWidth * 0.2;
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(centerX - roofWidth / 2 + roofRadius, roofTop);
+          this.ctx.arcTo(centerX - roofWidth / 2, roofTop, centerX - roofWidth / 2, roofTop + roofRadius, roofRadius);
+          this.ctx.lineTo(centerX - roofWidth / 2, bodyTop);
+          this.ctx.lineTo(centerX + roofWidth / 2, bodyTop);
+          this.ctx.lineTo(centerX + roofWidth / 2, roofTop + roofRadius);
+          this.ctx.arcTo(centerX + roofWidth / 2, roofTop, centerX + roofWidth / 2 - roofRadius, roofTop, roofRadius);
+          this.ctx.closePath();
+          this.ctx.fillStyle = car.color;
+          this.ctx.fill();
+
+          // Rear windshield - sloped glass (signature 911 slope)
+          const windowWidth = roofWidth * 0.8;
+          const windowHeight = roofHeight * 0.65;
+          const windowTop = roofTop + roofHeight * 0.12;
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(centerX - windowWidth / 2, bodyTop);
+          this.ctx.lineTo(centerX - windowWidth / 2 + windowWidth * 0.1, windowTop);
+          this.ctx.lineTo(centerX + windowWidth / 2 - windowWidth * 0.1, windowTop);
+          this.ctx.lineTo(centerX + windowWidth / 2, bodyTop);
+          this.ctx.closePath();
+          this.ctx.fillStyle = isRedCar ? 'rgba(30, 30, 40, 0.95)' : 'rgba(50, 50, 80, 0.9)';
+          this.ctx.fill();
+
+          // Iconic 911 horizontal tail light bar
+          const lightBarHeight = bodyHeight * 0.08;
+          const lightBarY = bodyTop + bodyHeight * 0.35;
+
+          this.ctx.fillStyle = '#FF3333'; // Bright red
+          this.ctx.fillRect(centerX - bodyWidth / 2 + 5, lightBarY, bodyWidth - 10, lightBarHeight);
+
+          // Individual tail light sections within the bar (classic 911 style)
+          const tailLightWidth = bodyWidth * 0.18;
+          this.ctx.fillStyle = '#FF0000';
+          this.ctx.fillRect(centerX - bodyWidth / 2 + 8, lightBarY, tailLightWidth, lightBarHeight);
+          this.ctx.fillRect(centerX + bodyWidth / 2 - tailLightWidth - 8, lightBarY, tailLightWidth, lightBarHeight);
+
+          // Engine grille/vents (horizontal slats over rear engine)
+          const grilleTop = bodyTop + bodyHeight * 0.5;
+          const grilleHeight = bodyHeight * 0.3;
+          const grilleWidth = bodyWidth * 0.6;
+
+          this.ctx.fillStyle = isRedCar ? '#1a1a1a' : '#2a2a2a'; // Black for red cars
+          this.ctx.fillRect(centerX - grilleWidth / 2, grilleTop, grilleWidth, grilleHeight);
+
+          // Horizontal slats in grille
+          this.ctx.strokeStyle = isRedCar ? '#0a0a0a' : '#1a1a1a';
+          this.ctx.lineWidth = Math.max(1, bodyHeight * 0.02);
+          for (let i = 1; i < 4; i++) {
+            const slotY = grilleTop + (grilleHeight / 4) * i;
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX - grilleWidth / 2, slotY);
+            this.ctx.lineTo(centerX + grilleWidth / 2, slotY);
+            this.ctx.stroke();
+          }
+
+          // Lower diffuser/bumper (black for red cars)
+          const bumperHeight = bodyHeight * 0.15;
+          this.ctx.fillStyle = isRedCar ? '#0d0d0d' : '#333333';
+          this.ctx.fillRect(centerX - bodyWidth / 2, carBottom - bumperHeight, bodyWidth, bumperHeight);
+
+          // Dual exhaust tips (911 signature)
+          const exhaustWidth = bodyWidth * 0.08;
+          const exhaustHeight = bumperHeight * 0.4;
+          const exhaustY = carBottom - bumperHeight / 2 - exhaustHeight / 2;
+          const exhaustSpacing = bodyWidth * 0.25;
+
+          this.ctx.fillStyle = isRedCar ? '#000000' : '#1a1a1a'; // Black for red cars
+          // Left exhaust
+          this.ctx.beginPath();
+          this.ctx.arc(centerX - exhaustSpacing, exhaustY + exhaustHeight / 2, exhaustWidth / 2, 0, Math.PI * 2);
+          this.ctx.fill();
+          // Right exhaust
+          this.ctx.beginPath();
+          this.ctx.arc(centerX + exhaustSpacing, exhaustY + exhaustHeight / 2, exhaustWidth / 2, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // License plate
+          const plateWidth = bodyWidth * 0.22;
+          const plateHeight = bumperHeight * 0.35;
+          this.ctx.fillStyle = '#FFFFFF';
+          this.ctx.fillRect(centerX - plateWidth / 2, carBottom - bumperHeight + bumperHeight * 0.3, plateWidth, plateHeight);
+        }
+      }
+
+      drawCockpit() {
+        // Draw car sprite as a static image at bottom center
+        if (!this.carImage.complete) return; // Wait for image to load
+
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        // Scale car to fit screen (responsive) - 2.5x size
+        const carWidth = Math.min(width * 1.25, 1250); // 2.5x size, cap at 1250px width
+        const carHeight = carWidth * (this.carImage.height / this.carImage.width); // Maintain aspect ratio
+
+        // Position at bottom center
+        const carX = (width - carWidth) / 2;
+        const carY = height - carHeight;
+
+        // Draw the car image
+        this.ctx.drawImage(this.carImage, carX, carY, carWidth, carHeight);
+      }
+    }
+
+    // ============================================================================
+    // INPUT MANAGER - Handles keyboard and touch controls
+    // ============================================================================
+
+    class InputManager {
+      constructor(canvas) {
+        this.canvas = canvas;
+
+        // Input states
+        this.steerLeft = false;
+        this.steerRight = false;
+        this.gas = false;
+        this.brake = false;
+        this.pause = false;
+
+        // Steering value (-1 to 1)
+        this.steeringValue = 0;
+
+        // Touch tracking
+        this.touches = {
+          steering: null,  // Touch ID for steering zone
+          gas: null        // Touch ID for gas zone
+        };
+
+        // Handedness preference (load from localStorage)
+        this.handedness = localStorage.getItem('nightDriverHandedness') || 'right';
+
+        // Bind event listeners
+        this.setupKeyboard();
+        this.setupTouch();
+      }
+
+      setupKeyboard() {
+        // Keyboard controls
+        window.addEventListener('keydown', (e) => {
+          switch(e.key) {
+            case 'a':
+            case 'A':
+            case 'ArrowLeft':
+              this.steerLeft = true;
+              e.preventDefault();
+              break;
+            case 'd':
+            case 'D':
+            case 'ArrowRight':
+              this.steerRight = true;
+              e.preventDefault();
+              break;
+            case 'ArrowUp':
+            case ' ':
+              this.gas = true;
+              e.preventDefault();
+              break;
+            case 'ArrowDown':
+              this.brake = true;
+              e.preventDefault();
+              break;
+            case 'Escape':
+              this.pause = !this.pause;
+              e.preventDefault();
+              break;
+          }
+        });
+
+        window.addEventListener('keyup', (e) => {
+          switch(e.key) {
+            case 'a':
+            case 'A':
+            case 'ArrowLeft':
+              this.steerLeft = false;
+              break;
+            case 'd':
+            case 'D':
+            case 'ArrowRight':
+              this.steerRight = false;
+              break;
+            case 'ArrowUp':
+            case ' ':
+              this.gas = false;
+              break;
+            case 'ArrowDown':
+              this.brake = false;
+              break;
+          }
+        });
+      }
+
+      setupTouch() {
+        // Prevent iOS text selection
+        this.canvas.style.webkitUserSelect = 'none';
+        this.canvas.style.userSelect = 'none';
+        this.canvas.style.webkitTouchCallout = 'none';
+
+        // Touch zones based on handedness
+        this.canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+
+          for (let touch of e.changedTouches) {
+            const rect = this.canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const isLeftSide = x < rect.width / 2;
+
+            // Right-handed: steering left, gas right
+            // Left-handed: gas left, steering right
+            if (this.handedness === 'right') {
+              if (isLeftSide && !this.touches.steering) {
+                this.touches.steering = touch.identifier;
+              } else if (!isLeftSide && !this.touches.gas) {
+                this.touches.gas = touch.identifier;
+                this.gas = true;
+              }
+            } else {
+              if (isLeftSide && !this.touches.gas) {
+                this.touches.gas = touch.identifier;
+                this.gas = true;
+              } else if (!isLeftSide && !this.touches.steering) {
+                this.touches.steering = touch.identifier;
+              }
+            }
+          }
+        });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+
+          for (let touch of e.changedTouches) {
+            if (touch.identifier === this.touches.steering) {
+              const rect = this.canvas.getBoundingClientRect();
+              const x = touch.clientX - rect.left;
+              const centerX = rect.width / 2;
+
+              // Calculate steering (-1 to 1)
+              const steerZoneWidth = rect.width / 2;
+              if (this.handedness === 'right') {
+                this.steeringValue = (x - 0) / steerZoneWidth * 2 - 1;
+              } else {
+                this.steeringValue = (x - centerX) / steerZoneWidth * 2 - 1;
+              }
+
+              // Clamp to -1 to 1
+              this.steeringValue = Math.max(-1, Math.min(1, this.steeringValue));
+            }
+          }
+        });
+
+        this.canvas.addEventListener('touchend', (e) => {
+          e.preventDefault();
+
+          for (let touch of e.changedTouches) {
+            if (touch.identifier === this.touches.steering) {
+              this.touches.steering = null;
+              this.steeringValue = 0;
+            }
+            if (touch.identifier === this.touches.gas) {
+              this.touches.gas = null;
+              this.gas = false;
+            }
+          }
+        });
+
+        this.canvas.addEventListener('touchcancel', (e) => {
+          e.preventDefault();
+
+          for (let touch of e.changedTouches) {
+            if (touch.identifier === this.touches.steering) {
+              this.touches.steering = null;
+              this.steeringValue = 0;
+            }
+            if (touch.identifier === this.touches.gas) {
+              this.touches.gas = null;
+              this.gas = false;
+            }
+          }
+        });
+      }
+
+      getSteeringInput() {
+        // Keyboard steering (digital)
+        if (this.steerLeft) return -1;
+        if (this.steerRight) return 1;
+
+        // Touch steering (analog)
+        return this.steeringValue;
+      }
+
+      isGasPressed() {
+        return this.gas;
+      }
+
+      isBrakePressed() {
+        return this.brake;
+      }
+
+      isPaused() {
+        return this.pause;
+      }
+    }
+
+    // ============================================================================
+    // GAME STATE MANAGER
+    // ============================================================================
+
+    class Game {
+      constructor() {
+        this.roadRenderer = new RoadRenderer(canvas, ctx);
+        this.inputManager = new InputManager(canvas);
+        this.lastTime = 0;
+        this.fps = 60;
+        this.frameCount = 0;
+        this.fpsTime = 0;
+
+        // Game values for HUD (authentic 1976 style)
+        this.score = 0;
+        this.topSpeed = 0; // Track highest speed reached
+        this.currentSpeed = 0; // Current speed (starts at 0)
+        this.time = 90; // Time countdown (starts at 90 seconds)
+
+        // Physics values
+        this.carX = 0; // Horizontal position (-roadWidth/2 to +roadWidth/2)
+        this.velocity = 0; // Forward velocity
+        this.maxSpeed = 6000; // Maximum speed (20x faster - markers will blur past)
+        this.acceleration = 2000; // Acceleration rate (nearly instant - 3 seconds to max)
+        this.deceleration = 800; // Deceleration rate (coasting)
+        this.braking = 1500; // Braking rate
+        this.steeringSpeed = 3000; // How fast car moves horizontally (2x faster for responsive steering)
+
+        // Start game loop
+        this.isRunning = true;
+        requestAnimationFrame((time) => this.gameLoop(time));
+      }
+
+      gameLoop(currentTime) {
+        if (!this.isRunning) return;
+
+        // Calculate delta time (in seconds)
+        const deltaTime = this.lastTime ? (currentTime - this.lastTime) / 1000 : 0;
+        this.lastTime = currentTime;
+
+        // Cap delta time to prevent huge jumps
+        const safeDeltaTime = Math.min(deltaTime, 0.1);
+
+        // Update FPS counter
+        this.frameCount++;
+        this.fpsTime += deltaTime;
+        if (this.fpsTime >= 1.0) {
+          this.fps = this.frameCount;
+          this.frameCount = 0;
+          this.fpsTime = 0;
+          document.getElementById('fps-display').textContent = this.fps.toFixed(0);
+        }
+
+        // Update game state
+        this.update(safeDeltaTime);
+
+        // Render
+        this.render();
+
+        // Continue loop
+        requestAnimationFrame((time) => this.gameLoop(time));
+      }
+
+      update(deltaTime) {
+        // Check for pause
+        if (this.inputManager.isPaused()) {
+          return; // Pause game
+        }
+
+        // ===== UPDATE VANISHING POINT ANIMATION =====
+        this.roadRenderer.updateVanishingPoint(deltaTime);
+
+        // ===== UPDATE AI CARS =====
+        this.roadRenderer.updateAICars(deltaTime);
+
+        // ===== ACCELERATION/BRAKING PHYSICS =====
+        if (this.inputManager.isGasPressed()) {
+          // Accelerate
+          this.velocity += this.acceleration * deltaTime;
+          if (this.velocity > this.maxSpeed) {
+            this.velocity = this.maxSpeed;
+          }
+        } else if (this.inputManager.isBrakePressed()) {
+          // Brake
+          this.velocity -= this.braking * deltaTime;
+          if (this.velocity < 0) {
+            this.velocity = 0;
+          }
+        } else {
+          // Coast (gradual deceleration)
+          this.velocity -= this.deceleration * deltaTime;
+          if (this.velocity < 0) {
+            this.velocity = 0;
+          }
+        }
+
+        // ===== STEERING PHYSICS =====
+        const steerInput = this.inputManager.getSteeringInput();
+        this.carX += steerInput * this.steeringSpeed * deltaTime;
+
+        // ===== COLLISION DETECTION WITH ROAD BOUNDARIES =====
+        // Calculate the lateral shift at the base (near car) position
+        // This matches the sweeping road logic in the renderer
+        const roadWidth = this.roadRenderer.roadWidth;
+        const baseShiftAmount = roadWidth / 2; // Same as in render loop
+        const horizonShiftAmount = this.roadRenderer.vanishingPointOffset * 3;
+
+        // At base (depthFactor ≈ 0), use baseShift calculation
+        // For collision, we check the base position where the car is
+        const vanishingNormalized = this.roadRenderer.vanishingPointOffset / 200;
+        const baseShift = -baseShiftAmount * vanishingNormalized;
+
+        // Near car, depthFactor is very small, so use mostly baseShift
+        // Use a small depth factor for "just in front of car" collision zone
+        const collisionDepthFactor = 0.05; // 5% depth - very close to car
+        const sCurveFactor = Math.pow(collisionDepthFactor, 4);
+        const lateralShiftAtBase = baseShift + (horizonShiftAmount - baseShift) * sCurveFactor;
+
+        // Calculate road edge positions (NO WRAPPING - direct comparison)
+        // Left edge of road with lateral shift applied
+        const leftRoadEdge = -roadWidth / 2 + lateralShiftAtBase + 500;
+        // Right edge of road with lateral shift applied
+        const rightRoadEdge = roadWidth / 2 + lateralShiftAtBase - 500;
+
+        // Simple collision check - is car outside the road edges?
+        // No wrapping needed - just direct position comparison
+        const isOffRoad = this.carX < leftRoadEdge || this.carX > rightRoadEdge;
+
+        if (isOffRoad) {
+          // HARSH off-road penalty - automatic braking to 50 km/h
+          const minOffRoadSpeed = 1000; // 50 km/h display (1000 internal = 50 display)
+          if (this.velocity > minOffRoadSpeed) {
+            this.velocity -= 2500 * deltaTime; // Hard braking
+            if (this.velocity < minOffRoadSpeed) {
+              this.velocity = minOffRoadSpeed; // Stop at 50 km/h
+            }
+          }
+        }
+
+        // Camera LAGS behind player position for realistic physics
+        // Camera wants to follow car, but smoothly catches up over time
+        const targetCameraX = this.carX;
+        this.roadRenderer.cameraX += (targetCameraX - this.roadRenderer.cameraX) * this.roadRenderer.cameraLagFactor * deltaTime;
+
+        // NO WRAPPING for camera X - lateral shifts handle road sway
+        // Wrapping was causing glitches when combined with large lateral shifts
+
+        // Update road renderer forward movement based on velocity
+        this.roadRenderer.cameraZ += this.velocity * deltaTime;
+
+        // Wrap camera position (endless road)
+        if (this.roadRenderer.cameraZ > this.roadRenderer.roadLength * this.roadRenderer.postSpacing) {
+          this.roadRenderer.cameraZ = 0;
+        }
+
+        // ===== GAME VALUES =====
+        // Display speed as 0-300 scale (velocity is 0-6000 internally for that blur effect)
+        this.currentSpeed = Math.floor(this.velocity / 20); // Scale back to 300 for display
+
+        // Track top speed
+        if (this.currentSpeed > this.topSpeed) {
+          this.topSpeed = this.currentSpeed;
+        }
+
+        // Countdown time (only when moving)
+        if (this.velocity > 0) {
+          this.time -= deltaTime;
+          if (this.time < 0) this.time = 0;
+        }
+
+        // Increase score based on distance traveled
+        this.score += Math.floor(this.velocity * deltaTime * 0.1);
+
+        // ===== UPDATE HUD =====
+        const scoreEl = document.getElementById('score-display');
+        const speedEl = document.getElementById('speed-display');
+        const highScoreEl = document.getElementById('high-score-display');
+        const topSpeed1El = document.getElementById('top-speed-1');
+
+        if (scoreEl) scoreEl.textContent = String(this.score).padStart(3, '0');
+        if (speedEl) speedEl.textContent = String(this.currentSpeed).padStart(3, '0');
+        if (highScoreEl) highScoreEl.textContent = String(this.score).padStart(3, '0'); // For now, same as score
+        if (topSpeed1El) topSpeed1El.textContent = String(this.topSpeed).padStart(3, '0');
+      }
+
+      render() {
+        // Render road
+        this.roadRenderer.render();
+      }
+    }
+
+    // ============================================================================
+    // INITIALIZE GAME
+    // ============================================================================
+
+    // Start game when page loads
+    window.addEventListener('load', () => {
+      console.log('Night Driver - Phase 1: Foundation & Rendering');
+      console.log('Testing pseudo-3D road rendering...');
+
+      const game = new Game();
+
+      console.log('Game initialized. Road should be scrolling toward camera.');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Space Invaders - Icon Generator</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #0f0;
+    }
+    h1 {
+      color: #0f0;
+      text-align: center;
+    }
+    .icon-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #000;
+      border: 2px solid #0f0;
+      border-radius: 10px;
+    }
+    canvas {
+      display: block;
+      margin: 20px auto;
+      border: 2px solid #0f0;
+      background: #000;
+    }
+    button {
+      display: block;
+      margin: 10px auto;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      background: #0f0;
+      color: #000;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #0f0;
+      box-shadow: 0 0 20px #0f0;
+      transform: scale(1.05);
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+    .status {
+      text-align: center;
+      margin: 10px 0;
+      font-size: 14px;
+      color: #fff;
+    }
+    .success {
+      color: #0f0;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 SPACE INVADERS ICON GENERATOR 🎮</h1>
+  <p style="text-align: center;">Click the buttons below to download each icon</p>
+
+  <div class="icon-section">
+    <h2>Icon 192x192</h2>
+    <canvas id="icon-192" width="192" height="192"></canvas>
+    <button id="download-192">📥 DOWNLOAD icon-192.png</button>
+    <div id="status-192" class="status"></div>
+  </div>
+
+  <div class="icon-section">
+    <h2>Icon 512x512</h2>
+    <canvas id="icon-512" width="512" height="512"></canvas>
+    <button id="download-512">📥 DOWNLOAD icon-512.png</button>
+    <div id="status-512" class="status"></div>
+  </div>
+
+  <script>
+    // Alien sprite (squid - top row invader)
+    const alienSprite = [
+      [0,0,0,0,1,1,1,1,0,0,0,0],
+      [0,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,0,0,1,1,0,0,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,0,0,1,1,0,0,1,1,0,0,0],
+      [0,0,1,1,0,1,1,0,1,1,0,0],
+      [1,1,0,0,0,0,0,0,0,0,1,1]
+    ];
+
+    function drawIcon(canvasId, size) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+
+      // Black background
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, size, size);
+
+      // Calculate alien size (70% of canvas)
+      const alienWidth = 12;
+      const alienHeight = 8;
+      const pixelSize = Math.floor(size * 0.7 / Math.max(alienWidth, alienHeight));
+
+      // Center the alien
+      const offsetX = (size - alienWidth * pixelSize) / 2;
+      const offsetY = (size - alienHeight * pixelSize) / 2;
+
+      // Draw alien in white
+      ctx.fillStyle = '#FFFFFF';
+      for (let row = 0; row < alienHeight; row++) {
+        for (let col = 0; col < alienWidth; col++) {
+          if (alienSprite[row][col] === 1) {
+            ctx.fillRect(
+              offsetX + col * pixelSize,
+              offsetY + row * pixelSize,
+              pixelSize,
+              pixelSize
+            );
+          }
+        }
+      }
+
+      // Add game title text at bottom
+      ctx.fillStyle = '#00FF00';
+      ctx.font = `bold ${Math.floor(size / 12)}px 'Courier New', monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('SPACE INVADERS', size / 2, size - size / 12);
+    }
+
+    function downloadCanvas(canvasId, filename, statusId) {
+      const canvas = document.getElementById(canvasId);
+      const statusElement = document.getElementById(statusId);
+
+      // Create download link
+      canvas.toBlob(function(blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = url;
+        link.click();
+
+        // Show success message
+        statusElement.textContent = `✅ ${filename} downloaded!`;
+        statusElement.className = 'status success';
+
+        // Clear message after 3 seconds
+        setTimeout(() => {
+          statusElement.textContent = '';
+        }, 3000);
+
+        // Clean up
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    // Generate both icons on page load
+    drawIcon('icon-192', 192);
+    drawIcon('icon-512', 512);
+
+    // Add download button handlers
+    document.getElementById('download-192').addEventListener('click', function() {
+      downloadCanvas('icon-192', 'icon-192.png', 'status-192');
+    });
+
+    document.getElementById('download-512').addEventListener('click', function() {
+      downloadCanvas('icon-512', 'icon-512.png', 'status-512');
+    });
+  </script>
+</body>
+</html>

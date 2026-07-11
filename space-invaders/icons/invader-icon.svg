@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Pure black background -->
+  <rect width="512" height="512" fill="#000000"/>
+
+  <!-- Classic Space Invader sprite in neon green -->
+  <!-- Scaled to fill most of the icon space for high visibility -->
+  <g transform="translate(256, 256) scale(18)">
+    <!-- Top antennae -->
+    <rect x="-6" y="-10" width="2" height="2" fill="#00FF41"/>
+    <rect x="4" y="-10" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Head row 1 -->
+    <rect x="-5" y="-8" width="2" height="2" fill="#00FF41"/>
+    <rect x="-3" y="-8" width="2" height="2" fill="#00FF41"/>
+    <rect x="-1" y="-8" width="2" height="2" fill="#00FF41"/>
+    <rect x="1" y="-8" width="2" height="2" fill="#00FF41"/>
+    <rect x="3" y="-8" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Head row 2 -->
+    <rect x="-7" y="-6" width="2" height="2" fill="#00FF41"/>
+    <rect x="-5" y="-6" width="2" height="2" fill="#00FF41"/>
+    <rect x="-3" y="-6" width="2" height="2" fill="#00FF41"/>
+    <rect x="-1" y="-6" width="2" height="2" fill="#00FF41"/>
+    <rect x="1" y="-6" width="2" height="2" fill="#00FF41"/>
+    <rect x="3" y="-6" width="2" height="2" fill="#00FF41"/>
+    <rect x="5" y="-6" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Body row 1 -->
+    <rect x="-9" y="-4" width="2" height="2" fill="#00FF41"/>
+    <rect x="-7" y="-4" width="2" height="2" fill="#00FF41"/>
+    <rect x="-5" y="-4" width="2" height="2" fill="#00FF41"/>
+    <rect x="-3" y="-4" width="2" height="2" fill="#00FF41"/>
+    <rect x="-1" y="-4" width="2" height="2" fill="#00FF41"/>
+    <rect x="1" y="-4" width="2" height="2" fill="#00FF41"/>
+    <rect x="3" y="-4" width="2" height="2" fill="#00FF41"/>
+    <rect x="5" y="-4" width="2" height="2" fill="#00FF41"/>
+    <rect x="7" y="-4" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Body row 2 -->
+    <rect x="-9" y="-2" width="2" height="2" fill="#00FF41"/>
+    <rect x="-7" y="-2" width="2" height="2" fill="#00FF41"/>
+    <rect x="-5" y="-2" width="2" height="2" fill="#00FF41"/>
+    <rect x="-3" y="-2" width="2" height="2" fill="#00FF41"/>
+    <rect x="-1" y="-2" width="2" height="2" fill="#00FF41"/>
+    <rect x="1" y="-2" width="2" height="2" fill="#00FF41"/>
+    <rect x="3" y="-2" width="2" height="2" fill="#00FF41"/>
+    <rect x="5" y="-2" width="2" height="2" fill="#00FF41"/>
+    <rect x="7" y="-2" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Eyes (black holes) -->
+    <rect x="-5" y="-2" width="2" height="2" fill="#000000"/>
+    <rect x="3" y="-2" width="2" height="2" fill="#000000"/>
+
+    <!-- Body row 3 -->
+    <rect x="-9" y="0" width="2" height="2" fill="#00FF41"/>
+    <rect x="-7" y="0" width="2" height="2" fill="#00FF41"/>
+    <rect x="-5" y="0" width="2" height="2" fill="#00FF41"/>
+    <rect x="-3" y="0" width="2" height="2" fill="#00FF41"/>
+    <rect x="-1" y="0" width="2" height="2" fill="#00FF41"/>
+    <rect x="1" y="0" width="2" height="2" fill="#00FF41"/>
+    <rect x="3" y="0" width="2" height="2" fill="#00FF41"/>
+    <rect x="5" y="0" width="2" height="2" fill="#00FF41"/>
+    <rect x="7" y="0" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Bottom row with gaps -->
+    <rect x="-9" y="2" width="2" height="2" fill="#00FF41"/>
+    <rect x="-7" y="2" width="2" height="2" fill="#00FF41"/>
+    <rect x="-3" y="2" width="2" height="2" fill="#00FF41"/>
+    <rect x="-1" y="2" width="2" height="2" fill="#00FF41"/>
+    <rect x="1" y="2" width="2" height="2" fill="#00FF41"/>
+    <rect x="5" y="2" width="2" height="2" fill="#00FF41"/>
+    <rect x="7" y="2" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Arms/legs row 1 -->
+    <rect x="-11" y="4" width="2" height="2" fill="#00FF41"/>
+    <rect x="-9" y="4" width="2" height="2" fill="#00FF41"/>
+    <rect x="-5" y="4" width="2" height="2" fill="#00FF41"/>
+    <rect x="3" y="4" width="2" height="2" fill="#00FF41"/>
+    <rect x="7" y="4" width="2" height="2" fill="#00FF41"/>
+    <rect x="9" y="4" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Arms/legs row 2 (feet) -->
+    <rect x="-11" y="6" width="2" height="2" fill="#00FF41"/>
+    <rect x="-7" y="6" width="2" height="2" fill="#00FF41"/>
+    <rect x="5" y="6" width="2" height="2" fill="#00FF41"/>
+    <rect x="9" y="6" width="2" height="2" fill="#00FF41"/>
+
+    <!-- Add glow effect with semi-transparent outer glow -->
+    <rect x="-6" y="-10" width="2" height="2" fill="#00FF41" opacity="0.3"/>
+    <rect x="4" y="-10" width="2" height="2" fill="#00FF41" opacity="0.3"/>
+  </g>
+
+  <!-- Neon glow effect (optional subtle background glow) -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#00FF41" stroke-width="2" opacity="0.1"/>
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#00FF41" stroke-width="1" opacity="0.05"/>
+</svg>

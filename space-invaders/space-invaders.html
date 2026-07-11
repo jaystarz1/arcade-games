@@ -1,0 +1,2532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+  <meta name="apple-mobile-web-app-title" content="Space Invaders">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#00FF41">
+  <meta name="background-color" content="#000000">
+  <title>Space Invaders (1978) - Classic Arcade Game</title>
+  <meta name="description" content="Defend Earth from the alien invasion! Classic Space Invaders arcade game - play in browser or install as app.">
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- iOS Icons -->
+  <link rel="apple-touch-icon" href="./icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="./icons/icon-152x152.png">
+
+  <!-- Standard Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-72x72.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512x512.png">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      width: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    #game-container {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      display: block;
+      background: #000;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      -ms-interpolation-mode: nearest-neighbor;
+      border: 2px solid #333;
+      max-width: 90vw;
+      max-height: 90vh;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      outline: none;
+    }
+
+    canvas:focus {
+      border-color: #0f0;
+    }
+
+    #game-controls {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .control-btn {
+      background: rgba(0, 255, 0, 0.2);
+      border: 2px solid rgba(0, 255, 0, 0.5);
+      color: #0f0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 8px 16px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      touch-action: manipulation;
+      transition: all 0.2s;
+      border-radius: 5px;
+    }
+
+    .control-btn:hover {
+      background: rgba(0, 255, 0, 0.3);
+      border-color: rgba(0, 255, 0, 0.8);
+    }
+
+    .control-btn:active {
+      background: rgba(0, 255, 0, 0.4);
+    }
+
+    .control-btn.active {
+      background: rgba(255, 0, 0, 0.2);
+      border-color: rgba(255, 0, 0, 0.5);
+      color: #f00;
+    }
+
+    #touch-controls {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      height: 100px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    @media (max-width: 768px), (hover: none) and (pointer: coarse) {
+      #touch-controls {
+        display: flex;
+      }
+
+      body {
+        padding: 0;
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
+
+      canvas {
+        border: none;
+      }
+
+      #game-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        padding-top: 90px;
+        padding-bottom: 130px;
+      }
+
+      canvas {
+        max-height: calc(100vh - 220px);
+      }
+
+      #game-controls {
+        position: fixed;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto;
+        max-width: 95%;
+        gap: 6px;
+        flex-direction: column;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .control-row {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .control-btn {
+        font-size: 11px;
+        padding: 10px 16px;
+        min-width: 90px;
+        white-space: nowrap;
+        border-radius: 6px;
+        font-weight: normal;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+    }
+
+    /* Better landscape mobile support */
+    @media (max-height: 600px) and (orientation: landscape) {
+      #touch-controls {
+        display: flex;
+        bottom: 10px;
+        height: 60px;
+      }
+
+      #btn-left, #btn-right {
+        width: 60px;
+        height: 60px;
+      }
+
+      #btn-fire {
+        width: 80px;
+        height: 60px;
+      }
+
+      #game-controls {
+        top: 5px;
+        right: 5px;
+      }
+    }
+
+    /* Install prompt styles */
+    #install-prompt {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 255, 0, 0.95);
+      color: #000;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      z-index: 2000;
+      display: none;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0, 255, 0, 0.3);
+    }
+
+    #install-prompt button {
+      margin: 10px 5px 0;
+      padding: 8px 15px;
+      background: #000;
+      color: #0f0;
+      border: 2px solid #0f0;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #install-prompt button:hover {
+      background: #0f0;
+      color: #000;
+    }
+
+    .touch-btn {
+      position: absolute;
+      background: rgba(0, 255, 0, 0.15);
+      border: 2px solid rgba(0, 255, 0, 0.4);
+      color: #0f0;
+      font-size: 24px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      pointer-events: all;
+      touch-action: manipulation;
+    }
+
+    .touch-btn * {
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .touch-btn.active {
+      background: rgba(0, 255, 0, 0.3);
+      border-color: rgba(0, 255, 0, 0.7);
+    }
+
+    #btn-left {
+      left: 20px;
+      bottom: 0;
+      width: 100px;
+      height: 100px;
+      border-radius: 15px;
+      font-size: 32px;
+    }
+
+    #btn-right {
+      left: 130px;
+      bottom: 0;
+      width: 100px;
+      height: 100px;
+      border-radius: 15px;
+      font-size: 32px;
+    }
+
+    #btn-fire {
+      right: 20px;
+      bottom: 0;
+      width: 140px;
+      height: 100px;
+      border-radius: 15px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      #game-container {
+        max-height: calc(100vh - 100px);
+      }
+    }
+
+    /* Hide quit button ONLY in PWA mode */
+    @media (display-mode: standalone) {
+      #btn-quit {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-controls">
+    <div class="control-row">
+      <button id="btn-quit" class="control-btn">⬅ QUIT</button>
+      <button id="btn-pause" class="control-btn">⏸ PAUSE</button>
+      <button id="btn-mute" class="control-btn">🔊 SOUND</button>
+    </div>
+    <div class="control-row">
+      <button id="btn-play-again" class="control-btn">▶ PLAY AGAIN</button>
+      <button id="btn-main-menu" class="control-btn">⬅ MAIN MENU</button>
+    </div>
+  </div>
+
+  <div id="game-container">
+    <canvas id="game-canvas" tabindex="0"></canvas>
+  </div>
+
+  <div id="touch-controls">
+    <div id="btn-left" class="touch-btn">◄</div>
+    <div id="btn-right" class="touch-btn">►</div>
+    <div id="btn-fire" class="touch-btn">FIRE</div>
+  </div>
+
+  <!-- Install prompt for PWA -->
+  <div id="install-prompt">
+    <div>📱 Install Space Invaders</div>
+    <div style="font-size: 12px; margin-top: 5px;">Play offline anytime!</div>
+    <button id="install-button">Install</button>
+    <button id="dismiss-button">Later</button>
+  </div>
+
+  <script>
+const CONFIG = {
+  CANVAS_WIDTH: 224,
+  CANVAS_HEIGHT: 256,
+  SCALE: 3,
+  
+  TARGET_FPS: 60,
+  FRAME_TIME: 1000 / 60,
+  
+  SPEEDS: {
+    PLAYER: 2,
+    PLAYER_SHOT: 4,
+    ALIEN_BOMB: 2,
+    UFO: 1,
+    ALIEN_BASE: 48,
+    ALIEN_MIN: 6
+  },
+  
+  PLAYER: {
+    WIDTH: 13,
+    HEIGHT: 8,
+    START_X: 224 / 2 - 6,
+    START_Y: 208,
+    MAX_LIVES: 3,
+    INVULNERABILITY_TIME: 2000
+  },
+
+  ALIEN: {
+    ROWS: 5,
+    COLS: 11,
+    WIDTH: 8,
+    HEIGHT: 8,
+    SPACING_X: 16,
+    SPACING_Y: 16,
+    START_Y: 36,
+    STEP_X: 2,
+    STEP_Y: 8,
+    POINTS: {
+      OCTOPUS: 10,
+      CRAB: 20,
+      SQUID: 30
+    }
+  },
+  
+  PROJECTILE: {
+    WIDTH: 1,
+    HEIGHT: 4,
+    BOMB_WIDTH: 3,
+    BOMB_HEIGHT: 5
+  },
+  
+  SHIELD: {
+    COUNT: 4,
+    WIDTH: 22,
+    HEIGHT: 16,
+    Y_OFFSET: 32
+  },
+  
+  UFO: {
+    WIDTH: 16,
+    HEIGHT: 8,
+    Y: 36,
+    SPAWN_INTERVAL: 25600,
+    MIN_ALIENS: 7,
+    SCORES: [100, 50, 50, 100, 150, 100, 100, 50, 300, 100, 100, 100, 50, 150, 100, 50]
+  },
+  
+  COLORS: {
+    WHITE: '#FFFFFF',
+    RED: '#FF0000',
+    GREEN: '#00FF00'
+  }
+};
+
+const GameState = {
+  MENU: 'menu',
+  CONTROLS: 'controls',
+  PLAYING: 'playing',
+  PAUSED: 'paused',
+  WAVE_CLEAR: 'wave_clear',
+  DEATH: 'death',
+  GAME_OVER: 'game_over'
+};
+
+const MenuOption = {
+  PLAY: 0,
+  CONTROLS: 1,
+  SETTINGS: 2
+};
+
+const GameOverOption = {
+  PLAY_AGAIN: 0,
+  MAIN_MENU: 1
+};
+
+const BitmapFont = {
+  chars: {
+    'A': [[0,1,1,1,0],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1]],
+    'B': [[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0]],
+    'C': [[0,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[0,1,1,1,1]],
+    'D': [[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0]],
+    'E': [[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,1,1,1,1]],
+    'F': [[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0]],
+    'G': [[0,1,1,1,1],[1,0,0,0,0],[1,0,1,1,1],[1,0,0,0,1],[0,1,1,1,1]],
+    'H': [[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1]],
+    'I': [[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1]],
+    'L': [[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+    'M': [[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+    'N': [[1,0,0,0,1],[1,1,0,0,1],[1,0,1,0,1],[1,0,0,1,1],[1,0,0,0,1]],
+    'O': [[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+    'P': [[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0]],
+    'R': [[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,1,0,0],[1,0,0,1,1]],
+    'S': [[0,1,1,1,1],[1,0,0,0,0],[0,1,1,1,0],[0,0,0,0,1],[1,1,1,1,0]],
+    'T': [[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+    'U': [[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+    'V': [[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0]],
+    'W': [[1,0,0,0,1],[1,0,0,0,1],[1,0,1,0,1],[1,1,0,1,1],[1,0,0,0,1]],
+    'Y': [[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+    '0': [[0,1,1,1,0],[1,0,0,1,1],[1,0,1,0,1],[1,1,0,0,1],[0,1,1,1,0]],
+    '1': [[0,0,1,0,0],[0,1,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,1,1,1,0]],
+    '2': [[0,1,1,1,0],[1,0,0,0,1],[0,0,1,1,0],[0,1,0,0,0],[1,1,1,1,1]],
+    '3': [[1,1,1,1,0],[0,0,0,0,1],[0,1,1,1,0],[0,0,0,0,1],[1,1,1,1,0]],
+    '4': [[1,0,0,1,0],[1,0,0,1,0],[1,1,1,1,1],[0,0,0,1,0],[0,0,0,1,0]],
+    '5': [[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[0,0,0,0,1],[1,1,1,1,0]],
+    '6': [[0,1,1,1,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,1],[0,1,1,1,0]],
+    '7': [[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0]],
+    '8': [[0,1,1,1,0],[1,0,0,0,1],[0,1,1,1,0],[1,0,0,0,1],[0,1,1,1,0]],
+    '9': [[0,1,1,1,0],[1,0,0,0,1],[0,1,1,1,1],[0,0,0,0,1],[0,1,1,1,0]],
+    '<': [[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0]],
+    '>': [[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0]],
+    '=': [[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0]],
+    '-': [[0,0,0,0,0],[0,0,0,0,0],[1,1,1,1,1],[0,0,0,0,0],[0,0,0,0,0]],
+    '*': [[0,1,0,1,0],[0,0,1,0,0],[1,1,1,1,1],[0,0,1,0,0],[0,1,0,1,0]],
+    '?': [[0,1,1,1,0],[1,0,0,0,1],[0,0,1,1,0],[0,0,0,0,0],[0,0,1,0,0]],
+    ' ': [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
+  },
+  
+  charWidth: 5,
+  charHeight: 5,
+  spacing: 1,
+  pixelSize: 2,
+  
+  drawText(ctx, text, x, y, color = '#FFF') {
+    text = text.toUpperCase();
+    let offsetX = 0;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const charData = this.chars[char];
+      
+      if (charData) {
+        for (let row = 0; row < this.charHeight; row++) {
+          for (let col = 0; col < this.charWidth; col++) {
+            if (charData[row][col]) {
+              ctx.fillStyle = color;
+              ctx.fillRect(
+                x + offsetX + col * this.pixelSize,
+                y + row * this.pixelSize,
+                this.pixelSize,
+                this.pixelSize
+              );
+            }
+          }
+        }
+      }
+      
+      offsetX += (this.charWidth + this.spacing) * this.pixelSize;
+    }
+    
+    return offsetX;
+  },
+  
+  measureText(text) {
+    return text.length * (this.charWidth + this.spacing) * this.pixelSize;
+  }
+};
+class AudioManager {
+  constructor() {
+    this.audioCtx = null;
+    this.ufoOscillator = null;
+    this.ufoGain = null;
+    this.marchIndex = 0;
+    this.marchNotes = [55, 49, 44, 39];
+    this.muted = false;
+  }
+
+  async init() {
+    if (!this.audioCtx) {
+      this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      console.log('AudioContext created, state:', this.audioCtx.state);
+    }
+    // Always try to resume if suspended and WAIT for it
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      await this.audioCtx.resume();
+      console.log('AudioContext resumed, state:', this.audioCtx.state);
+    }
+    return this.audioCtx;
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    if (this.muted) {
+      this.stopUFOSound();
+    }
+    return this.muted;
+  }
+
+  isMuted() {
+    return this.muted;
+  }
+
+  playShot() {
+    console.log('playShot called - audioCtx:', !!this.audioCtx, 'muted:', this.muted, 'state:', this.audioCtx?.state);
+    if (!this.audioCtx || this.muted || this.audioCtx.state !== 'running') {
+      console.log('playShot blocked - audioCtx not ready');
+      return;
+    }
+
+    try {
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+
+      osc.frequency.setValueAtTime(800, this.audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, this.audioCtx.currentTime + 0.1);
+
+      // Can't exponentialRamp to zero or very small values - use linearRamp instead
+      gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, this.audioCtx.currentTime + 0.1);
+
+      osc.connect(gain).connect(this.audioCtx.destination);
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + 0.1);
+      console.log('playShot - sound played successfully');
+    } catch (e) {
+      console.error('playShot error:', e);
+    }
+  }
+
+  playAlienExplosion() {
+    if (!this.audioCtx || this.muted || this.audioCtx.state !== 'running') return;
+
+    const bufferSize = this.audioCtx.sampleRate * 0.15;
+    const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+    }
+    
+    const source = this.audioCtx.createBufferSource();
+    const gain = this.audioCtx.createGain();
+    
+    source.buffer = buffer;
+    gain.gain.value = 0.2;
+    
+    source.connect(gain).connect(this.audioCtx.destination);
+    source.start();
+  }
+
+  playPlayerDeath() {
+    if (!this.audioCtx || this.muted) return;
+    
+    const bufferSize = this.audioCtx.sampleRate * 0.5;
+    const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.2));
+    }
+    
+    const source = this.audioCtx.createBufferSource();
+    const gain = this.audioCtx.createGain();
+    
+    source.buffer = buffer;
+    gain.gain.value = 0.3;
+    
+    source.connect(gain).connect(this.audioCtx.destination);
+    source.start();
+  }
+
+  playMarch() {
+    if (!this.audioCtx || this.muted || this.audioCtx.state !== 'running') return;
+
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    
+    osc.frequency.value = this.marchNotes[this.marchIndex];
+    this.marchIndex = (this.marchIndex + 1) % 4;
+    
+    osc.type = 'square';
+    gain.gain.setValueAtTime(0.15, this.audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.15);
+    
+    osc.connect(gain).connect(this.audioCtx.destination);
+    osc.start();
+    osc.stop(this.audioCtx.currentTime + 0.15);
+  }
+
+  startUFOSound() {
+    if (!this.audioCtx || this.muted) return;
+    if (this.ufoOscillator) return;
+    
+    this.ufoOscillator = this.audioCtx.createOscillator();
+    this.ufoGain = this.audioCtx.createGain();
+    
+    this.ufoOscillator.frequency.value = 400;
+    this.ufoGain.gain.value = 0.1;
+    
+    this.ufoOscillator.connect(this.ufoGain).connect(this.audioCtx.destination);
+    this.ufoOscillator.start();
+    
+    this.oscillateUFO();
+  }
+
+  oscillateUFO() {
+    if (!this.ufoOscillator) return;
+    
+    const time = this.audioCtx.currentTime;
+    this.ufoOscillator.frequency.setValueAtTime(400, time);
+    this.ufoOscillator.frequency.linearRampToValueAtTime(600, time + 0.5);
+    this.ufoOscillator.frequency.linearRampToValueAtTime(400, time + 1);
+    
+    setTimeout(() => this.oscillateUFO(), 1000);
+  }
+
+  stopUFOSound() {
+    if (this.ufoOscillator) {
+      this.ufoOscillator.stop();
+      this.ufoOscillator = null;
+      this.ufoGain = null;
+    }
+  }
+}
+
+const audioManager = new AudioManager();
+class InputManager {
+  constructor() {
+    this.keys = {
+      left: false,
+      right: false,
+      up: false,
+      down: false,
+      fire: false,
+      start: false,
+      pause: false,
+      mute: false
+    };
+
+    this.keyMap = {
+      ArrowLeft: 'left',
+      KeyA: 'left',
+      Numpad4: 'left',
+      ArrowRight: 'right',
+      KeyD: 'right',
+      Numpad6: 'right',
+      ArrowUp: 'up',
+      KeyW: 'up',
+      ArrowDown: 'down',
+      KeyS: 'down',
+      Space: 'fire',
+      Enter: 'start',
+      Escape: 'pause',
+      KeyP: 'pause',
+      KeyM: 'mute'
+    };
+  }
+
+  setupEventListeners(canvas) {
+    canvas.addEventListener('keydown', (e) => {
+      const action = this.keyMap[e.code];
+      if (action) {
+        e.preventDefault();
+        this.keys[action] = true;
+
+        if (action === 'fire' || action === 'start') {
+          audioManager.init();
+        }
+      }
+    });
+
+    canvas.addEventListener('keyup', (e) => {
+      const action = this.keyMap[e.code];
+      if (action) {
+        e.preventDefault();
+        this.keys[action] = false;
+      }
+    });
+  }
+
+  isPressed(action) {
+    return this.keys[action];
+  }
+
+  wasPressed(action) {
+    const pressed = this.keys[action];
+    if (pressed) {
+      this.keys[action] = false;
+      return true;
+    }
+    return false;
+  }
+
+  clearState() {
+    // Reset all key states to false
+    for (let key in this.keys) {
+      this.keys[key] = false;
+    }
+  }
+}
+
+const inputManager = new InputManager();
+class SettingsManager {
+  constructor() {
+    this.settings = this.loadSettings();
+  }
+
+  loadSettings() {
+    const saved = localStorage.getItem('spaceInvadersSettings');
+    const defaults = {
+      gameMode: 'single',
+      startingWave: 1,
+      shieldRegen: false
+    };
+    return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+  }
+
+  saveSettings() {
+    localStorage.setItem('spaceInvadersSettings', JSON.stringify(this.settings));
+  }
+}
+
+const settingsManager = new SettingsManager();
+class StatsTracker {
+  constructor() {
+    this.currentSession = {
+      shotsFired: 0,
+      shotsHit: 0,
+      aliensKilled: 0,
+      ufoHits: 0,
+      ufo300Hits: 0,
+      wavesCompleted: 0,
+      highestWave: 0,
+      deaths: 0
+    };
+    
+    this.allTimeStats = this.loadAllTimeStats();
+  }
+
+  loadAllTimeStats() {
+    const saved = localStorage.getItem('spaceInvadersStats');
+    const defaults = {
+      totalShotsFired: 0,
+      totalShotsHit: 0,
+      totalAliensKilled: 0,
+      totalUfoHits: 0,
+      totalUfo300Hits: 0,
+      totalWavesCompleted: 0,
+      highestWaveReached: 0,
+      totalDeaths: 0,
+      gamesPlayed: 0
+    };
+    return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+  }
+
+  saveAllTimeStats() {
+    localStorage.setItem('spaceInvadersStats', JSON.stringify(this.allTimeStats));
+  }
+
+  recordShot() {
+    this.currentSession.shotsFired++;
+    this.allTimeStats.totalShotsFired++;
+  }
+
+  recordHit(type = 'alien') {
+    this.currentSession.shotsHit++;
+    this.allTimeStats.totalShotsHit++;
+    
+    if (type === 'alien') {
+      this.currentSession.aliensKilled++;
+      this.allTimeStats.totalAliensKilled++;
+    }
+  }
+
+  recordUFOHit(score) {
+    this.currentSession.ufoHits++;
+    this.allTimeStats.totalUfoHits++;
+    
+    if (score === 300) {
+      this.currentSession.ufo300Hits++;
+      this.allTimeStats.totalUfo300Hits++;
+    }
+  }
+
+  recordWaveComplete(waveNumber) {
+    this.currentSession.wavesCompleted++;
+    this.currentSession.highestWave = Math.max(this.currentSession.highestWave, waveNumber);
+    
+    this.allTimeStats.totalWavesCompleted++;
+    this.allTimeStats.highestWaveReached = Math.max(this.allTimeStats.highestWaveReached, waveNumber);
+  }
+
+  recordDeath() {
+    this.currentSession.deaths++;
+    this.allTimeStats.totalDeaths++;
+  }
+
+  recordGameOver() {
+    this.allTimeStats.gamesPlayed++;
+    this.saveAllTimeStats();
+  }
+
+  resetSession() {
+    this.currentSession = {
+      shotsFired: 0,
+      shotsHit: 0,
+      aliensKilled: 0,
+      ufoHits: 0,
+      ufo300Hits: 0,
+      wavesCompleted: 0,
+      highestWave: 0,
+      deaths: 0
+    };
+  }
+
+  getAccuracy() {
+    if (this.currentSession.shotsFired === 0) return 0;
+    return Math.round((this.currentSession.shotsHit / this.currentSession.shotsFired) * 100);
+  }
+
+  getAllTimeAccuracy() {
+    if (this.allTimeStats.totalShotsFired === 0) return 0;
+    return Math.round((this.allTimeStats.totalShotsHit / this.allTimeStats.totalShotsFired) * 100);
+  }
+
+  getStats() {
+    return {
+      session: {
+        ...this.currentSession,
+        accuracy: this.getAccuracy()
+      },
+      allTime: {
+        ...this.allTimeStats,
+        accuracy: this.getAllTimeAccuracy()
+      }
+    };
+  }
+}
+
+const statsTracker = new StatsTracker();
+class Player {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.x = CONFIG.PLAYER.START_X;
+    this.y = CONFIG.PLAYER.START_Y;
+    this.width = CONFIG.PLAYER.WIDTH;
+    this.height = CONFIG.PLAYER.HEIGHT;
+    this.lives = CONFIG.PLAYER.MAX_LIVES;
+    this.invulnerable = false;
+    this.invulnerableTimer = 0;
+    this.flashTimer = 0;
+    this.visible = true;
+    this.exploding = false;
+    this.explosionFrame = 0;
+  }
+
+  update(deltaTime) {
+    if (inputManager.isPressed('left')) {
+      this.x = Math.max(0, this.x - CONFIG.SPEEDS.PLAYER);
+    }
+    if (inputManager.isPressed('right')) {
+      this.x = Math.min(CONFIG.CANVAS_WIDTH - this.width, this.x + CONFIG.SPEEDS.PLAYER);
+    }
+
+    if (this.invulnerable) {
+      this.invulnerableTimer += deltaTime;
+      this.flashTimer += deltaTime;
+      
+      if (this.flashTimer > 100) {
+        this.visible = !this.visible;
+        this.flashTimer = 0;
+      }
+      
+      if (this.invulnerableTimer > CONFIG.PLAYER.INVULNERABILITY_TIME) {
+        this.invulnerable = false;
+        this.visible = true;
+      }
+    }
+  }
+
+  hit() {
+    if (this.invulnerable || this.exploding) return false;
+    
+    this.lives--;
+    this.exploding = true;
+    this.explosionFrame = 0;
+    this.visible = false;
+    audioManager.playPlayerDeath();
+    
+    return this.lives > 0;
+  }
+
+  respawn() {
+    this.x = CONFIG.PLAYER.START_X;
+    this.exploding = false;
+    this.visible = true;
+    
+    if (this.lives > 0) {
+      this.invulnerable = true;
+      this.invulnerableTimer = 0;
+      this.flashTimer = 0;
+    }
+  }
+
+  getSprite() {
+    return [
+      [0,0,0,0,0,0,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,0,0,0,0,0],
+      [0,1,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+  }
+
+  getExplosionSprite() {
+    return [
+      [1,0,0,1,0,1,0,0,1,0,1,0,1],
+      [0,1,0,0,1,0,1,0,0,1,0,1,0],
+      [0,0,1,0,0,1,0,1,0,0,1,0,0],
+      [1,0,0,1,0,0,1,0,0,1,0,0,1],
+      [0,1,0,0,1,0,0,0,1,0,0,1,0],
+      [1,0,1,0,0,1,0,1,0,0,1,0,1],
+      [0,0,0,1,0,0,1,0,0,1,0,0,0],
+      [1,0,1,0,1,0,0,0,1,0,1,0,1]
+    ];
+  }
+}
+class Alien {
+  constructor(row, col, type, x, y) {
+    this.row = row;
+    this.col = col;
+    this.type = type;
+    this.x = x;
+    this.y = y;
+    this.width = CONFIG.ALIEN.WIDTH;
+    this.height = CONFIG.ALIEN.HEIGHT;
+    this.alive = true;
+    this.frame = 0;
+  }
+
+  getPoints() {
+    return CONFIG.ALIEN.POINTS[this.type.toUpperCase()];
+  }
+
+  getSprite() {
+    const sprites = {
+      OCTOPUS: [
+        [
+          [0,0,0,1,1,1,1,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0,0],
+          [1,1,1,1,1,1,1,1,1,1,0],
+          [1,1,1,0,0,1,0,0,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,0],
+          [0,0,1,1,1,0,1,1,1,0,0],
+          [0,1,1,0,0,1,0,0,1,1,0],
+          [0,0,0,1,1,0,1,1,0,0,0]
+        ],
+        [
+          [0,0,0,1,1,1,1,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,0,0],
+          [1,1,1,1,1,1,1,1,1,1,0],
+          [1,1,1,0,0,1,0,0,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,0],
+          [0,1,0,1,1,0,1,1,0,1,0],
+          [1,0,1,0,0,0,0,0,1,0,1],
+          [0,1,0,1,1,0,1,1,0,1,0]
+        ]
+      ],
+      CRAB: [
+        [
+          [0,0,1,0,0,0,0,0,1,0,0],
+          [0,0,0,1,0,0,0,1,0,0,0],
+          [0,0,1,1,1,1,1,1,1,0,0],
+          [0,1,1,0,1,1,1,0,1,1,0],
+          [1,1,1,1,1,1,1,1,1,1,1],
+          [1,0,1,1,1,1,1,1,1,0,1],
+          [1,0,1,0,0,0,0,0,1,0,1],
+          [0,0,0,1,1,0,1,1,0,0,0]
+        ],
+        [
+          [0,0,1,0,0,0,0,0,1,0,0],
+          [1,0,0,1,0,0,0,1,0,0,1],
+          [1,0,1,1,1,1,1,1,1,0,1],
+          [1,1,1,0,1,1,1,0,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1],
+          [0,1,1,1,1,1,1,1,1,1,0],
+          [0,0,1,0,0,0,0,0,1,0,0],
+          [0,1,0,0,0,0,0,0,0,1,0]
+        ]
+      ],
+      SQUID: [
+        [
+          [0,0,0,0,1,1,1,1,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,1,1,0],
+          [1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,0,0,1,1,0,0,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1],
+          [0,0,0,1,1,0,0,1,1,0,0,0],
+          [0,0,1,1,0,1,1,0,1,1,0,0],
+          [1,1,0,0,0,0,0,0,0,0,1,1]
+        ],
+        [
+          [0,0,0,0,1,1,1,1,0,0,0,0],
+          [0,1,1,1,1,1,1,1,1,1,1,0],
+          [1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,0,0,1,1,0,0,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1],
+          [0,0,1,1,0,0,0,0,1,1,0,0],
+          [0,1,1,0,0,1,1,0,0,1,1,0],
+          [0,0,1,1,0,0,0,0,1,1,0,0]
+        ]
+      ]
+    };
+    
+    return sprites[this.type.toUpperCase()][this.frame];
+  }
+}
+
+class AlienFormation {
+  constructor() {
+    this.aliens = [];
+    this.direction = 1;
+    this.frameCounter = 0;
+    this.stepCounter = 0;
+    this.animFrame = 0;
+    this.drawIndex = 0;
+    this.startY = CONFIG.ALIEN.START_Y;
+    this.waveNumber = 1;
+    this.reset();
+  }
+
+  reset() {
+    this.aliens = [];
+    this.direction = 1;
+    this.frameCounter = 0;
+    this.stepCounter = 0;
+    this.animFrame = 0;
+    
+    let alienIndex = 0;
+    for (let row = 0; row < CONFIG.ALIEN.ROWS; row++) {
+      for (let col = 0; col < CONFIG.ALIEN.COLS; col++) {
+        let type;
+        if (row === 4) type = 'squid';
+        else if (row >= 2) type = 'crab';
+        else type = 'octopus';
+        
+        const x = col * CONFIG.ALIEN.SPACING_X + 16;
+        const y = this.startY + row * CONFIG.ALIEN.SPACING_Y;
+        
+        this.aliens.push(new Alien(row, col, type, x, y));
+        alienIndex++;
+      }
+    }
+  }
+
+  nextWave() {
+    this.waveNumber++;
+
+    // Consistent starting position for levels 1-3 (OG arcade behavior)
+    // Early level difficulty managed by speed and bomb mechanics
+    if (this.waveNumber <= 3) {
+      this.startY = CONFIG.ALIEN.START_Y;       // Levels 1-3: Standard position
+    } else {
+      // Level 4+: Progress downward like original
+      this.startY += 16;
+    }
+
+    if (this.waveNumber > 10) {
+      this.startY = CONFIG.ALIEN.START_Y;
+      this.waveNumber = 1;
+    }
+
+    this.reset();
+  }
+
+  getAliveCount() {
+    return this.aliens.filter(a => a.alive).length;
+  }
+
+  getSpeed() {
+    const aliveCount = this.getAliveCount();
+
+    // Progressive difficulty based on wave number
+    // Wave 1-2: Easier warm-up levels
+    // Wave 3: Medium (current difficulty baseline)
+    // Wave 4+: Hard and beyond
+    let speedMultiplier = 1.0;
+
+    if (this.waveNumber === 1) {
+      speedMultiplier = 1.5;  // Level 1: 50% slower - good warm-up, still engaging
+    } else if (this.waveNumber === 2) {
+      speedMultiplier = 1.25; // Level 2: 25% slower - bridge to baseline
+    } else if (this.waveNumber === 3) {
+      speedMultiplier = 1.0;  // Level 3: Baseline - original difficulty
+    } else if (this.waveNumber === 4) {
+      speedMultiplier = 0.75; // Level 4: 25% faster - challenging
+    } else {
+      speedMultiplier = 0.6;  // Level 5+: 40% faster - expert mode
+    }
+
+    // Base speed calculation (same as before)
+    let baseSpeed;
+    if (aliveCount >= 55) baseSpeed = 60;
+    else if (aliveCount >= 40) baseSpeed = 50;
+    else if (aliveCount >= 30) baseSpeed = 30;
+    else if (aliveCount >= 20) baseSpeed = 20;
+    else if (aliveCount >= 15) baseSpeed = 15;
+    else if (aliveCount >= 10) baseSpeed = 10;
+    else if (aliveCount >= 5) baseSpeed = 5;
+    else if (aliveCount >= 2) baseSpeed = 2;
+    else baseSpeed = 1;
+
+    // Apply difficulty multiplier (higher values = slower = easier)
+    return Math.max(1, Math.round(baseSpeed * speedMultiplier));
+  }
+
+  update() {
+    this.frameCounter++;
+    const speed = this.getSpeed();
+    
+    if (this.frameCounter >= speed) {
+      this.frameCounter = 0;
+      this.step();
+      audioManager.playMarch();
+    }
+    
+    this.drawIndex = (this.drawIndex + 1) % 55;
+  }
+
+  step() {
+    let needsDescend = false;
+    
+    for (let alien of this.aliens) {
+      if (!alien.alive) continue;
+      
+      const newX = alien.x + (this.direction * CONFIG.ALIEN.STEP_X);
+      
+      if (newX <= 0 || newX + alien.width >= CONFIG.CANVAS_WIDTH) {
+        needsDescend = true;
+        break;
+      }
+    }
+    
+    if (needsDescend) {
+      for (let alien of this.aliens) {
+        if (alien.alive) {
+          alien.y += CONFIG.ALIEN.STEP_Y;
+        }
+      }
+      this.direction *= -1;
+    } else {
+      for (let alien of this.aliens) {
+        if (alien.alive) {
+          alien.x += this.direction * CONFIG.ALIEN.STEP_X;
+        }
+      }
+    }
+    
+    this.animFrame = 1 - this.animFrame;
+    for (let alien of this.aliens) {
+      alien.frame = this.animFrame;
+    }
+  }
+
+  getBottomAliens() {
+    const columns = [];
+    for (let col = 0; col < CONFIG.ALIEN.COLS; col++) {
+      for (let row = 0; row < CONFIG.ALIEN.ROWS; row++) {
+        const alien = this.aliens[row * CONFIG.ALIEN.COLS + col];
+        if (alien && alien.alive) {
+          columns.push(alien);
+          break;
+        }
+      }
+    }
+    return columns;
+  }
+
+  checkDefenseLine(playerY) {
+    for (let alien of this.aliens) {
+      if (alien.alive && alien.y + alien.height >= playerY - 8) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  getLowestY() {
+    let lowest = 0;
+    for (let alien of this.aliens) {
+      if (alien.alive && alien.y > lowest) {
+        lowest = alien.y;
+      }
+    }
+    return lowest;
+  }
+}
+class UFO {
+  constructor() {
+    this.x = 0;
+    this.y = CONFIG.UFO.Y;
+    this.width = CONFIG.UFO.WIDTH;
+    this.height = CONFIG.UFO.HEIGHT;
+    this.active = false;
+    this.direction = 1;
+    this.spawnTimer = 0;
+    this.score = 0;
+  }
+
+  spawn(alienCount) {
+    if (this.active || alienCount <= CONFIG.UFO.MIN_ALIENS) return;
+    
+    this.active = true;
+    this.direction = Math.random() < 0.5 ? 1 : -1;
+    this.x = this.direction > 0 ? -this.width : CONFIG.CANVAS_WIDTH;
+    this.y = CONFIG.UFO.Y;
+    audioManager.startUFOSound();
+  }
+
+  update(deltaTime, alienCount) {
+    if (!this.active) {
+      this.spawnTimer += deltaTime;
+      if (this.spawnTimer >= CONFIG.UFO.SPAWN_INTERVAL) {
+        this.spawn(alienCount);
+        this.spawnTimer = 0;
+      }
+      return;
+    }
+
+    this.x += this.direction * CONFIG.SPEEDS.UFO;
+    
+    if (this.direction > 0 && this.x > CONFIG.CANVAS_WIDTH + this.width) {
+      this.deactivate();
+    } else if (this.direction < 0 && this.x < -this.width) {
+      this.deactivate();
+    }
+  }
+
+  hit(score) {
+    this.score = score;
+    this.deactivate();
+    audioManager.playAlienExplosion();
+    return score;
+  }
+
+  deactivate() {
+    this.active = false;
+    audioManager.stopUFOSound();
+  }
+
+  getSprite() {
+    return [
+      [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+      [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+      [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+      [0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [0,0,1,1,1,0,0,1,1,0,0,1,1,1,0,0],
+      [0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    ];
+  }
+
+  reset() {
+    this.active = false;
+    this.spawnTimer = 0;
+    this.score = 0;
+    audioManager.stopUFOSound();
+  }
+}
+class PlayerShot {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = CONFIG.PROJECTILE.WIDTH;
+    this.height = CONFIG.PROJECTILE.HEIGHT;
+    this.active = true;
+  }
+
+  update() {
+    this.y -= CONFIG.SPEEDS.PLAYER_SHOT;
+
+    // Deactivate if shot goes above the gameplay area
+    if (this.y < 32) {
+      this.active = false;
+    }
+  }
+}
+
+class AlienBomb {
+  constructor(x, y, type, sourceRow) {
+    this.x = x;
+    this.y = y;
+    this.width = CONFIG.PROJECTILE.BOMB_WIDTH;
+    this.height = CONFIG.PROJECTILE.BOMB_HEIGHT;
+    this.type = type;
+    this.sourceRow = sourceRow;
+    this.active = true;
+    this.frame = 0;
+    this.frameCounter = 0;
+    this.canHitPlayer = true;
+  }
+
+  update() {
+    this.y += CONFIG.SPEEDS.ALIEN_BOMB;
+    
+    this.frameCounter++;
+    if (this.frameCounter > 4) {
+      this.frame = (this.frame + 1) % 4;
+      this.frameCounter = 0;
+    }
+    
+    if (this.y > CONFIG.CANVAS_HEIGHT) {
+      this.active = false;
+    }
+  }
+
+  getSprite() {
+    const plunger = [
+      [[1],[1],[0],[1],[1]],
+      [[1],[0],[1],[0],[1]],
+      [[0],[1],[1],[1],[0]],
+      [[1],[1],[0],[1],[1]]
+    ];
+    
+    const squiggly = [
+      [[0,1,0],[1,0,1],[0,1,0],[1,0,1],[0,1,0]],
+      [[1,0,1],[0,1,0],[1,0,1],[0,1,0],[1,0,1]],
+      [[0,1,0],[1,0,1],[0,1,0],[1,0,1],[0,1,0]],
+      [[1,0,1],[0,1,0],[1,0,1],[0,1,0],[1,0,1]]
+    ];
+    
+    const rolling = [
+      [[1],[1],[1],[1],[1]],
+      [[0],[1],[1],[1],[0]],
+      [[1],[1],[1],[1],[1]],
+      [[0],[1],[1],[1],[0]]
+    ];
+    
+    if (this.type === 'plunger') return plunger[this.frame];
+    if (this.type === 'squiggly') return squiggly[this.frame];
+    return rolling[this.frame];
+  }
+}
+
+class ProjectileManager {
+  constructor() {
+    this.playerShot = null;
+    this.alienBombs = [];
+    this.maxBombs = 3;
+    this.bombTimer = 0;
+    this.shotCounter = 0;
+  }
+
+  firePlayerShot(x, y) {
+    if (!this.playerShot) {
+      this.playerShot = new PlayerShot(x, y);
+      this.shotCounter++;
+      audioManager.playShot();
+      return true;
+    }
+    // Shot already active - can't fire another one
+    return false;
+  }
+
+  update(deltaTime, alienFormation, playerY) {
+    if (this.playerShot) {
+      this.playerShot.update();
+      if (!this.playerShot.active) {
+        this.playerShot = null;
+      }
+    }
+
+    for (let i = this.alienBombs.length - 1; i >= 0; i--) {
+      this.alienBombs[i].update();
+      
+      if (!this.alienBombs[i].active) {
+        this.alienBombs.splice(i, 1);
+      }
+    }
+
+    this.bombTimer += deltaTime;
+    const alienLowestY = alienFormation.getLowestY();
+    const baseFireRate = 1000;
+    const fireRate = Math.max(300, baseFireRate - (alienLowestY * 2));
+    
+    if (this.bombTimer > fireRate && this.alienBombs.length < this.maxBombs) {
+      this.spawnBomb(alienFormation);
+      this.bombTimer = 0;
+    }
+  }
+
+  spawnBomb(alienFormation) {
+    const bottomAliens = alienFormation.getBottomAliens();
+    if (bottomAliens.length === 0) return;
+    
+    const alien = bottomAliens[Math.floor(Math.random() * bottomAliens.length)];
+    const types = ['plunger', 'squiggly', 'rolling'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    
+    this.alienBombs.push(new AlienBomb(
+      alien.x + alien.width / 2,
+      alien.y + alien.height,
+      type,
+      alien.row
+    ));
+  }
+
+  getUFOScore() {
+    return CONFIG.UFO.SCORES[this.shotCounter % 15];
+  }
+
+  reset() {
+    this.playerShot = null;
+    this.alienBombs = [];
+    this.bombTimer = 0;
+  }
+}
+class Shield {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = CONFIG.SHIELD.WIDTH;
+    this.height = CONFIG.SHIELD.HEIGHT;
+    this.pixels = this.createPixelArray();
+  }
+
+  createPixelArray() {
+    const shape = [
+      [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+      [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0],
+      [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+      [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1],
+      [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1],
+      [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1],
+      [1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1]
+    ];
+    
+    return shape.map(row => [...row]);
+  }
+
+  erasePixels(hitX, hitY, width, height) {
+    const localX = Math.floor(hitX - this.x);
+    const localY = Math.floor(hitY - this.y);
+    
+    const startX = Math.max(0, localX - Math.floor(width / 2));
+    const endX = Math.min(this.width, localX + Math.ceil(width / 2));
+    const startY = Math.max(0, localY - Math.floor(height / 2));
+    const endY = Math.min(this.height, localY + Math.ceil(height / 2));
+    
+    for (let y = startY; y < endY; y++) {
+      for (let x = startX; x < endX; x++) {
+        if (this.pixels[y] && this.pixels[y][x] !== undefined) {
+          this.pixels[y][x] = 0;
+        }
+      }
+    }
+  }
+
+  checkCollision(x, y, width, height) {
+    if (x + width < this.x || x > this.x + this.width ||
+        y + height < this.y || y > this.y + this.height) {
+      return false;
+    }
+    
+    const startX = Math.max(0, Math.floor(x - this.x));
+    const endX = Math.min(this.width, Math.ceil(x + width - this.x));
+    const startY = Math.max(0, Math.floor(y - this.y));
+    const endY = Math.min(this.height, Math.ceil(y + height - this.y));
+    
+    for (let py = startY; py < endY; py++) {
+      for (let px = startX; px < endX; px++) {
+        if (this.pixels[py] && this.pixels[py][px] === 1) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+}
+
+class ShieldManager {
+  constructor() {
+    this.shields = [];
+    this.reset();
+  }
+
+  reset() {
+    this.shields = [];
+    const spacing = CONFIG.CANVAS_WIDTH / (CONFIG.SHIELD.COUNT + 1);
+    
+    for (let i = 0; i < CONFIG.SHIELD.COUNT; i++) {
+      const x = spacing * (i + 1) - CONFIG.SHIELD.WIDTH / 2;
+      const y = CONFIG.PLAYER.START_Y - CONFIG.SHIELD.Y_OFFSET;
+      this.shields.push(new Shield(x, y));
+    }
+  }
+
+  checkAndErode(x, y, width, height, isPlayerShot, waveNumber = 7) {
+    for (let shield of this.shields) {
+      if (shield.checkCollision(x, y, width, height)) {
+        // Player shots always do full damage (5x7)
+        // Bomb damage scales by level: L1-3 quarter, L4-5 half, L6+ full
+        let damageWidth = 5;
+        let damageHeight = 7;
+
+        if (!isPlayerShot) {
+          if (waveNumber <= 3) {
+            damageWidth = 2;
+            damageHeight = 3;
+          } else if (waveNumber <= 5) {
+            damageWidth = 3;
+            damageHeight = 5;
+          }
+          // waveNumber >= 6: full damage (5x7)
+        }
+
+        shield.erasePixels(x + width / 2, y + height / 2, damageWidth, damageHeight);
+        return true;
+      }
+    }
+    return false;
+  }
+}
+class CollisionDetector {
+  checkCollision(a, b) {
+    return a.x < b.x + b.width &&
+           a.x + a.width > b.x &&
+           a.y < b.y + b.height &&
+           a.y + a.height > b.y;
+  }
+
+  handleCollisions(game) {
+    if (game.projectileManager.playerShot) {
+      const shot = game.projectileManager.playerShot;
+
+      for (let alien of game.alienFormation.aliens) {
+        if (alien.alive && this.checkCollision(shot, alien)) {
+          alien.alive = false;
+          game.projectileManager.playerShot = null;
+          const points = alien.getPoints();
+          game.addScore(points);
+          statsTracker.recordHit('alien');
+          audioManager.playAlienExplosion();
+          return;
+        }
+      }
+
+      if (game.ufo.active && this.checkCollision(shot, game.ufo)) {
+        const score = game.projectileManager.getUFOScore();
+        game.addScore(game.ufo.hit(score));
+        statsTracker.recordUFOHit(score);
+        game.projectileManager.playerShot = null;
+        return;
+      }
+
+      // Check if shot hits shield - remove one pixel and destroy shot
+      if (game.shieldManager.checkAndErode(
+        shot.x, shot.y, shot.width, shot.height, true, game.alienFormation.waveNumber
+      )) {
+        game.projectileManager.playerShot = null;
+        return;
+      }
+    }
+
+    for (let i = game.projectileManager.alienBombs.length - 1; i >= 0; i--) {
+      const bomb = game.projectileManager.alienBombs[i];
+      
+      if (bomb.canHitPlayer && !game.player.invulnerable && 
+          this.checkCollision(bomb, game.player)) {
+        game.projectileManager.alienBombs.splice(i, 1);
+        
+        if (!game.player.hit()) {
+          game.setState(GameState.GAME_OVER);
+        } else {
+          game.setState(GameState.DEATH);
+        }
+        continue;
+      }
+      
+      if (game.shieldManager.checkAndErode(
+        bomb.x, bomb.y, bomb.width, bomb.height, false, game.alienFormation.waveNumber
+      )) {
+        game.projectileManager.alienBombs.splice(i, 1);
+        continue;
+      }
+    }
+
+    if (game.alienFormation.checkDefenseLine(game.player.y)) {
+      game.setState(GameState.GAME_OVER);
+    }
+  }
+}
+
+const collisionDetector = new CollisionDetector();
+class Renderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.scale = CONFIG.SCALE;
+
+    // Set canvas display size based on viewport
+    const aspectRatio = CONFIG.CANVAS_WIDTH / CONFIG.CANVAS_HEIGHT;
+    const maxWidth = Math.min(window.innerWidth * 0.9, 1000);
+    const maxHeight = window.innerHeight * 0.9;
+
+    let displayWidth = maxWidth;
+    let displayHeight = displayWidth / aspectRatio;
+
+    if (displayHeight > maxHeight) {
+      displayHeight = maxHeight;
+      displayWidth = displayHeight * aspectRatio;
+    }
+
+    // Set the canvas internal resolution
+    this.canvas.width = CONFIG.CANVAS_WIDTH * CONFIG.SCALE;
+    this.canvas.height = CONFIG.CANVAS_HEIGHT * CONFIG.SCALE;
+
+    // Set the canvas display size
+    this.canvas.style.width = displayWidth + 'px';
+    this.canvas.style.height = displayHeight + 'px';
+
+    this.offscreenCanvas = document.createElement('canvas');
+    this.offscreenCanvas.width = CONFIG.CANVAS_WIDTH;
+    this.offscreenCanvas.height = CONFIG.CANVAS_HEIGHT;
+    this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+  }
+
+  clear() {
+    this.offscreenCtx.fillStyle = '#000';
+    this.offscreenCtx.fillRect(0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT);
+  }
+
+  drawPixel(x, y, color = CONFIG.COLORS.WHITE) {
+    this.offscreenCtx.fillStyle = color;
+    this.offscreenCtx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+  }
+
+  drawSprite(sprite, x, y, color = CONFIG.COLORS.WHITE) {
+    for (let row = 0; row < sprite.length; row++) {
+      for (let col = 0; col < sprite[row].length; col++) {
+        if (sprite[row][col] === 1) {
+          this.drawPixel(x + col, y + row, color);
+        }
+      }
+    }
+  }
+
+  drawSmallNumber(num, x, y) {
+    const digits = {
+      0: [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
+      1: [[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
+      2: [[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
+      3: [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
+      4: [[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
+      5: [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
+      6: [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
+      7: [[1,1,1],[0,0,1],[0,0,1],[0,0,1],[0,0,1]],
+      8: [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
+      9: [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]
+    };
+    
+    const digit = digits[num];
+    if (digit) {
+      this.drawSprite(digit, x, y, CONFIG.COLORS.WHITE);
+    }
+  }
+
+  drawPlayer(player) {
+    if (player.exploding) {
+      this.drawSprite(player.getExplosionSprite(), player.x, player.y, CONFIG.COLORS.WHITE);
+    } else if (player.visible) {
+      this.drawSprite(player.getSprite(), player.x, player.y, CONFIG.COLORS.GREEN);
+    }
+  }
+
+  drawAliens(alienFormation) {
+    for (let alien of alienFormation.aliens) {
+      if (alien.alive) {
+        this.drawSprite(alien.getSprite(), alien.x, alien.y, CONFIG.COLORS.WHITE);
+      }
+    }
+  }
+
+  drawProjectiles(projectileManager) {
+    if (projectileManager.playerShot) {
+      const shot = projectileManager.playerShot;
+      this.offscreenCtx.fillStyle = CONFIG.COLORS.WHITE;
+      this.offscreenCtx.fillRect(
+        Math.floor(shot.x),
+        Math.floor(shot.y),
+        shot.width,
+        shot.height
+      );
+    }
+
+    for (let bomb of projectileManager.alienBombs) {
+      this.drawSprite(bomb.getSprite(), bomb.x, bomb.y, CONFIG.COLORS.WHITE);
+    }
+  }
+
+  drawShields(shieldManager) {
+    for (let shield of shieldManager.shields) {
+      for (let y = 0; y < shield.height; y++) {
+        for (let x = 0; x < shield.width; x++) {
+          if (shield.pixels[y][x] === 1) {
+            this.drawPixel(shield.x + x, shield.y + y, CONFIG.COLORS.GREEN);
+          }
+        }
+      }
+    }
+  }
+
+  drawUFO(ufo) {
+    if (ufo.active) {
+      this.drawSprite(ufo.getSprite(), ufo.x, ufo.y, CONFIG.COLORS.RED);
+    }
+    if (ufo.scoreVisible) {
+      BitmapFont.drawText(this.offscreenCtx, String(ufo.scoreValue), ufo.scoreX, ufo.y, CONFIG.COLORS.WHITE);
+    }
+  }
+
+  drawHUD(game) {
+    const isTwoPlayer = game.twoPlayerMode;
+    
+    if (isTwoPlayer) {
+      BitmapFont.drawText(this.offscreenCtx, 'SCORE<1>', 8, 8, CONFIG.COLORS.WHITE);
+      BitmapFont.drawText(this.offscreenCtx, String(game.scores[0]).padStart(4, '0'), 8, 20, CONFIG.COLORS.WHITE);
+      
+      BitmapFont.drawText(this.offscreenCtx, 'HI-SCORE', 80, 8, CONFIG.COLORS.WHITE);
+      BitmapFont.drawText(this.offscreenCtx, String(game.highScore).padStart(4, '0'), 92, 20, CONFIG.COLORS.WHITE);
+      
+      BitmapFont.drawText(this.offscreenCtx, 'SCORE<2>', 168, 8, CONFIG.COLORS.WHITE);
+      BitmapFont.drawText(this.offscreenCtx, String(game.scores[1]).padStart(4, '0'), 176, 20, CONFIG.COLORS.WHITE);
+    } else {
+      BitmapFont.drawText(this.offscreenCtx, 'SCORE', 8, 8, CONFIG.COLORS.WHITE);
+      BitmapFont.drawText(this.offscreenCtx, String(game.score).padStart(4, '0'), 8, 20, CONFIG.COLORS.WHITE);
+      
+      BitmapFont.drawText(this.offscreenCtx, 'HI-SCORE', 120, 8, CONFIG.COLORS.WHITE);
+      BitmapFont.drawText(this.offscreenCtx, String(game.highScore).padStart(4, '0'), 132, 20, CONFIG.COLORS.WHITE);
+    }
+    
+    this.offscreenCtx.fillStyle = CONFIG.COLORS.GREEN;
+    this.offscreenCtx.fillRect(0, CONFIG.CANVAS_HEIGHT - 40, CONFIG.CANVAS_WIDTH, 1);
+
+    const livesRemaining = Math.max(0, game.player.lives - 1);
+    this.drawSmallNumber(game.player.lives - 1, 4, CONFIG.CANVAS_HEIGHT - 32);
+
+    const playerSprite = [
+      [0,0,0,0,0,0,1,0,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,0,0,0,0,0],
+      [0,0,0,0,0,1,1,1,0,0,0,0,0],
+      [0,1,1,1,1,1,1,1,1,1,1,1,0],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    for (let i = 0; i < livesRemaining; i++) {
+      this.drawSprite(playerSprite, 12 + i * 16, CONFIG.CANVAS_HEIGHT - 32, CONFIG.COLORS.GREEN);
+    }
+    
+    // Credit text removed for mobile - was overlapping fire button
+    // BitmapFont.drawText(this.offscreenCtx, 'CREDIT 01', CONFIG.CANVAS_WIDTH - 70, CONFIG.CANVAS_HEIGHT - 12, CONFIG.COLORS.WHITE);
+  }
+
+  drawMenu(game) {
+    BitmapFont.drawText(this.offscreenCtx, 'SPACE  INVADERS', CONFIG.CANVAS_WIDTH / 2 - 72, 50, CONFIG.COLORS.WHITE);
+    
+    const yStart = 85;
+    const spacing = 20;
+    
+    const playColor = game.menuSelection === MenuOption.PLAY ? CONFIG.COLORS.GREEN : CONFIG.COLORS.WHITE;
+    const controlsColor = game.menuSelection === MenuOption.CONTROLS ? CONFIG.COLORS.GREEN : CONFIG.COLORS.WHITE;
+    const settingsColor = game.menuSelection === MenuOption.SETTINGS ? CONFIG.COLORS.GREEN : CONFIG.COLORS.WHITE;
+    
+    BitmapFont.drawText(this.offscreenCtx, 'PLAY', CONFIG.CANVAS_WIDTH / 2 - 24, yStart, playColor);
+    BitmapFont.drawText(this.offscreenCtx, 'CONTROLS', CONFIG.CANVAS_WIDTH / 2 - 40, yStart + spacing, controlsColor);
+    BitmapFont.drawText(this.offscreenCtx, 'SETTINGS', CONFIG.CANVAS_WIDTH / 2 - 40, yStart + spacing * 2, settingsColor);
+    
+    BitmapFont.drawText(this.offscreenCtx, 'MODE: ' + (settingsManager.settings.gameMode === 'two-player' ? '2P' : '1P'), 
+      CONFIG.CANVAS_WIDTH / 2 - 36, yStart + spacing * 3 + 10, CONFIG.COLORS.WHITE);
+  }
+
+  drawControls() {
+    BitmapFont.drawText(this.offscreenCtx, 'CONTROLS', CONFIG.CANVAS_WIDTH / 2 - 40, 35, CONFIG.COLORS.WHITE);
+
+    BitmapFont.drawText(this.offscreenCtx, 'MOVE LEFT', 20, 65, CONFIG.COLORS.GREEN);
+    BitmapFont.drawText(this.offscreenCtx, 'LEFT ARROW OR A', 20, 77, CONFIG.COLORS.WHITE);
+
+    BitmapFont.drawText(this.offscreenCtx, 'MOVE RIGHT', 20, 95, CONFIG.COLORS.GREEN);
+    BitmapFont.drawText(this.offscreenCtx, 'RIGHT ARROW OR D', 20, 107, CONFIG.COLORS.WHITE);
+
+    BitmapFont.drawText(this.offscreenCtx, 'SHOOT', 20, 125, CONFIG.COLORS.GREEN);
+    BitmapFont.drawText(this.offscreenCtx, 'SPACE BAR', 20, 137, CONFIG.COLORS.WHITE);
+
+    BitmapFont.drawText(this.offscreenCtx, 'PAUSE', 20, 155, CONFIG.COLORS.GREEN);
+    BitmapFont.drawText(this.offscreenCtx, 'ESC OR P', 20, 167, CONFIG.COLORS.WHITE);
+
+    BitmapFont.drawText(this.offscreenCtx, 'MUTE', 20, 185, CONFIG.COLORS.GREEN);
+    BitmapFont.drawText(this.offscreenCtx, 'M KEY', 20, 197, CONFIG.COLORS.WHITE);
+
+    BitmapFont.drawText(this.offscreenCtx, 'PRESS SPACE TO RETURN', CONFIG.CANVAS_WIDTH / 2 - 90, 225, CONFIG.COLORS.GREEN);
+  }
+
+  drawGameOver(game) {
+    BitmapFont.drawText(this.offscreenCtx, 'GAME  OVER', CONFIG.CANVAS_WIDTH / 2 - 48, CONFIG.CANVAS_HEIGHT / 2 - 10, CONFIG.COLORS.RED);
+  }
+
+  drawPause() {
+    BitmapFont.drawText(this.offscreenCtx, 'PAUSED', CONFIG.CANVAS_WIDTH / 2 - 30, CONFIG.CANVAS_HEIGHT / 2 - 10, CONFIG.COLORS.GREEN);
+    BitmapFont.drawText(this.offscreenCtx, 'PRESS ESC OR P', CONFIG.CANVAS_WIDTH / 2 - 70, CONFIG.CANVAS_HEIGHT / 2 + 20, CONFIG.COLORS.WHITE);
+  }
+
+  render(game) {
+    this.clear();
+    
+    if (game.state === GameState.MENU) {
+      this.drawMenu(game);
+      this.drawHUD(game);
+    } else if (game.state === GameState.CONTROLS) {
+      this.drawControls();
+      this.drawHUD(game);
+    } else if (game.state === GameState.PLAYING || game.state === GameState.WAVE_CLEAR || game.state === GameState.DEATH) {
+      this.drawHUD(game);
+      this.drawShields(game.shieldManager);
+      this.drawAliens(game.alienFormation);
+      this.drawPlayer(game.player);
+      this.drawProjectiles(game.projectileManager);
+      this.drawUFO(game.ufo);
+    } else if (game.state === GameState.PAUSED) {
+      this.drawHUD(game);
+      this.drawShields(game.shieldManager);
+      this.drawAliens(game.alienFormation);
+      this.drawPlayer(game.player);
+      this.drawProjectiles(game.projectileManager);
+      this.drawUFO(game.ufo);
+      this.drawPause();
+    } else if (game.state === GameState.GAME_OVER) {
+      this.drawHUD(game);
+      this.drawShields(game.shieldManager);
+      this.drawGameOver(game);
+    }
+    
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.drawImage(
+      this.offscreenCanvas,
+      0, 0, CONFIG.CANVAS_WIDTH, CONFIG.CANVAS_HEIGHT,
+      0, 0, this.canvas.width, this.canvas.height
+    );
+  }
+}
+class Game {
+  constructor() {
+    this.canvas = document.getElementById('game-canvas');
+    this.renderer = new Renderer(this.canvas);
+
+    this.player = new Player();
+    this.alienFormation = new AlienFormation();
+    this.projectileManager = new ProjectileManager();
+    this.shieldManager = new ShieldManager();
+    this.ufo = new UFO();
+
+    this.state = GameState.MENU;
+    this.menuSelection = MenuOption.PLAY;
+    this.gameOverSelection = GameOverOption.PLAY_AGAIN;
+    this.score = 0;
+    this.highScore = this.loadHighScore();
+
+    this.twoPlayerMode = false;
+    this.currentPlayer = 0;
+    this.scores = [0, 0];
+    this.playerLives = [3, 3];
+
+    this.lastTime = 0;
+    this.deathTimer = 0;
+    this.waveClearTimer = 0;
+    this.inputGracePeriod = 0;
+
+    this.demoMode = false;
+    this.demoTimer = 0;
+    this.demoShootTimer = 0;
+    this.demoMoveDir = 1;
+
+    this.bonusLifeThreshold = 1000;  // Track when to give bonus life
+    this.bonusLifeGiven = false;     // Track if bonus life already awarded
+
+    this.init();
+  }
+
+  init() {
+    // Setup keyboard event listeners on canvas
+    inputManager.setupEventListeners(this.canvas);
+
+    // Focus canvas to receive keyboard input
+    this.canvas.focus();
+
+    // Add click-to-focus functionality
+    this.canvas.addEventListener('click', () => {
+      this.canvas.focus();
+    });
+
+    // Setup game action button handlers
+    document.getElementById('btn-play-again').addEventListener('click', () => {
+      // Initialize audio on button click (required for mobile)
+      if (!audioManager.audioCtx) {
+        audioManager.init();
+      }
+      if (audioManager.audioCtx && audioManager.audioCtx.state === 'suspended') {
+        audioManager.audioCtx.resume();
+      }
+      this.reset();
+      this.canvas.focus();
+    });
+    document.getElementById('btn-main-menu').addEventListener('click', () => {
+      this.setState(GameState.MENU);
+      this.canvas.focus();
+    });
+
+    this.startGameLoop();
+  }
+
+  setState(newState) {
+    this.state = newState;
+
+    if (newState === GameState.DEATH) {
+      this.deathTimer = 0;
+      this.projectileManager.reset();
+      statsTracker.recordDeath();
+
+      if (this.twoPlayerMode) {
+        this.playerLives[this.currentPlayer] = this.player.lives;
+        if (this.player.lives > 0) {
+          this.switchPlayer();
+        }
+      }
+    } else if (newState === GameState.WAVE_CLEAR) {
+      this.waveClearTimer = 0;
+      statsTracker.recordWaveComplete(this.alienFormation.waveNumber);
+
+      if (this.twoPlayerMode) {
+        this.scores[this.currentPlayer] = this.score;
+        this.playerLives[this.currentPlayer] = this.player.lives;
+        this.switchPlayer();
+      }
+    } else if (newState === GameState.GAME_OVER) {
+      this.gameOverSelection = GameOverOption.PLAY_AGAIN;
+      this.updateHighScore();
+      statsTracker.recordGameOver();
+
+      // PWA Install Prompt - Track game completion
+      if (typeof window !== 'undefined' && window.installManager) {
+        window.installManager.incrementGamesPlayed();
+      }
+    }
+  }
+
+  loadHighScore() {
+    const saved = localStorage.getItem('spaceInvadersHighScore');
+    return saved ? parseInt(saved, 10) : 0;
+  }
+
+  updateHighScore() {
+    const finalScore = this.twoPlayerMode ? Math.max(this.scores[0], this.scores[1]) : this.score;
+    if (finalScore > this.highScore) {
+      this.highScore = finalScore;
+      localStorage.setItem('spaceInvadersHighScore', String(this.highScore));
+    }
+  }
+
+  getScore() {
+    return this.twoPlayerMode ? this.scores[this.currentPlayer] : this.score;
+  }
+
+  addScore(points) {
+    const oldScore = this.twoPlayerMode ? this.scores[this.currentPlayer] : this.score;
+
+    if (this.twoPlayerMode) {
+      this.scores[this.currentPlayer] += points;
+      this.score = this.scores[this.currentPlayer];
+    } else {
+      this.score += points;
+    }
+
+    // Check for bonus life at 1000 points
+    const newScore = this.twoPlayerMode ? this.scores[this.currentPlayer] : this.score;
+    if (!this.bonusLifeGiven && oldScore < this.bonusLifeThreshold && newScore >= this.bonusLifeThreshold) {
+      this.player.lives++;
+      this.bonusLifeGiven = true;
+      audioManager.playUFO(); // Play a sound to indicate bonus life
+    }
+  }
+
+  reset() {
+    this.twoPlayerMode = settingsManager.settings.gameMode === 'two-player';
+    this.currentPlayer = 0;
+    this.scores = [0, 0];
+    this.playerLives = [CONFIG.PLAYER.MAX_LIVES, CONFIG.PLAYER.MAX_LIVES];
+
+    this.player.reset();
+
+    // Set wave number and starting position based on difficulty
+    this.alienFormation.waveNumber = settingsManager.settings.startingWave;
+
+    // Consistent starting position (OG arcade behavior)
+    if (this.alienFormation.waveNumber <= 3) {
+      this.alienFormation.startY = CONFIG.ALIEN.START_Y;  // Levels 1-3: Standard position
+    } else {
+      // Level 4+: Use standard calculation (progress downward)
+      this.alienFormation.startY = CONFIG.ALIEN.START_Y + (settingsManager.settings.startingWave - 3) * 16;
+    }
+
+    this.alienFormation.reset();
+    this.projectileManager.reset();
+    this.shieldManager.reset();
+    this.ufo.reset();
+    this.score = 0;
+
+    this.bonusLifeGiven = false;  // Reset bonus life flag on new game
+
+    statsTracker.resetSession();
+    this.setState(GameState.PLAYING);
+  }
+
+  switchPlayer() {
+    this.currentPlayer = 1 - this.currentPlayer;
+    
+    this.score = this.scores[this.currentPlayer];
+    this.player.lives = this.playerLives[this.currentPlayer];
+    this.player.x = CONFIG.PLAYER.START_X;
+    
+    this.projectileManager.reset();
+  }
+
+  handleInput() {
+    // Mute can be toggled at any time
+    if (inputManager.wasPressed('mute')) {
+      audioManager.toggleMute();
+    }
+
+    if (this.state === GameState.MENU) {
+      if (inputManager.wasPressed('up')) {
+        this.menuSelection = Math.max(0, this.menuSelection - 1);
+      } else if (inputManager.wasPressed('down')) {
+        this.menuSelection = Math.min(MenuOption.SETTINGS, this.menuSelection + 1);
+      } else if (inputManager.wasPressed('start') || inputManager.wasPressed('fire')) {
+        if (this.menuSelection === MenuOption.PLAY) {
+          this.reset();
+        } else if (this.menuSelection === MenuOption.CONTROLS) {
+          this.setState(GameState.CONTROLS);
+        } else if (this.menuSelection === MenuOption.SETTINGS) {
+          this.showSettings();
+        }
+      }
+    } else if (this.state === GameState.CONTROLS) {
+      if (inputManager.wasPressed('start') || inputManager.wasPressed('fire') || inputManager.wasPressed('pause')) {
+        this.setState(GameState.MENU);
+      }
+    } else if (this.state === GameState.PLAYING) {
+      if (inputManager.wasPressed('pause')) {
+        this.setState(GameState.PAUSED);
+      }
+
+      // Check fire separately (not else if) to ensure it always gets checked
+      if (inputManager.wasPressed('fire')) {
+        const fired = this.projectileManager.firePlayerShot(
+          this.player.x + this.player.width / 2,
+          this.player.y
+        );
+        if (fired) {
+          statsTracker.recordShot();
+        }
+      }
+    } else if (this.state === GameState.PAUSED) {
+      if (inputManager.wasPressed('pause') || inputManager.wasPressed('start')) {
+        this.setState(GameState.PLAYING);
+      }
+    } else if (this.state === GameState.GAME_OVER) {
+      // Game over is now handled by HTML buttons
+      // No keyboard input needed here
+    }
+  }
+
+  showSettings() {
+    const mode = settingsManager.settings.gameMode === 'two-player' ? 'single' : 'two-player';
+    settingsManager.settings.gameMode = mode;
+    settingsManager.saveSettings();
+  }
+
+  updateDemo(deltaTime) {
+    this.demoTimer += deltaTime;
+    this.demoShootTimer += deltaTime;
+    
+    if (this.demoTimer > 500) {
+      if (Math.random() < 0.3) {
+        this.demoMoveDir = Math.random() < 0.5 ? -1 : 1;
+      }
+      this.demoTimer = 0;
+    }
+    
+    if (this.demoMoveDir < 0) {
+      this.player.x = Math.max(0, this.player.x - CONFIG.SPEEDS.PLAYER);
+    } else {
+      this.player.x = Math.min(
+        CONFIG.CANVAS_WIDTH - this.player.width,
+        this.player.x + CONFIG.SPEEDS.PLAYER
+      );
+    }
+    
+    if (this.demoShootTimer > 1000 && Math.random() < 0.1) {
+      this.projectileManager.firePlayerShot(
+        this.player.x + this.player.width / 2,
+        this.player.y
+      );
+      this.demoShootTimer = 0;
+    }
+    
+    this.player.update(deltaTime);
+    this.alienFormation.update();
+    this.projectileManager.update(
+      deltaTime,
+      this.alienFormation,
+      this.player.y
+    );
+    this.ufo.update(deltaTime, this.alienFormation.getAliveCount());
+    collisionDetector.handleCollisions(this);
+  }
+
+  update(deltaTime) {
+    this.handleInput();
+
+    if (this.state === GameState.MENU || this.state === GameState.CONTROLS) {
+      this.updateDemo(deltaTime);
+    } else if (this.state === GameState.PLAYING) {
+      this.player.update(deltaTime);
+      this.alienFormation.update();
+      this.projectileManager.update(
+        deltaTime,
+        this.alienFormation,
+        this.player.y
+      );
+      this.ufo.update(deltaTime, this.alienFormation.getAliveCount());
+      
+      collisionDetector.handleCollisions(this);
+      
+      if (this.alienFormation.getAliveCount() === 0) {
+        this.setState(GameState.WAVE_CLEAR);
+      }
+    } else if (this.state === GameState.WAVE_CLEAR) {
+      this.waveClearTimer += deltaTime;
+      if (this.waveClearTimer > 2000) {
+        this.alienFormation.nextWave();
+        this.projectileManager.reset();
+        this.ufo.reset();
+
+        // Always reset shields/forts when starting a new level
+        this.shieldManager.reset();
+
+        if (this.twoPlayerMode) {
+          this.scores[this.currentPlayer] = this.score;
+          this.playerLives[this.currentPlayer] = this.player.lives;
+        }
+
+        this.setState(GameState.PLAYING);
+      }
+    } else if (this.state === GameState.DEATH) {
+      this.deathTimer += deltaTime;
+      if (this.deathTimer > 2000) {
+        if (this.player.lives < 1) {
+          this.setState(GameState.GAME_OVER);
+        } else {
+          this.player.respawn();
+          this.setState(GameState.PLAYING);
+        }
+      }
+    }
+  }
+
+  startGameLoop() {
+    const loop = (currentTime) => {
+      requestAnimationFrame(loop);
+
+      const deltaTime = currentTime - this.lastTime;
+      if (deltaTime < CONFIG.FRAME_TIME) return;
+
+      this.lastTime = currentTime - (deltaTime % CONFIG.FRAME_TIME);
+
+      this.update(deltaTime);
+      this.renderer.render(this);
+    };
+
+    requestAnimationFrame(loop);
+  }
+}
+
+// Mobile touch controls
+class TouchControls {
+  constructor() {
+    this.leftBtn = document.getElementById('btn-left');
+    this.rightBtn = document.getElementById('btn-right');
+    this.fireBtn = document.getElementById('btn-fire');
+    
+    this.leftPressed = false;
+    this.rightPressed = false;
+    this.firePressed = false;
+    
+    this.init();
+  }
+  
+  init() {
+    // Initialize audio on first touch (required for mobile browsers)
+    const initAudio = () => {
+      if (!audioManager.audioCtx) {
+        audioManager.init();
+      }
+      if (audioManager.audioCtx && audioManager.audioCtx.state === 'suspended') {
+        audioManager.audioCtx.resume();
+      }
+    };
+
+    // Left button
+    this.leftBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      initAudio();
+      this.leftPressed = true;
+      this.leftBtn.classList.add('active');
+      inputManager.keys.left = true;
+    });
+    
+    this.leftBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.leftPressed = false;
+      this.leftBtn.classList.remove('active');
+      inputManager.keys.left = false;
+    });
+    
+    // Right button
+    this.rightBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      initAudio();
+      this.rightPressed = true;
+      this.rightBtn.classList.add('active');
+      inputManager.keys.right = true;
+    });
+    
+    this.rightBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.rightPressed = false;
+      this.rightBtn.classList.remove('active');
+      inputManager.keys.right = false;
+    });
+    
+    // Fire button
+    this.fireBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      initAudio();
+      if (!this.firePressed) {
+        this.firePressed = true;
+        this.fireBtn.classList.add('active');
+        inputManager.keys.fire = true;
+      }
+    });
+    
+    this.fireBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.firePressed = false;
+      this.fireBtn.classList.remove('active');
+      inputManager.keys.fire = false;
+    });
+  }
+}
+
+// Initialize game when page loads
+window.addEventListener('DOMContentLoaded', () => {
+  const game = new Game();
+  const touchControls = new TouchControls();
+  
+  // Prevent zoom on double-tap
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, false);
+  
+  // Prevent context menu on long press
+  window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // PWA Installation
+  let deferredPrompt;
+  const installPrompt = document.getElementById('install-prompt');
+  const installButton = document.getElementById('install-button');
+  const dismissButton = document.getElementById('dismiss-button');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later
+    deferredPrompt = e;
+    // Show install prompt after 5 seconds
+    setTimeout(() => {
+      installPrompt.style.display = 'block';
+    }, 5000);
+  });
+
+  installButton.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+
+    // Show the install prompt
+    deferredPrompt.prompt();
+
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to install prompt: ${outcome}`);
+
+    // Clear the deferred prompt variable
+    deferredPrompt = null;
+    installPrompt.style.display = 'none';
+  });
+
+  dismissButton.addEventListener('click', () => {
+    installPrompt.style.display = 'none';
+  });
+
+  // Register service worker for offline support
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then((registration) => {
+          console.log('Service Worker registered:', registration.scope);
+        })
+        .catch((error) => {
+          console.log('Service Worker registration failed:', error);
+        });
+    });
+  }
+
+  // Pause, Mute, and Quit button controls
+  const quitBtn = document.getElementById('btn-quit');
+  const pauseBtn = document.getElementById('btn-pause');
+  const muteBtn = document.getElementById('btn-mute');
+
+  quitBtn.addEventListener('click', () => {
+    // Go back to arcade page - use absolute path for reliability
+    window.location.href = '/arcade.html';
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    inputManager.keys.pause = true;
+    setTimeout(() => {
+      inputManager.keys.pause = false;
+      // Refocus canvas so keyboard input works
+      const canvas = document.getElementById('game-canvas');
+      canvas.focus();
+    }, 100);
+  });
+
+  muteBtn.addEventListener('click', () => {
+    // Initialize audio on button click (required for mobile)
+    if (!audioManager.audioCtx) {
+      audioManager.init();
+    }
+    if (audioManager.audioCtx && audioManager.audioCtx.state === 'suspended') {
+      audioManager.audioCtx.resume();
+    }
+
+    const isMuted = audioManager.toggleMute();
+    if (isMuted) {
+      muteBtn.textContent = '🔇 MUTED';
+      muteBtn.classList.add('active');
+    } else {
+      muteBtn.textContent = '🔊 SOUND';
+      muteBtn.classList.remove('active');
+    }
+    // Refocus canvas so keyboard input works
+    const canvas = document.getElementById('game-canvas');
+    canvas.focus();
+  });
+
+  // Prevent iOS text selection menu on all control buttons
+  const controlButtons = [quitBtn, pauseBtn, muteBtn];
+  const playAgainBtn = document.getElementById('btn-play-again');
+  const mainMenuBtn = document.getElementById('btn-main-menu');
+  if (playAgainBtn) controlButtons.push(playAgainBtn);
+  if (mainMenuBtn) controlButtons.push(mainMenuBtn);
+
+  controlButtons.forEach(btn => {
+    if (btn) {
+      // Prevent context menu (long press menu on iOS)
+      btn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+      });
+
+      // Prevent text selection on touch but allow normal click behavior
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+      }, { passive: false });
+    }
+  });
+
+  // Hide quit button ONLY in PWA mode - do this AFTER all event listeners are set up
+  const isPWAMode = window.matchMedia('(display-mode: standalone)').matches ||
+                    window.navigator.standalone === true ||
+                    document.referrer.includes('android-app://');
+
+  if (isPWAMode && quitBtn) {
+    quitBtn.style.display = 'none';
+    console.log('PWA mode: quit button hidden');
+  } else {
+    console.log('Browser mode: quit button visible');
+  }
+});
+  </script>
+
+  <!-- PWA Install Prompt Manager -->
+  <script src="./install-prompt.js"></script>
+
+  <!-- Game Integration for Install Prompts -->
+  <script src="./game-integration.js"></script>
+
+  <!-- Service Worker Registration -->
+  <script>
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(registration => {
+            console.log('Service Worker registered:', registration.scope);
+          })
+          .catch(error => {
+            console.log('Service Worker registration failed:', error);
+          });
+      });
+    }
+
+    // Initialize install prompt manager
+    let installManager;
+    window.addEventListener('load', () => {
+      installManager = new InstallPromptManager();
+
+      // Make it globally available so game can call incrementGamesPlayed()
+      window.installManager = installManager;
+    });
+  </script>
+</body>
+</html>
