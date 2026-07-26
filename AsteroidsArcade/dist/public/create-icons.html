@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="canvas192" width="192" height="192"></canvas>
+<canvas id="canvas512" width="512" height="512"></canvas>
+<script>
+function createIcon(canvasId, size) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  
+  // Black background
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, size, size);
+  
+  // White ship triangle
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = size / 96;
+  ctx.beginPath();
+  ctx.moveTo(size/2, size * 0.2);
+  ctx.lineTo(size * 0.6, size * 0.45);
+  ctx.lineTo(size * 0.4, size * 0.45);
+  ctx.closePath();
+  ctx.stroke();
+  
+  // Asteroids
+  ctx.beginPath();
+  ctx.arc(size * 0.7, size * 0.5, size * 0.1, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.arc(size * 0.25, size * 0.7, size * 0.075, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  // Text
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `${size/10}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText('ASTEROIDS', size/2, size * 0.9);
+  
+  // Download
+  const link = document.createElement('a');
+  link.download = `icon-${size}.png`;
+  link.href = canvas.toDataURL();
+  link.click();
+}
+
+createIcon('canvas192', 192);
+setTimeout(() => createIcon('canvas512', 512), 100);
+</script>
+</body>
+</html>
