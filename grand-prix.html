@@ -1,0 +1,981 @@
+<title>Grand Prix — 1982 Tribute</title>
+<style>
+  :root {
+    --cabinet: #0c0d0a;
+    --bezel: #080908;
+    --panel: #12140f;
+    --panel-edge: #232619;
+    --phosphor: #eef2e6;
+    --phosphor-dim: #99a18c;
+    --gold: #ffd21f;
+    --act-red: #d82800;
+    --act-orange: #ff7c00;
+    --act-green: #20a020;
+    --act-blue: #2870d8;
+    --act-purple: #8040c0;
+    color-scheme: dark;
+  }
+  html, body { background: var(--cabinet); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    color: var(--phosphor);
+  }
+  .cabinet {
+    /* landscape 4:3, screen dominant */
+    width: min(97vw, calc((100dvh - 210px) * 1.3333));
+    min-width: 320px;
+    padding: 10px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cabinet > * {
+    /* never let flex shrink the CRT — a shrunken .crt clips the bottom of
+       the canvas behind overflow:hidden */
+    flex-shrink: 0;
+  }
+
+  /* ── Marquee ── */
+  .marquee {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 16px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #14160f, #0a0b08);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+  }
+  .marquee .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--phosphor-dim);
+    text-transform: uppercase;
+    margin: 0;
+    white-space: nowrap;
+  }
+  .marquee h1 {
+    margin: 0;
+    font-size: clamp(18px, 2.6vw, 30px);
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: #fff;
+    white-space: nowrap;
+    text-shadow: 0 0 16px rgba(255, 210, 31, 0.4), 0 0 2px rgba(255, 255, 255, 0.9);
+  }
+  .marquee .rule {
+    align-self: center;
+    width: 72px;
+    height: 6px;
+    border-radius: 2px;
+    /* the Activision rainbow */
+    background: linear-gradient(180deg,
+      var(--act-red) 0 17%, var(--act-orange) 17% 34%, var(--gold) 34% 51%,
+      var(--act-green) 51% 68%, var(--act-blue) 68% 85%, var(--act-purple) 85% 100%);
+    box-shadow: 0 0 12px rgba(255, 124, 0, 0.45);
+  }
+
+  /* ── CRT screen ── */
+  .crt {
+    position: relative;
+    border-radius: 22px;
+    border: 10px solid var(--bezel);
+    outline: 1px solid var(--panel-edge);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 12px 40px rgba(0,0,0,0.6);
+    overflow: hidden;
+    background: #000;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    image-rendering: pixelated;
+  }
+  .crt::after {
+    /* scanlines */
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.22) 3px,
+      rgba(0,0,0,0) 4px
+    );
+  }
+  .crt::before {
+    /* vignette + glass */
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(ellipse 115% 105% at 50% 45%,
+      rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%);
+  }
+
+  /* true fullscreen: the glass IS the room */
+  .crt:fullscreen,
+  .crt.theater {
+    border: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+  .crt:fullscreen canvas,
+  .crt.theater canvas {
+    width: auto;
+    height: 100vh;
+    max-width: 100vw;
+  }
+  /* theater mode: fullscreen API is blocked in sandboxed iframes, so pin
+     the CRT over the whole viewport instead */
+  .crt.theater {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+  }
+
+  /* ── Control panel ── */
+  .panel {
+    background: linear-gradient(180deg, var(--panel), #0b0c08);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    justify-content: center;
+    align-items: center;
+  }
+  .panel .key {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--phosphor-dim);
+    white-space: nowrap;
+  }
+  kbd {
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--gold);
+    background: #060604;
+    border: 1px solid #2c2c18;
+    border-bottom-width: 3px;
+    border-radius: 5px;
+    padding: 3px 8px;
+    min-width: 14px;
+    text-align: center;
+  }
+  .footnote {
+    text-align: center;
+    font-size: 11.5px;
+    line-height: 1.7;
+    letter-spacing: 0.06em;
+    color: var(--phosphor-dim);
+    max-width: 58ch;
+    margin: 0 auto;
+  }
+  .footnote strong { color: var(--phosphor); font-weight: 700; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee h1 { animation: hum 4s ease-in-out infinite alternate; }
+    @keyframes hum {
+      from { text-shadow: 0 0 10px rgba(255,210,31,0.3), 0 0 2px rgba(255,255,255,0.9); }
+      to   { text-shadow: 0 0 22px rgba(255,210,31,0.55), 0 0 2px rgba(255,255,255,0.9); }
+    }
+  }
+</style>
+
+<div class="cabinet">
+  <header class="marquee">
+    <p class="eyebrow">Activision · 1982 · Keyboard Tribute</p>
+    <h1>Grand Prix</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="crt">
+    <canvas id="game" width="1280" height="960" aria-label="Grand Prix game screen. Steer with up and down arrows, accelerate with right arrow, brake with left arrow."></canvas>
+  </div>
+
+  <div class="panel" aria-label="Controls">
+    <span class="key"><kbd>↑</kbd><kbd>↓</kbd><kbd>W</kbd><kbd>S</kbd> Steer</span>
+    <span class="key"><kbd>→</kbd><kbd>D</kbd> Gas</span>
+    <span class="key"><kbd>←</kbd><kbd>A</kbd> Brake</span>
+    <span class="key"><kbd>1</kbd>–<kbd>4</kbd> Course</span>
+    <span class="key"><kbd>Space</kbd> Start</span>
+    <span class="key"><kbd>R</kbd> Restart</span>
+    <span class="key"><kbd>F</kbd> Fullscreen</span>
+    <span class="key"><kbd>M</kbd> Sound</span>
+  </div>
+
+  <p class="footnote">
+    A tribute to <strong>Grand Prix</strong> (Activision, 1982), designed by
+    <strong>Larry Kaplan</strong>. Race the clock across four classic circuits —
+    slip past slower cars without clipping them, catch the <strong>draft</strong>
+    behind a rival for extra pace, and thread the narrow <strong>bridges</strong>.
+    Lower time wins; course records are saved.
+  </p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ── Canvas ─────────────────────────────────────────────
+  // Game logic runs in 320×240 (landscape 4:3). Backing store is 4× so the
+  // chunky 2600 pixels stay crisp blown up to a full screen.
+  const cvs = document.getElementById("game");
+  const ctx = cvs.getContext("2d");
+  ctx.scale(4, 4);
+  ctx.imageSmoothingEnabled = false;
+  const W = 320, H = 240, CX = W / 2;
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  const REDUCED = (() => {
+    try { return matchMedia("(prefers-reduced-motion: reduce)").matches; }
+    catch (e) { return false; }
+  })();
+
+  // ── Storage ────────────────────────────────────────────
+  function loadLS(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+  function saveLS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  let muted = loadLS("gp.muted", "0") === "1";
+  // per-course best times in hundredths; 0 = none yet
+  const bests = [0, 1, 2, 3].map(i => parseInt(loadLS("gp.best." + i, "0"), 10) || 0);
+
+  // ── Audio (all synthesized) ────────────────────────────
+  let AC = null, master = null, engine = null;
+  function ensureAudio() {
+    if (!AC) {
+      try {
+        AC = new (window.AudioContext || window.webkitAudioContext)();
+        master = AC.createGain();
+        master.gain.value = muted ? 0 : 0.4;
+        master.connect(AC.destination);
+        // persistent engine: saw fundamental + square octave, lowpassed
+        const o1 = AC.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = 50;
+        const o2 = AC.createOscillator(); o2.type = "square"; o2.frequency.value = 100;
+        const lp = AC.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 500;
+        const g = AC.createGain(); g.gain.value = 0;
+        const g2 = AC.createGain(); g2.gain.value = 0.25;
+        o1.connect(lp); o2.connect(g2); g2.connect(lp);
+        lp.connect(g); g.connect(master);
+        o1.start(); o2.start();
+        engine = { o1, o2, g };
+      } catch (e) { AC = null; }
+    }
+    if (AC && AC.state === "suspended") { try { AC.resume(); } catch (e) {} }
+  }
+  function setMuted(m) {
+    muted = m;
+    saveLS("gp.muted", m ? "1" : "0");
+    if (master) master.gain.value = m ? 0 : 0.4;
+  }
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  function tone(freq, dur, type, vol, when, slideTo) {
+    if (!AC) return;
+    const t0 = AC.currentTime + (when || 0);
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(master);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  function noiseBurst(dur, vol, when, fFrom, fTo) {
+    if (!AC) return;
+    const t0 = AC.currentTime + (when || 0);
+    const len = Math.max(1, Math.floor(AC.sampleRate * dur));
+    const buf = AC.createBuffer(1, len, AC.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const f = AC.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 0.7;
+    f.frequency.setValueAtTime(fFrom || 900, t0);
+    f.frequency.exponentialRampToValueAtTime(Math.max(40, fTo || 200), t0 + dur);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t0);
+  }
+  const sfx = {
+    select() { tone(880, 0.06, "square", 0.15); },
+    countBeep() { tone(392, 0.16, "square", 0.2); },
+    goBeep() { tone(784, 0.3, "square", 0.24); },
+    bump() { noiseBurst(0.12, 0.4, 0, 1600, 300); tone(190, 0.1, "square", 0.16, 0, 110); },
+    crash() {
+      noiseBurst(0.55, 0.7, 0, 900, 60);
+      tone(150, 0.45, "sawtooth", 0.22, 0, 35);
+    },
+    finish() {
+      const m = [[72, 0], [76, 0.12], [79, 0.24], [84, 0.36]];
+      m.forEach(([n, t]) => tone(mtof(n), 0.18, "square", 0.18, t));
+      tone(mtof(84), 0.5, "square", 0.14, 0.5);
+    },
+    record() {
+      const m = [79, 84, 88, 91, 96, 91, 96];
+      m.forEach((n, i) => tone(mtof(n), 0.13, "square", 0.18, 0.9 + i * 0.11));
+    },
+  };
+  function updateEngine() {
+    if (!engine) return;
+    const on = state === "racing" && stunT <= 0;
+    const t = AC.currentTime;
+    engine.g.gain.setTargetAtTime(on ? 0.06 : 0, t, 0.07);
+    const f = 48 + (speed / MAXSPD) * 175;
+    engine.o1.frequency.setTargetAtTime(f, t, 0.05);
+    engine.o2.frequency.setTargetAtTime(f * 2, t, 0.05);
+  }
+
+  // ── Sprites (2600-style string grids, 2px fat cells) ───
+  function buildSprite(rows, map, cell) {
+    cell = cell || 2;
+    const c = document.createElement("canvas");
+    c.width = rows[0].length * cell;
+    c.height = rows.length * cell;
+    const g = c.getContext("2d");
+    for (let r = 0; r < rows.length; r++)
+      for (let i = 0; i < rows[r].length; i++) {
+        const col = map[rows[r][i]];
+        if (col) { g.fillStyle = col; g.fillRect(i * cell, r * cell, cell, cell); }
+      }
+    return c;
+  }
+
+  // top-down F1, nose to the right: rear wing, fat rear slicks, engine
+  // intake, cockpit bubble, slim front tires, needle nose
+  const CAR_ROWS = [
+    ".tttt.....tt....",
+    "wtttt.....tt....",
+    "wbbbbobbbbbyy...",
+    "wbbbboccbbbyyyy.",
+    "wbbbbobbbbbyy...",
+    "wtttt.....tt....",
+    ".tttt.....tt....",
+  ];
+  const CAR_W = 32, CAR_H = 14;
+  // the player's multicolor machine — red body, gold wing+nose, white bubble
+  const sprPlayer = buildSprite(CAR_ROWS, {
+    t: "#161616", w: "#ffd21f", b: "#d82800", o: "#7a1400", c: "#ffffff", y: "#ffd21f",
+  });
+  // rivals: same silhouette, one livery color each (main, dark, light)
+  const RIVAL_LIVERIES = [
+    ["#2870d8", "#123a80", "#79b0ff"],
+    ["#1fa01f", "#0c5a0c", "#7fe07f"],
+    ["#9048d8", "#4a1e80", "#c9a0ff"],
+    ["#c8a020", "#705410", "#ffe080"],
+    ["#18b0b0", "#0a5c5c", "#80eaea"],
+    ["#d84890", "#801040", "#ffa0c8"],
+  ];
+  const sprRivals = RIVAL_LIVERIES.map(([main, dark, light]) => buildSprite(CAR_ROWS, {
+    t: "#161616", w: dark, b: main, o: dark, c: "#e8e8e8", y: light,
+  }));
+
+  const sprTree = buildSprite([
+    "..gggg..",
+    ".gggggg.",
+    "gggggggg",
+    "gggggggg",
+    ".gggggg.",
+    "...nn...",
+    "...nn...",
+  ], { g: "#0e5a10", n: "#6b4a20" });
+  const sprBush = buildSprite([
+    ".gggg.",
+    "gggggg",
+    "gggggg",
+  ], { g: "#0f6414" });
+
+  // chunky 4×6 bitmap digits for the Activision-style timer
+  const GLYPHS = {
+    "0": ["####", "#..#", "#..#", "#..#", "#..#", "####"],
+    "1": ["..#.", ".##.", "..#.", "..#.", "..#.", ".###"],
+    "2": ["####", "...#", "####", "#...", "#...", "####"],
+    "3": ["####", "...#", ".###", "...#", "...#", "####"],
+    "4": ["#..#", "#..#", "####", "...#", "...#", "...#"],
+    "5": ["####", "#...", "####", "...#", "...#", "####"],
+    "6": ["####", "#...", "####", "#..#", "#..#", "####"],
+    "7": ["####", "...#", "..#.", "..#.", ".#..", ".#.."],
+    "8": ["####", "#..#", "####", "#..#", "#..#", "####"],
+    "9": ["####", "#..#", "####", "...#", "...#", "####"],
+    ":": ["....", ".#..", "....", "....", ".#..", "...."],
+    ".": ["....", "....", "....", "....", "....", ".#.."],
+    "-": ["....", "....", "####", "....", "....", "...."],
+  };
+  function drawGlyphs(str, x, y, cell, color) {
+    ctx.fillStyle = color;
+    let cx = x;
+    for (const ch of str) {
+      const g = GLYPHS[ch];
+      if (g) {
+        for (let r = 0; r < 6; r++)
+          for (let i = 0; i < 4; i++)
+            if (g[r][i] === "#") ctx.fillRect(cx + i * cell, y + r * cell, cell, cell);
+      }
+      cx += 5 * cell;
+    }
+    return cx - x;
+  }
+  const glyphW = (str, cell) => str.length * 5 * cell;
+
+  function text(str, x, y, size, color, align) {
+    ctx.fillStyle = color;
+    ctx.font = "bold " + size + "px ui-monospace, Menlo, monospace";
+    ctx.textAlign = align || "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(str, x, y);
+  }
+
+  // ── Track geometry ─────────────────────────────────────
+  const HUD_H = 28;
+  const ROAD_TOP = 64, ROAD_BOT = 208;           // 4 lanes × 36px
+  const LANES = [82, 118, 154, 190];             // lane centers
+  const MAXSPD = 300;                            // logical px/s at full throttle
+  const ACCEL = 105, BRAKE = 300, COAST = 42, STEER = 112;
+  const BRIDGE_W = 220;
+
+  // Four courses of increasing length and traffic, named for the classics.
+  // gap pattern: WG/BH bridges centered; LE MANS & MONACO gaps wander.
+  const COURSES = [
+    { name: "WATKINS GLEN", len: 9000,  spacing: 800, bridges: [4600],
+      gapH: 64, wander: false, grass: "#1c7a1c", road: "#6a6a6a", accent: "#ffd21f" },
+    { name: "BRANDS HATCH", len: 15000, spacing: 650, bridges: [5000, 10600],
+      gapH: 56, wander: false, grass: "#4a7a18", road: "#707070", accent: "#ff7c00" },
+    { name: "LE MANS",      len: 22000, spacing: 450, bridges: [5400, 11000, 16600],
+      gapH: 48, wander: true, grass: "#14601c", road: "#5e5e66", accent: "#4fc3ff" },
+    { name: "MONACO",       len: 30000, spacing: 360, bridges: [4200, 9200, 14200, 19400, 24600],
+      gapH: 44, wander: true, grass: "#0e6a54", road: "#62666e", accent: "#ff4f9a" },
+  ];
+  const GAP_YS = [136, 100, 172]; // center / high / low, all inside the road
+
+  // ── State ──────────────────────────────────────────────
+  let state = "title";      // title | countdown | racing | finished
+  let stateT = 0, gt = 0, blink = 0;
+  let courseIdx = 0, course = COURSES[0];
+  let traveled = 0, speed = 0, elapsed = 0, finalTime = 0;
+  let py = 136, prevY = 136, px = 60;
+  let stunT = 0, flashT = 0, bumpCool = 0;
+  let bumps = 0, crashes = 0, newRecord = false;
+  let draft = false;
+  let cars = [], bridges = [];
+  let beepsDone = 0;
+  let attractX = -CAR_W;
+  let botOn = false;
+
+  const keys = { up: false, down: false, gas: false, brake: false };
+
+  const playerWorld = () => traveled + px;
+
+  // ── Course build ───────────────────────────────────────
+  function buildCourse(i) {
+    courseIdx = clamp(i, 0, 3);
+    course = COURSES[courseIdx];
+    bridges = course.bridges.map((d, k) => ({
+      d, w: BRIDGE_W,
+      gapY: course.wander ? GAP_YS[k % 3] : 136,
+      gapH: course.gapH,
+    }));
+    // scatter rivals along the course; never inside a bridge zone,
+    // never bunched in one lane
+    cars = [];
+    const lastInLane = [-999, -999, -999, -999];
+    let d = 600;
+    while (d < course.len - 500) {
+      d += course.spacing * rand(0.65, 1.45);
+      if (bridges.some(b => d > b.d - 340 && d < b.d + b.w + 120)) continue;
+      const laneOrder = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+      let lane = -1;
+      for (const L of laneOrder) if (d - lastInLane[L] > 230) { lane = L; break; }
+      if (lane < 0) continue;
+      lastInLane[lane] = d;
+      cars.push({
+        x: d, y: LANES[lane],
+        speed: rand(85, 165) + courseIdx * 8,
+        spr: sprRivals[(Math.random() * sprRivals.length) | 0],
+      });
+    }
+  }
+
+  function startRace(i) {
+    buildCourse(i);
+    state = "countdown"; stateT = 0;
+    traveled = 0; speed = 0; elapsed = 0;
+    py = 136; prevY = 136; px = 60;
+    stunT = 0; flashT = 0; bumpCool = 0;
+    bumps = 0; crashes = 0; newRecord = false; draft = false;
+    beepsDone = 0;
+  }
+  function toTitle() { state = "title"; stateT = 0; speed = 0; }
+
+  function finishRace() {
+    state = "finished"; stateT = 0;
+    finalTime = Math.min(elapsed, 599.99);
+    const cs = Math.floor(finalTime * 100); // floor to match the displayed hundredths
+    newRecord = bests[courseIdx] === 0 || cs < bests[courseIdx];
+    if (newRecord) {
+      bests[courseIdx] = cs;
+      saveLS("gp.best." + courseIdx, String(cs));
+    }
+    sfx.finish();
+    if (newRecord) sfx.record();
+  }
+
+  // ── Helpers ────────────────────────────────────────────
+  function fmtTime(t) {
+    t = Math.max(0, Math.min(t, 599.99));
+    const m = (t / 60) | 0, s = (t % 60) | 0, h = ((t * 100) % 100) | 0;
+    return m + ":" + String(s).padStart(2, "0") + "." + String(h).padStart(2, "0");
+  }
+  const fmtBest = (i) => bests[i] ? fmtTime(bests[i] / 100) : "-:--.--";
+
+  // deterministic per-slot decoration hash (no per-frame flicker)
+  function h32(n) {
+    n = (n ^ 61) ^ (n >>> 16);
+    n = (n + (n << 3)) | 0;
+    n = (n ^ (n >>> 4)) * 0x27d4eb2d | 0;
+    return ((n ^ (n >>> 15)) >>> 0);
+  }
+  const frac = (n) => h32(n) / 4294967296;
+
+  function bridgeAt(x0, x1) {
+    for (const b of bridges) if (x1 > b.d && x0 < b.d + b.w) return b;
+    return null;
+  }
+
+  // ── Autopilot (attract demo + difficulty bot) ─────────
+  function botDrive() {
+    const pw = playerWorld();
+    keys.gas = true; keys.brake = false; keys.up = false; keys.down = false;
+    let target = py;
+    const bAhead = bridges.find(b => b.d + b.w > pw && b.d - pw < 360);
+    if (bAhead) {
+      target = bAhead.gapY;
+    } else {
+      // clearance per lane over the next 300px
+      const clear = LANES.map(L => {
+        let c = 320;
+        for (const car of cars) {
+          const dx = car.x - pw;
+          if (dx > -10 && dx < 320 && Math.abs(car.y - L) < 20) c = Math.min(c, dx);
+        }
+        return c;
+      });
+      let cur = 0;
+      for (let i = 1; i < 4; i++) if (Math.abs(LANES[i] - py) < Math.abs(LANES[cur] - py)) cur = i;
+      if (clear[cur] > 140) target = LANES[cur];
+      else {
+        let best = cur;
+        for (let i = 0; i < 4; i++)
+          if (clear[i] > clear[best] + 8 && Math.abs(i - cur) <= (clear[cur] < 60 ? 3 : 1)) best = i;
+        target = LANES[best];
+        if (clear[best] < 55) { keys.gas = false; keys.brake = true; }
+      }
+    }
+    if (target < py - 3) keys.up = true;
+    else if (target > py + 3) keys.down = true;
+  }
+
+  // ── Update ─────────────────────────────────────────────
+  function update(dt) {
+    gt += dt; stateT += dt; blink += dt;
+    if (flashT > 0) flashT -= dt;
+    if (bumpCool > 0) bumpCool -= dt;
+
+    if (state === "title") {
+      if (!REDUCED) {
+        attractX += dt * 55;
+        if (attractX > W + CAR_W) attractX = -CAR_W * 2;
+      }
+      return;
+    }
+
+    if (state === "countdown") {
+      // three amber beeps, then the green light drops
+      const due = Math.min(3, 1 + (stateT / 0.5) | 0);
+      while (beepsDone < due && beepsDone < 3) { sfx.countBeep(); beepsDone++; }
+      if (stateT >= 1.5) { sfx.goBeep(); state = "racing"; stateT = 0; elapsed = 0; }
+      return;
+    }
+
+    if (state === "finished") return;
+
+    // ── racing ──
+    elapsed += dt;
+    if (botOn) botDrive();
+
+    if (stunT > 0) { stunT -= dt; speed = 0; }
+    else {
+      let acc = -COAST;
+      if (keys.gas) acc = ACCEL * (draft ? 1.4 : 1);
+      if (keys.brake) acc = -BRAKE;
+      speed = clamp(speed + acc * dt, 0, MAXSPD);
+      const sf = 0.45 + 0.55 * (speed / MAXSPD);
+      prevY = py;
+      if (keys.up) py -= STEER * sf * dt;
+      if (keys.down) py += STEER * sf * dt;
+      py = clamp(py, ROAD_TOP + CAR_H / 2 + 1, ROAD_BOT - CAR_H / 2 - 1);
+    }
+
+    traveled += speed * dt;
+    const pxTarget = 60 + 46 * (speed / MAXSPD);
+    px += (pxTarget - px) * Math.min(1, dt * 1.6);
+
+    const pw = playerWorld();
+    const aL = pw + 2, aR = pw + CAR_W - 2;
+    const aT = py - CAR_H / 2 + 2, aB = py + CAR_H / 2 - 2;
+
+    // rivals advance; they aim for the bridge gap like any sane driver
+    draft = false;
+    for (const c of cars) {
+      c.x += c.speed * dt;
+      const bz = bridges.find(b => c.x + CAR_W > b.d - 260 && c.x < b.d + b.w + 40);
+      if (bz) c.y += (bz.gapY - c.y) * Math.min(1, dt * 3);
+
+      const dx = c.x - pw;
+      if (dx > -60 && dx < 60) {
+        const bL = c.x + 2, bR = c.x + CAR_W - 2;
+        const bT = c.y - CAR_H / 2 + 2, bB = c.y + CAR_H / 2 - 2;
+        if (aR > bL && aL < bR && aB > bT && aT < bB) {
+          if (aR - bL < 9 && speed > c.speed) {
+            // rear-ended a slower car: shove back, lose the pace
+            traveled -= (aR - bL) + 0.5;
+            speed = Math.min(speed, c.speed * 0.55);
+          } else if (bR - aL < 9 && c.speed > speed) {
+            // a rival caught the stopped player: rival tailgates
+            c.x = Math.min(c.x, pw + 2 - CAR_W);
+          } else {
+            // scraped alongside: undo the steer, scrub a little speed
+            py = prevY;
+            speed *= 0.985;
+          }
+          if (bumpCool <= 0) { bumps++; bumpCool = 0.5; flashT = 0.12; sfx.bump(); }
+        }
+      }
+      // slipstream: tucked in close behind a rival at matching height
+      const gap = c.x - (pw + CAR_W);
+      if (gap > 0 && gap < 70 && Math.abs(c.y - py) < 10) draft = true;
+    }
+
+    // bridges: outside the gap = hard crash, bounced back to the entrance
+    const bz = bridgeAt(aL, aR);
+    if (bz && stunT <= 0) {
+      const gapT = bz.gapY - bz.gapH / 2, gapB = bz.gapY + bz.gapH / 2;
+      if (aT < gapT + 1 || aB > gapB - 1) {
+        crashes++;
+        stunT = 1.0; flashT = 0.4;
+        speed = 0;
+        traveled = bz.d - px - CAR_W - 6;
+        sfx.crash();
+      }
+    }
+
+    if (pw >= course.len || elapsed > 600) finishRace();
+  }
+
+  // ── Draw ───────────────────────────────────────────────
+  function drawCheckers(sx, worldX) {
+    for (let r = 0; r < 18; r++)
+      for (let cix = 0; cix < 2; cix++) {
+        ctx.fillStyle = (r + cix) % 2 ? "#111111" : "#f2f2f2";
+        ctx.fillRect(sx + cix * 4, ROAD_TOP + r * 8, 4, 8);
+      }
+  }
+
+  function drawWorld() {
+    // grass + road
+    ctx.fillStyle = course.grass;
+    ctx.fillRect(0, HUD_H, W, H - HUD_H);
+    ctx.fillStyle = course.road;
+    ctx.fillRect(0, ROAD_TOP, W, ROAD_BOT - ROAD_TOP);
+    // white borders
+    ctx.fillStyle = "#e8e8e8";
+    ctx.fillRect(0, ROAD_TOP - 2, W, 2);
+    ctx.fillRect(0, ROAD_BOT, W, 2);
+    // km posts on the verges + faint lane dashes for speed feel
+    const post0 = -((traveled % 60) | 0);
+    ctx.fillStyle = "#d0d0d0";
+    for (let x = post0; x < W; x += 60) {
+      ctx.fillRect(x, ROAD_TOP - 7, 2, 5);
+      ctx.fillRect(x, ROAD_BOT + 2, 2, 5);
+    }
+    ctx.fillStyle = "rgba(255,255,255,0.14)";
+    const dash0 = -((traveled % 30) | 0);
+    for (const ly of [100, 136, 172])
+      for (let x = dash0; x < W; x += 30) ctx.fillRect(x, ly - 1, 10, 2);
+
+    // trees & bushes in the verges (hash-stable per slot)
+    const k0 = ((traveled / 120) | 0) - 1;
+    for (let k = k0; k < k0 + 5; k++) {
+      for (const [seed, gy] of [[k * 2, 36], [k * 2 + 1, 216]]) {
+        const f = frac(seed);
+        if (f < 0.55) {
+          const sx = (k * 120 + frac(seed + 7) * 90 - traveled) | 0;
+          if (sx > -20 && sx < W + 20) {
+            if (f < 0.35) ctx.drawImage(sprTree, sx, gy);
+            else ctx.drawImage(sprBush, sx, gy + 6);
+          }
+        }
+      }
+    }
+
+    // start line + finish line
+    const sLine = (140 - traveled) | 0;
+    if (sLine > -10 && sLine < W) drawCheckers(sLine, 140);
+    const fLine = (course.len - traveled) | 0;
+    if (fLine > -14 && fLine < W + 14) {
+      drawCheckers(fLine, course.len);
+      drawCheckers(fLine + 8, course.len);
+    }
+
+    // bridges: water crosses everything, a narrow rail-lined deck spans it
+    for (const b of bridges) {
+      const sx = (b.d - traveled) | 0;
+      if (sx > W + 20 || sx + b.w < -20) continue;
+      ctx.fillStyle = "#1040c8";
+      ctx.fillRect(sx, HUD_H, b.w, H - HUD_H);
+      const gapT = b.gapY - b.gapH / 2, gapB = b.gapY + b.gapH / 2;
+      ctx.fillStyle = course.road;
+      ctx.fillRect(sx, gapT, b.w, b.gapH);
+      ctx.fillStyle = "#f0f0f0";
+      ctx.fillRect(sx, gapT - 3, b.w, 3);
+      ctx.fillRect(sx, gapB, b.w, 3);
+      // hazard boards on the abutments
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = i % 2 ? "#161616" : "#ffd21f";
+        ctx.fillRect(sx - 4, gapT - 6 - i * 5, 4, 5);
+        ctx.fillRect(sx - 4, gapB + 3 + i * 5, 4, 5);
+      }
+    }
+
+    // rivals
+    for (const c of cars) {
+      const sx = (c.x - traveled) | 0;
+      if (sx > -CAR_W - 8 && sx < W + 8) ctx.drawImage(c.spr, sx, (c.y - CAR_H / 2) | 0);
+    }
+
+    // slipstream streaks
+    if (draft && speed > 60) {
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.fillRect((px - 10) | 0, (py - 4) | 0, 7, 2);
+      ctx.fillRect((px - 14) | 0, (py + 3) | 0, 9, 2);
+    }
+    // the star of the show
+    ctx.drawImage(sprPlayer, px | 0, (py - CAR_H / 2) | 0);
+  }
+
+  function drawHUD() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, HUD_H);
+    const t = state === "finished" ? finalTime : (state === "racing" ? elapsed : 0);
+    drawGlyphs(fmtTime(t), 10, 7, 2, "#f2f2f2");
+    text(course.name, CX, 10, 8, course.accent, "center");
+    const bStr = fmtBest(courseIdx);
+    drawGlyphs(bStr, W - 10 - glyphW(bStr, 2), 7, 2, "#8a8a8a");
+    // progress strip with bridge ticks
+    ctx.fillStyle = "#222";
+    ctx.fillRect(8, 25, W - 16, 2);
+    ctx.fillStyle = "#f2f2f2";
+    for (const b of bridges) ctx.fillRect((8 + (W - 16) * (b.d / course.len)) | 0, 24, 2, 4);
+    ctx.fillStyle = course.accent;
+    ctx.fillRect(8, 25, ((W - 16) * clamp(playerWorld() / course.len, 0, 1)) | 0, 2);
+  }
+
+  function drawRainbow(x, y, w) {
+    const cols = ["#d82800", "#ff7c00", "#ffd200", "#20a020", "#2870d8", "#8040c0"];
+    cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(x, y + i * 3, w, 3); });
+  }
+
+  function drawTitle() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    text("A C T I V I S I O N", CX, 26, 9, "#9aa18c", "center");
+    // blocky two-tone logotype, 2600 label style
+    ctx.font = "bold 30px ui-monospace, Menlo, monospace";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillStyle = "#d82800"; ctx.fillText("GRAND PRIX", CX + 2, 44);
+    ctx.fillStyle = "#ffd21f"; ctx.fillText("GRAND PRIX", CX, 42);
+    drawRainbow(CX - 104, 80, 208);
+
+    // course selector, Night Driver style
+    for (let i = 0; i < 4; i++) {
+      const y = 112 + i * 15;
+      const sel = i === courseIdx;
+      text((i + 1) + "  " + COURSES[i].name, CX - 96, y, 9, sel ? "#ffffff" : "#77806e", "left");
+      text(fmtBest(i), CX + 96, y, 9, sel ? COURSES[i].accent : "#55604e", "right");
+      if (sel) text(">", CX - 108, y, 9, COURSES[i].accent, "left");
+    }
+
+    if (REDUCED || (blink % 1) < 0.62)
+      text("PRESS SPACE TO RACE", CX, 180, 10, "#ffffff", "center");
+
+    // an attract-mode rival cruising under the menu
+    ctx.drawImage(sprRivals[2], (REDUCED ? CX - 16 : attractX) | 0, 193);
+
+    text("© 1982 ACTIVISION · DESIGNED BY LARRY KAPLAN", CX, 214, 8, "#66705c", "center");
+    text("PERSONAL TRIBUTE — NOT FOR SALE", CX, 226, 8, "#66705c", "center");
+  }
+
+  function drawCountdown() {
+    text("GET READY", CX, 96, 16, "#f2f2f2", "center");
+    text(course.name + " — " + (course.len / 100 | 0) / 10 + " KM", CX, 122, 9, course.accent, "center");
+    for (let i = 0; i < 3; i++) {
+      const on = stateT >= i * 0.5;
+      const go = stateT >= 1.45;
+      ctx.fillStyle = go ? "#20d020" : (on ? "#ffb020" : "#2a2a2a");
+      ctx.fillRect(CX - 26 + i * 20, 140, 12, 12);
+    }
+  }
+
+  function drawFinished() {
+    ctx.fillStyle = "rgba(0,0,0,0.72)";
+    ctx.fillRect(0, HUD_H, W, H - HUD_H);
+    text("F I N I S H", CX, 64, 18, "#ffd21f", "center");
+    const tStr = fmtTime(finalTime);
+    drawGlyphs(tStr, CX - glyphW(tStr, 4) / 2, 92, 4, "#ffffff");
+    text("BEST  " + fmtBest(courseIdx), CX, 130, 10, "#c8c8c8", "center");
+    if (newRecord && (REDUCED || (blink % 0.9) < 0.55))
+      text("NEW COURSE RECORD!", CX, 148, 11, "#20d020", "center");
+    text("BUMPS " + bumps + " · CRASHES " + crashes, CX, 170, 9, "#8a8a8a", "center");
+    text("SPACE — RACE AGAIN   ·   ESC — COURSE SELECT", CX, 192, 8, "#77806e", "center");
+  }
+
+  function draw() {
+    if (state === "title") { drawTitle(); return; }
+
+    // crash shake
+    let shx = 0, shy = 0;
+    if (stunT > 0.55 && !REDUCED) { shx = rand(-2, 2) | 0; shy = rand(-2, 2) | 0; }
+    ctx.save();
+    ctx.translate(shx, shy);
+    drawWorld();
+    ctx.restore();
+
+    drawHUD();
+
+    if (state === "countdown") drawCountdown();
+    if (state === "racing" && elapsed < 0.9) text("GO!", CX, 100, 22, "#20d020", "center");
+    if (state === "finished") drawFinished();
+
+    if (flashT > 0) {
+      ctx.fillStyle = "rgba(255,255,255," + Math.min(0.5, flashT) + ")";
+      ctx.fillRect(0, HUD_H, W, H - HUD_H);
+    }
+  }
+
+  // ── Input ──────────────────────────────────────────────
+  const crtEl = document.querySelector(".crt");
+  function toggleTheater() {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); return; }
+      if (crtEl.classList.contains("theater")) { crtEl.classList.remove("theater"); return; }
+      const p = crtEl.requestFullscreen();
+      if (p && p.catch) p.catch(() => crtEl.classList.add("theater"));
+    } catch (e) { crtEl.classList.toggle("theater"); }
+  }
+
+  const GAME_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space",
+    "KeyW", "KeyS", "KeyA", "KeyD", "KeyR", "KeyM", "KeyF",
+    "Digit1", "Digit2", "Digit3", "Digit4"];
+
+  window.addEventListener("keydown", (e) => {
+    if (GAME_KEYS.includes(e.code)) e.preventDefault();
+    ensureAudio();
+    switch (e.code) {
+      case "ArrowUp": case "KeyW": keys.up = true; break;
+      case "ArrowDown": case "KeyS": keys.down = true; break;
+      case "ArrowRight": case "KeyD": keys.gas = true; botOn = false; break;
+      case "ArrowLeft": case "KeyA": keys.brake = true; botOn = false; break;
+    }
+    if (e.repeat) return;
+    switch (e.code) {
+      case "Space": case "Enter":
+        if (state === "title" || state === "finished") startRace(courseIdx);
+        break;
+      case "KeyR":
+        if (state !== "title") startRace(courseIdx);
+        break;
+      case "KeyM": setMuted(!muted); break;
+      case "KeyF": toggleTheater(); break;
+      case "Digit1": case "Digit2": case "Digit3": case "Digit4":
+        if (state === "title") {
+          courseIdx = parseInt(e.code.slice(5), 10) - 1;
+          course = COURSES[courseIdx];
+          sfx.select();
+        }
+        break;
+      case "Escape":
+        if (crtEl.classList.contains("theater")) { crtEl.classList.remove("theater"); break; }
+        if (state !== "title") toTitle();
+        break;
+    }
+  });
+  window.addEventListener("keyup", (e) => {
+    switch (e.code) {
+      case "ArrowUp": case "KeyW": keys.up = false; break;
+      case "ArrowDown": case "KeyS": keys.down = false; break;
+      case "ArrowRight": case "KeyD": keys.gas = false; break;
+      case "ArrowLeft": case "KeyA": keys.brake = false; break;
+    }
+  });
+
+  // ── Main loop ──────────────────────────────────────────
+  buildCourse(0);
+  const STEP = 1000 / 120;
+  let last = performance.now(), acc = 0;
+  function frame(now) {
+    acc += Math.min(now - last, 100);
+    last = now;
+    while (acc >= STEP) { update(STEP / 1000); acc -= STEP; updateEngine(); }
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // debug/testing hook
+  window.__gp = {
+    state: () => state,
+    course: () => courseIdx,
+    time: () => elapsed,
+    finalTime: () => finalTime,
+    dist: () => playerWorld(),
+    len: () => course.len,
+    speed: () => speed,
+    y: () => py,
+    bumps: () => bumps,
+    crashes: () => crashes,
+    stun: () => stunT,
+    best: (i) => bests[i],
+    cars: () => cars.map(c => ({ x: c.x, y: c.y, speed: c.speed })),
+    bridgeList: () => bridges.map(b => ({ d: b.d, gapY: b.gapY, gapH: b.gapH })),
+    select: (i) => { courseIdx = clamp(i, 0, 3); course = COURSES[courseIdx]; },
+    start: (i) => startRace(i === undefined ? courseIdx : i),
+    toTitle,
+    input: (o) => { for (const k of ["up", "down", "gas", "brake"]) keys[k] = !!(o && o[k]); },
+    setY: (v) => { py = clamp(v, ROAD_TOP + CAR_H / 2 + 1, ROAD_BOT - CAR_H / 2 - 1); prevY = py; },
+    jump: (d) => { traveled = d - px; },
+    skipCountdown: () => { if (state === "countdown") { state = "racing"; stateT = 0; elapsed = 0; } },
+    bot: (v) => { botOn = !!v; },
+    finish: finishRace,
+  };
+})();
+</script>

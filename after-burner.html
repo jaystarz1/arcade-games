@@ -1,0 +1,1803 @@
+<title>After Burner — 1987 Tribute</title>
+<style>
+  :root {
+    --cabinet: #0b0b10;
+    --bezel: #07070a;
+    --panel: #10111a;
+    --panel-edge: #22243a;
+    --phosphor: #eef0f6;
+    --phosphor-dim: #939ab0;
+    --ab-red: #e6252b;
+    --ab-blue: #2fa6dc;
+    --ab-yellow: #ffd21f;
+    color-scheme: dark;
+  }
+  html, body { background: var(--cabinet); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    color: var(--phosphor);
+  }
+  .cabinet {
+    /* landscape 4:3, screen dominant */
+    width: min(97vw, calc((100dvh - 210px) * 1.3333));
+    min-width: 320px;
+    padding: 10px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cabinet > * { flex-shrink: 0; }
+
+  /* ── Marquee (column layout absorbs any title length) ── */
+  .marquee {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px 10px;
+    background: linear-gradient(180deg, #12131e, #0a0a10);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+  }
+  .marquee .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--phosphor-dim);
+    text-transform: uppercase;
+    margin: 0;
+    white-space: nowrap;
+  }
+  .marquee h1 {
+    margin: 0;
+    font-size: clamp(18px, 2.6vw, 30px);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #fff;
+    white-space: nowrap;
+    text-shadow:
+      -2px 2px 0 var(--ab-red), 2px -2px 0 var(--ab-blue),
+      0 0 16px rgba(230, 37, 43, 0.4);
+  }
+  .marquee .rule {
+    align-self: center;
+    width: 128px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--ab-blue) 0 22%, #f0f0f0 22% 44%, var(--ab-red) 44%);
+    box-shadow: 0 0 12px rgba(230, 37, 43, 0.5);
+  }
+
+  /* ── CRT ── */
+  .crt {
+    position: relative;
+    border-radius: 22px;
+    border: 10px solid var(--bezel);
+    outline: 1px solid var(--panel-edge);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 12px 40px rgba(0,0,0,0.6);
+    overflow: hidden;
+    background: #000;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    /* no pixelated: the X-Board CRT smeared pixels — smooth upscale + the
+       scanline overlay reads far closer than hard emulator squares */
+  }
+  .crt::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(180deg,
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.22) 3px, rgba(0,0,0,0) 4px);
+  }
+  .crt::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(ellipse 115% 105% at 50% 45%,
+      rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%);
+  }
+  .crt:fullscreen, .crt.theater {
+    border: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+  .crt:fullscreen canvas, .crt.theater canvas {
+    width: auto;
+    height: 100vh;
+    max-width: 100vw;
+  }
+  .crt.theater { position: fixed; inset: 0; z-index: 100; }
+
+  /* ── Control panel ── */
+  .panel {
+    background: linear-gradient(180deg, var(--panel), #0b0b12);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    justify-content: center;
+    align-items: center;
+  }
+  .panel .key {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--phosphor-dim);
+    white-space: nowrap;
+  }
+  kbd {
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--ab-yellow);
+    background: #05050a;
+    border: 1px solid #262a45;
+    border-bottom-width: 3px;
+    border-radius: 5px;
+    padding: 3px 8px;
+    min-width: 14px;
+    text-align: center;
+  }
+  .footnote {
+    text-align: center;
+    font-size: 11.5px;
+    line-height: 1.7;
+    letter-spacing: 0.06em;
+    color: var(--phosphor-dim);
+    max-width: 60ch;
+    margin: 0 auto;
+  }
+  .footnote strong { color: var(--phosphor); font-weight: 700; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee h1 { animation: hum 4s ease-in-out infinite alternate; }
+    @keyframes hum {
+      from { text-shadow: -2px 2px 0 var(--ab-red), 2px -2px 0 var(--ab-blue),
+             0 0 10px rgba(230,37,43,0.3); }
+      to   { text-shadow: -2px 2px 0 var(--ab-red), 2px -2px 0 var(--ab-blue),
+             0 0 22px rgba(230,37,43,0.55); }
+    }
+  }
+</style>
+
+<div class="cabinet">
+  <header class="marquee">
+    <p class="eyebrow">Sega · 1987 · After Burner II · Keyboard Tribute</p>
+    <h1>After Burner</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="crt">
+    <canvas id="game" width="1280" height="960" aria-label="After Burner game screen. Fly with arrow keys, fire the vulcan cannon with Z, launch missiles with X, hold Shift for afterburner, hold Control to throttle back, double-tap left or right to barrel roll."></canvas>
+  </div>
+
+  <div class="panel" aria-label="Controls">
+    <span class="key"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> Fly</span>
+    <span class="key"><kbd>Z</kbd> Vulcan</span>
+    <span class="key"><kbd>X</kbd> Missile</span>
+    <span class="key"><kbd>Shift</kbd> Afterburner</span>
+    <span class="key"><kbd>Ctrl</kbd> Throttle back</span>
+    <span class="key"><kbd>←</kbd><kbd>←</kbd> Roll</span>
+    <span class="key"><kbd>Enter</kbd> Start</span>
+    <span class="key"><kbd>F</kbd> Fullscreen</span>
+    <span class="key"><kbd>M</kbd> Sound</span>
+  </div>
+
+  <p class="footnote">
+    A tribute to <strong>After Burner II</strong> (Sega AM2, 1987) — the X-Board
+    sprite-scaler in the rotating deluxe cockpit. Sweep the reticle across the
+    bandits, hammer the missile button, and when the klaxon sounds:
+    <strong>change speed</strong> — a locked missile can't follow a throttle
+    change. 23 stages, refuelling every few blocks. High score is saved.
+  </p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ── Canvas ─────────────────────────────────────────────
+  // Logic 320×240, 4× backing store — chunky Sega raster.
+  const cvs = document.getElementById("game");
+  const ctx = cvs.getContext("2d");
+  ctx.scale(4, 4);
+  ctx.imageSmoothingEnabled = true;   // CRT smear, not emulator squares
+  const W = 320, H = 240, CX = W / 2, CY = H / 2;
+  const FOCAL = 240;
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const Q = (v) => Math.floor(v); // ONE quantizer for every shown+stored value
+  function h32(n) {
+    n = (n ^ 61) ^ (n >>> 16);
+    n = (n + (n << 3)) | 0;
+    n = (n ^ (n >>> 4)) * 0x27d4eb2d | 0;
+    return ((n ^ (n >>> 15)) >>> 0);
+  }
+
+  const REDUCED = (() => {
+    try { return matchMedia("(prefers-reduced-motion: reduce)").matches; }
+    catch (e) { return false; }
+  })();
+
+  // ── Storage ────────────────────────────────────────────
+  function loadLS(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+  function saveLS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  let muted = loadLS("ab.muted", "0") === "1";
+  let hiScore = parseInt(loadLS("ab.hi", "0"), 10) || 0;
+
+  // ── Audio (all synthesized) ────────────────────────────
+  let AC = null, master = null, engine = null, warnOsc = null;
+  function ensureAudio() {
+    if (!AC) {
+      try {
+        AC = new (window.AudioContext || window.webkitAudioContext)();
+        master = AC.createGain();
+        master.gain.value = muted ? 0 : 0.4;
+        master.connect(AC.destination);
+        // twin-turbofan: saw drone + filtered noise roar for the burner
+        const o1 = AC.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = 70;
+        const lp = AC.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 500;
+        const g = AC.createGain(); g.gain.value = 0;
+        o1.connect(lp); lp.connect(g); g.connect(master);
+        const nLen = AC.sampleRate * 1;
+        const nBuf = AC.createBuffer(1, nLen, AC.sampleRate);
+        const nd = nBuf.getChannelData(0);
+        for (let i = 0; i < nLen; i++) nd[i] = Math.random() * 2 - 1;
+        const nSrc = AC.createBufferSource(); nSrc.buffer = nBuf; nSrc.loop = true;
+        const nf = AC.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = 300; nf.Q.value = 0.4;
+        const ng = AC.createGain(); ng.gain.value = 0;
+        nSrc.connect(nf); nf.connect(ng); ng.connect(master);
+        o1.start(); nSrc.start();
+        engine = { o1, g, ng, nf };
+      } catch (e) { AC = null; }
+    }
+    if (AC && AC.state === "suspended") { try { AC.resume(); } catch (e) {} }
+  }
+  function setMuted(m) {
+    muted = m;
+    saveLS("ab.muted", m ? "1" : "0");
+    if (master) master.gain.value = m ? 0 : 0.4;
+  }
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  function tone(freq, dur, type, vol, when, slideTo) {
+    if (!AC) return;
+    const t0 = AC.currentTime + (when || 0);
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(master);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  function noiseBurst(dur, vol, when, fFrom, fTo) {
+    if (!AC) return;
+    const t0 = AC.currentTime + (when || 0);
+    const len = Math.max(1, Math.floor(AC.sampleRate * dur));
+    const buf = AC.createBuffer(1, len, AC.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const f = AC.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 0.7;
+    f.frequency.setValueAtTime(fFrom || 900, t0);
+    f.frequency.exponentialRampToValueAtTime(Math.max(40, fTo || 200), t0 + dur);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t0);
+  }
+  const sfx = {
+    start() { // period synth-rock stinger, generic composition
+      const m = [[57, 0], [64, 0.11], [69, 0.22], [76, 0.33], [72, 0.5], [76, 0.61], [81, 0.72]];
+      m.forEach(([n, t]) => tone(mtof(n), 0.14, "square", 0.16, t));
+      m.forEach(([n, t]) => tone(mtof(n - 12), 0.14, "sawtooth", 0.1, t));
+    },
+    stage() { [69, 73, 76, 81].forEach((n, i) => tone(mtof(n), 0.1, "square", 0.15, i * 0.08)); },
+    lock() { tone(1240, 0.07, "square", 0.16); },
+    fire() { noiseBurst(0.5, 0.4, 0, 2400, 300); tone(220, 0.4, "sawtooth", 0.12, 0, 60); },
+    vulcan() { noiseBurst(0.05, 0.16, 0, 3200, 1400); },
+    boom() {
+      noiseBurst(0.7, 0.65, 0, 900, 45);
+      tone(110, 0.5, "sawtooth", 0.2, 0, 30);
+    },
+    bigBoom() {
+      noiseBurst(1.1, 0.85, 0, 700, 35);
+      tone(90, 0.9, "sawtooth", 0.28, 0, 24);
+      tone(240, 0.3, "square", 0.14, 0.06, 50);
+    },
+    warn() { tone(880, 0.09, "square", 0.18); tone(880, 0.09, "square", 0.18, 0.16); },
+    whoosh() { noiseBurst(0.45, 0.3, 0, 500, 2600); },
+    refuel() { [64, 69, 73, 76].forEach((n, i) => tone(mtof(n), 0.12, "triangle", 0.16, i * 0.1)); },
+    extend() { [76, 81, 85].forEach((n, i) => tone(mtof(n), 0.1, "square", 0.16, i * 0.09)); },
+    clear() {
+      const m = [[72, 0], [76, 0.12], [79, 0.24], [84, 0.36], [83, 0.5], [84, 0.6]];
+      m.forEach(([n, t]) => tone(mtof(n), 0.15, "square", 0.17, t));
+    },
+    roll() { tone(500, 0.3, "triangle", 0.12, 0, 900); },
+  };
+  function updateEngine() {
+    if (!engine) return;
+    const on = (state === "play" || state === "refuel" || state === "landing") && deathT <= 0;
+    const t = AC.currentTime;
+    const sp = speed / AB_SPEED;
+    engine.g.gain.setTargetAtTime(on ? 0.05 : 0, t, 0.07);
+    engine.o1.frequency.setTargetAtTime(52 + sp * 90, t, 0.06);
+    // burner roar swells with throttle, screams on afterburner
+    engine.ng.gain.setTargetAtTime(on ? 0.02 + sp * sp * 0.11 : 0, t, 0.09);
+    engine.nf.frequency.setTargetAtTime(220 + sp * 700, t, 0.09);
+  }
+
+  // ── Sprites ────────────────────────────────────────────
+  function buildSprite(rows, map, cell) {
+    cell = cell || 1;
+    const wMax = rows.reduce((m, r) => Math.max(m, r.length), 0);
+    rows = rows.map(r => r.padEnd(wMax, "."));
+    const c = document.createElement("canvas");
+    c.width = wMax * cell;
+    c.height = rows.length * cell;
+    const g = c.getContext("2d");
+    for (let r = 0; r < rows.length; r++)
+      for (let i = 0; i < rows[r].length; i++) {
+        const col = map[rows[r][i]];
+        if (col) { g.fillStyle = col; g.fillRect(i * cell, r * cell, cell, cell); }
+      }
+    return c;
+  }
+
+  // Per-pixel bevel shading: top edges catch light, bottom edges shadow,
+  // faint panel lines every few rows. At 2× source density + smooth
+  // downscale this reads as the X-Board's airbrushed sprite work.
+  function shadeSprite(c) {
+    try {
+      const g = c.getContext("2d");
+      const im = g.getImageData(0, 0, c.width, c.height);
+      const d = im.data, cw = c.width, chh = c.height;
+      const alpha = (x, y) => d[(y * cw + x) * 4 + 3];
+      const out = new Uint8ClampedArray(d);
+      for (let y = 0; y < chh; y++) {
+        for (let x = 0; x < cw; x++) {
+          const i = (y * cw + x) * 4;
+          if (!d[i + 3]) continue;
+          const top = y === 0 || !alpha(x, y - 1);
+          const bot = y === chh - 1 || !alpha(x, y + 1);
+          const lft = x === 0 || !alpha(x - 1, y);
+          const rgt = x === cw - 1 || !alpha(x + 1, y);
+          let m = 1, add = 0;
+          if (top) { m = 1.3; add = 26; }
+          else if (bot) m = 0.58;
+          else if (lft) { m = 1.12; add = 10; }
+          else if (rgt) m = 0.8;
+          else if (y % 6 === 5) m = 0.88;          // panel lines
+          if (m !== 1 || add) {
+            out[i] = Math.min(255, d[i] * m + add);
+            out[i + 1] = Math.min(255, d[i + 1] * m + add);
+            out[i + 2] = Math.min(255, d[i + 2] * m + add);
+          }
+        }
+      }
+      g.putImageData(new ImageData(out, cw, chh), 0, 0);
+    } catch (e) { /* headless canvas stubs can't shade — fine */ }
+    return c;
+  }
+
+  // F-14 from dead astern — white/grey airframe, red trim, twin nozzles.
+  // Drawn from the reference shots: wide swing wings, twin tails, big round
+  // engine glows. ~56×26 at 1px cells (≈17% of screen width, per reference).
+  const F14_LEVEL = [
+    "..........................w..w..........................",
+    ".........................swwsww.........................",
+    ".........................swwwws.........................",
+    "....................t.t..swbbws..t.t....................",
+    "....................twt..swbbws..twt....................",
+    "....................tww..swwwws..wwt....................",
+    "wwww................twws.swwwws.swwt................wwww",
+    "swwwwwwwwww.........twwsswwwwwwsswwt.........wwwwwwwwwws",
+    "sswwwwwwwwwwwwww....swwwwwwwwwwwwwws....wwwwwwwwwwwwwwss",
+    "..ssswwwwwwwwwwwwwwswwwwwwwwwwwwwwwwswwwwwwwwwwwwwwsss..",
+    ".....sssswwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwssss.....",
+    "..........ssswwwwwwwwwwwwwwwwwwwwwwwwwwwwwsss...........",
+    "..............swwwwwrwwwwwwwwwwwrwwwwwws................",
+    "..............swwwwrrwwwwwwwwwwwrrwwwwws................",
+    "...............sww.kooktswwwwst.kookt.ws................",
+    "...............ss..koook.ssss..koook..ss................",
+    "....................kook........kook....................",
+    ".....................kk..........kk.....................",
+  ];
+  const F14_CLIMB = [
+    "..........................w..w..........................",
+    ".........................swwwws.........................",
+    "........................swwccwws........................",
+    "....................t.t.swwccwws.t.t....................",
+    "....................twt.swwwwwws.twt....................",
+    "....................twwsswwwwwwsswwt....................",
+    "wwwww...............twwwwwwwwwwwwwwt...............wwwww",
+    "sswwwwwwwwww........swwwwwwwwwwwwwws........wwwwwwwwwwss",
+    "...sswwwwwwwwwwwww..swwwwwwwwwwwwwws..wwwwwwwwwwwwwss...",
+    "......ssswwwwwwwwwwswwwwwwwwwwwwwwwwswwwwwwwwwwsss......",
+    "..........ssswwwwwwwwwwwwwwwwwwwwwwwwwwwwsss............",
+    "..............sswwwwwwwwwwwwwwwwwwwwwwss................",
+    "...............swwwooowwwwwwwwwooowww.s.................",
+    "..............sww.ooooo.wwwwww.ooooo.wws................",
+    "..............ss..oOOOo..ssss..oOOOo..ss................",
+    "...................ooooo......ooooo.....................",
+    "....................ooo........ooo......................",
+    ".....................o..........o.......................",
+  ];
+  const F14_DIVE = [
+    "....................t.t..........t.t....................",
+    "....................twt....ss....twt....................",
+    "....................tww...swws...wwt....................",
+    "wwww................twws.swwwws.swwt................wwww",
+    "swwwwwwwwww.........twwsswwwwwwsswwt.........wwwwwwwwwws",
+    "sswwwwwwwwwwwwww....swwwwwwwwwwwwwws....wwwwwwwwwwwwwwss",
+    "..ssswwwwwwwwwwwwwwswwwwwwwwwwwwwwwwswwwwwwwwwwwwwwsss..",
+    ".....sssswwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwssss.....",
+    "..........ssswwwwwwwwwwwwwwwwwwwwwwwwwwwwwsss...........",
+    "..............swwwwwrwwwwwwwwwwwrwwwwwws................",
+    "...............swwwwrrwwwwwwwwwwrrwwwws.................",
+    "...............sww.kooktswwwwst.kookt.ws................",
+    "...............ss..koook.ssss..koook..ss................",
+    "....................kook........kook....................",
+  ];
+  const F14_MAP = {
+    w: "#f0f2f6", s: "#7c828e", t: "#c0c6ce", b: "#5ab6e8", c: "#5ab6e8",
+    r: "#d03028", k: "#26262e", o: "#ff8c1a", O: "#ffd21f",
+  };
+  const sprJetLevel = shadeSprite(buildSprite(F14_LEVEL, F14_MAP, 2));
+  const sprJetClimb = shadeSprite(buildSprite(F14_CLIMB, F14_MAP, 2));
+  const sprJetDive = shadeSprite(buildSprite(F14_DIVE, F14_MAP, 2));
+
+  // Enemy fighter, seen head-on (attacking) — green/white camo, dark intakes
+  const MIG_FRONT = [
+    "...........g...........",
+    "..........ggg..........",
+    ".....d....gcg....d.....",
+    ".....dd..ggggg..dd.....",
+    "gggggddgggggggggddggggg",
+    "wgggggggggwgwgggggggggw",
+    ".wwgggggggggggggggggww.",
+    "...wwgggg.ggg.ggggww...",
+    "......d...ggg...d......",
+    "..........g.g..........",
+  ];
+  // Enemy fighter from astern (fleeing) — red exhaust
+  const MIG_REAR = [
+    "...........g...........",
+    ".....t....ggg....t.....",
+    ".....tg..ggggg..gt.....",
+    "gggggggggggwgwggggggggg",
+    "wggggggggg.o.gggggggggw",
+    ".wwggggg..ooo..gggggww.",
+    "...wwg...ooOoo...gww...",
+    "..........ooo..........",
+  ];
+  const MIG_MAP = {
+    g: "#4a7a3a", w: "#d8e0d0", d: "#22301c", c: "#79c6e8",
+    o: "#ff3a20", O: "#ffd21f", t: "#31501f",
+  };
+  const MIG_MAP_NIGHT = {
+    g: "#8a92a2", w: "#e8ecf2", d: "#30343e", c: "#9adcf8",
+    o: "#ff3a20", O: "#ffd21f", t: "#6a717f",
+  };
+  const sprMigFront = shadeSprite(buildSprite(MIG_FRONT, MIG_MAP, 2));
+  const sprMigRear = shadeSprite(buildSprite(MIG_REAR, MIG_MAP, 2));
+  const sprMigFrontN = shadeSprite(buildSprite(MIG_FRONT, MIG_MAP_NIGHT, 2));
+  const sprMigRearN = shadeSprite(buildSprite(MIG_REAR, MIG_MAP_NIGHT, 2));
+
+  // Refuelling tanker from astern — big grey silhouette with boom
+  const TANKER = [
+    "...........ww...........",
+    "..........wwww..........",
+    "wwwwwwwwwwwwwwwwwwwwwwww",
+    "swwwwwwwwwwwwwwwwwwwwwws",
+    ".ss.wwwwwwwwwwwwwwww.ss.",
+    "....k..wwwwwwwwww..k....",
+    ".......s...ww...s.......",
+    "...........kk..........",
+    "...........kk..........",
+  ];
+  const sprTanker = shadeSprite(buildSprite(TANKER, { w: "#b8bec8", s: "#888e9a", k: "#3a3a42" }, 4));
+
+  // Ground turret (canyon stages)
+  const TURRET = [
+    "...kk...",
+    "..kggk..",
+    ".kggggk.",
+    "kkkkkkkk",
+  ];
+  const sprTurret = shadeSprite(buildSprite(TURRET, { k: "#4a4038", g: "#7a6a52" }, 4));
+
+  // ── Terrain palettes: the 23-stage table ───────────────
+  // Palettes matched to the reference shots; type drives the stage logic.
+  const PAL = {
+    ocean:   { skyTop: "#1890e8", skyBot: "#9adcf8", glow: "#d8f2ff", gA: "#1440b0", gB: "#2058d0", patch: "#8a6a48", patch2: "#e8f4ff", name: "OCEAN" },
+    sunset:  { skyTop: "#e85800", skyBot: "#ffc020", glow: "#ffe860", gA: "#684210", gB: "#8a6220", patch: "#a04818", patch2: "#d8a820", name: "SUNSET" },
+    night:   { skyTop: "#2a2a48", skyBot: "#6a6a90", glow: "#b0b0cc", gA: "#182838", gB: "#1e3040", patch: "#ffe9a0", patch2: "#28404e", name: "NIGHT" },
+    desert:  { skyTop: "#f0e0b8", skyBot: "#f8f0d8", glow: "#ffffff", gA: "#b08830", gB: "#c09838", patch: "#8a5c28", patch2: "#d8b868", name: "DESERT" },
+    jungle:  { skyTop: "#1878e0", skyBot: "#88ccf0", glow: "#d0ecff", gA: "#1e7018", gB: "#288020", patch: "#0e5010", patch2: "#2898d8", name: "JUNGLE" },
+    dusk:    { skyTop: "#583068", skyBot: "#e07040", glow: "#ffb060", gA: "#3a3048", gB: "#443a52", patch: "#2a2438", patch2: "#c05830", name: "DUSK" },
+  };
+  // 23 stages: 5/13/23 landings, 8/17 canyon runs, refuel after 3/7/11/15/19.
+  const STAGES = [
+    { pal: "ocean" }, { pal: "sunset" }, { pal: "night", refuelAfter: true },
+    { pal: "desert" }, { pal: "ocean", type: "landing" },
+    { pal: "jungle" }, { pal: "dusk", refuelAfter: true },
+    { pal: "desert", type: "canyon" }, { pal: "night" },
+    { pal: "ocean" }, { pal: "sunset", refuelAfter: true },
+    { pal: "jungle" }, { pal: "desert", type: "landing" },
+    { pal: "dusk" }, { pal: "night", refuelAfter: true },
+    { pal: "ocean" }, { pal: "desert", type: "canyon" },
+    { pal: "jungle" }, { pal: "sunset", refuelAfter: true },
+    { pal: "dusk" }, { pal: "night" }, { pal: "sunset" },
+    { pal: "ocean", type: "landing", last: true },
+  ];
+
+  // ── Game state ─────────────────────────────────────────
+  const CRUISE = 460, MIN_SPEED = 240, AB_SPEED = 780;
+  const MISSILE_MAX = 50;
+  let state = "title";       // title | howto | intro | play | refuel | landing | over | ending
+  let stateT = 0;
+  let blink = 0;
+  let stage = 0;             // 0-based index into STAGES
+  let score = 0, hiFlash = 0, newHi = false;
+  let lives = 3;
+  let missiles = MISSILE_MAX;
+  let hitCount = 0;          // consecutive-kill HIT counter (per stage)
+  let speed = CRUISE, throttle = 0;  // throttle: -1 brake, 0 cruise, 1 afterburner
+  let px = 0, py = 0;        // plane screen-space position, -1..1
+  let vroll = 0;             // visual roll (rad)
+  let worldTilt = 0;         // ground rotation (rad)
+  let pitchOff = 0;
+  let traveled = 0;
+  let deathT = 0, invulnT = 0, gameOverT = 0;
+  let rollT = 0;             // barrel roll timer (>0 = rolling, i-frames)
+  let lastTapL = -9, lastTapR = -9, tClock = 0;
+  let shakeT = 0;
+  let stageT = 0, waveIdx = 0, stageKills = 0, waveClock = 0;
+  let enemies = [], bullets = [], pMissiles = [], eMissiles = [], booms = [], patches = [], turrets = [];
+  let lockQueue = [];        // enemy refs currently sweep-locked
+  let rearLock = null;       // {t, speedAtLock, resolved} — rear missile event
+  let flowT = 0;             // distance-score accumulator
+  let botOn = false, botAimless = false, botEvade = 0, botTarget = null, botFireT = -9;
+  let attractT = 0;
+  const keys = { left: false, right: false, up: false, down: false, vulcan: false, ab: false, brake: false };
+  let vulcanT = 0, vulcanPhase = 0;
+
+  const stagePal = () => PAL[STAGES[stage].pal];
+  const stageType = () => STAGES[stage].type || "combat";
+
+  // ── Terrain dressing (stable hash-positioned patches) ──
+  function seedPatches() {
+    patches = [];
+    for (let i = 0; i < 230; i++) {
+      const big = (i % 10) < 3;      // 30% large features, 70% fine speckle
+      patches.push({
+        // lateral spread matched to the view frustum (±0.67z at depth z);
+        // short 900u cycle keeps most of the strip inside the visible band
+        gx: ((h32(i * 71 + stage * 977) % 1900) - 950),
+        gz: (h32(i * 137 + stage * 421) % 900),
+        w: big ? 22 + (h32(i * 31) % 40) : 5 + (h32(i * 31) % 14),
+        kind: i % 3, big,
+        j: (h32(i * 13) % 100) / 100,
+      });
+    }
+  }
+
+  // ── Stage control ──────────────────────────────────────
+  function addScore(n) { score = Q(score + n); }
+
+  function spawnWave() {
+    const st = stage + 1;
+    const n = clamp(2 + ((stage / 4) | 0), 2, 5);
+    const rear = st >= 4 && Math.random() < clamp(0.12 + stage * 0.02, 0, 0.5);
+    for (let i = 0; i < n; i++) {
+      const attack = Math.random() < clamp(0.3 + stage * 0.03, 0, 0.85);
+      enemies.push({
+        // world coords: x lateral, y vertical, z depth ahead of player
+        x: rand(-320, 320), y: rand(-140, 150),
+        z: rear ? -rand(300, 700) - i * 160 : 2400 + i * 260 + rand(0, 140),
+        vx: rand(-46, 46), vy: rand(-26, 26),
+        rear,
+        attack,                              // attackers close in; others flee
+        fleeSpeed: rand(-140, -40),          // z-relative speed when fleeing
+        closeSpeed: rand(150, 240) + stage * 8,
+        fireT: rand(0.7, 2.1),
+        hp: 1, lockedT: 0, dead: false,
+        jinkP: rand(0, 6.28), jinkA: rand(28, 90),
+      });
+    }
+  }
+  function spawnTurrets() {
+    turrets = [];
+    for (let i = 0; i < 10; i++)
+      turrets.push({ gx: (i % 2 ? -1 : 1) * rand(120, 420), gz: 700 + i * 420, fireT: rand(0.4, 1.4), dead: false });
+  }
+
+  function startStage(n) {
+    stage = clamp(n, 0, STAGES.length - 1);
+    stageT = 0; waveIdx = 0; stageKills = 0; hitCount = 0; waveClock = 0;
+    enemies = []; bullets = []; pMissiles = []; eMissiles = []; booms = [];
+    lockQueue = []; rearLock = null; turrets = [];
+    seedPatches();
+    const t = stageType();
+    if (t === "landing") { state = "landing"; stateT = 0; }
+    else {
+      state = "intro"; stateT = 0;
+      if (t === "canyon") spawnTurrets();
+    }
+    sfx.stage();
+  }
+
+  function startGame() {
+    score = 0; lives = 3; missiles = MISSILE_MAX; newHi = false;
+    px = 0; py = 0; speed = CRUISE;
+    deathT = 0; invulnT = 2; gameOverT = 0;
+    startStage(0);
+    sfx.start();
+  }
+
+  function toTitle() {
+    state = "title"; stateT = 0; attractT = 0;
+    botOn = false; botAimless = false;
+    enemies = []; bullets = []; pMissiles = []; eMissiles = []; booms = [];
+    stage = 0; seedPatches();
+  }
+
+  function endStage() {
+    addScore(3000 + stage * 500);
+    sfx.clear();
+    if (STAGES[stage].refuelAfter) { state = "refuel"; stateT = 0; }
+    else if (stage + 1 < STAGES.length) startStage(stage + 1);
+    else { state = "ending"; stateT = 0; }
+  }
+
+  function saveHi() {
+    if (score > hiScore) { hiScore = Q(score); saveLS("ab.hi", String(hiScore)); newHi = true; }
+  }
+
+  function killPlayer() {
+    if (invulnT > 0 || rollT > 0 || deathT > 0) return;
+    deathT = 2.4; shakeT = 0.6;
+    lives--;
+    sfx.bigBoom();
+    for (let i = 0; i < 5; i++)
+      booms.push({ x: px * 60 + rand(-40, 40), y: py * 40 + rand(-30, 30), z: 120 + i * 30, t: -i * 0.12, big: true });
+    eMissiles = []; rearLock = null;
+  }
+
+  // ── Lock-on + weapons ──────────────────────────────────
+  // Boresight: slightly above plane, leads toward screen center.
+  function boresight() {
+    return { sx: CX + px * 46, sy: CY - 26 + py * -30 };
+  }
+  function project(o) {
+    // world → screen (before world tilt). Player camera counter-shifts.
+    const z = Math.max(o.z, 14);
+    const s = FOCAL / z;
+    return {
+      sx: CX + (o.x - px * 130) * s,
+      sy: CY - 8 - (o.y - py * 92) * s,
+      s,
+    };
+  }
+  function updateLocks(dt) {
+    const bs = boresight();
+    for (const e of enemies) {
+      if (e.dead || e.rear || e.z < 60 || e.z > 2100) { e.lockedT = Math.max(0, e.lockedT - dt); continue; }
+      const p = project(e);
+      const r = 30 + 900 / e.z;                    // reticle capture radius
+      const d = Math.hypot(p.sx - bs.sx, p.sy - bs.sy);
+      if (d < r) {
+        if (e.lockedT <= 0) {
+          sfx.lock();
+          if (!lockQueue.includes(e)) lockQueue.push(e);
+        }
+        e.lockedT = 0.95;                          // sweep-lock persistence
+      } else {
+        e.lockedT = Math.max(0, e.lockedT - dt);
+        if (e.lockedT <= 0) {
+          const qi = lockQueue.indexOf(e);
+          if (qi >= 0) lockQueue.splice(qi, 1);
+        }
+      }
+    }
+    lockQueue = lockQueue.filter(e => !e.dead && e.lockedT > 0);
+  }
+  let fireCool = 0;
+  function fireMissile() {
+    if (missiles <= 0 || state !== "play" || deathT > 0) return false;
+    if (tClock - fireCool < 0.22) return false;   // rapid but not instant (AB2 rate)
+    fireCool = tClock;
+    const target = lockQueue.shift() || null;
+    if (target) target.lockedT = 0;
+    missiles--;
+    sfx.fire();
+    const bs = boresight();
+    pMissiles.push({
+      sx: bs.sx + rand(-30, 30) * 0.4, sy: 190,
+      t: 0, dur: target ? 0.55 : 0.8, target,
+      trail: [], missT: rand(-1, 1),
+    });
+    return true;
+  }
+  function vulcanHits(dt) {
+    const bs = boresight();
+    for (const e of enemies) {
+      if (e.dead || e.rear) continue;
+      if (e.z < 90 || e.z > 1500) continue;
+      const p = project(e);
+      const d = Math.hypot(p.sx - bs.sx, p.sy - bs.sy);
+      if (d < 20 + 500 / e.z) {
+        e.hp -= dt * 3.4;                          // ~0.3s of fire kills
+        if (e.hp <= 0) killEnemy(e, false);
+      }
+    }
+    for (const t of turrets) {
+      if (t.dead) continue;
+      const z = t.gz - traveled;
+      if (z < 90 || z > 1300) continue;
+      const p = project({ x: t.gx, y: -170, z });
+      if (Math.hypot(p.sx - bs.sx, p.sy - bs.sy) < 18 + 400 / z) {
+        t.dead = true;
+        addScore(500); hitCount++;
+        booms.push({ x: t.gx, y: -170, z, t: 0, ground: true });
+        sfx.boom();
+      }
+    }
+  }
+  function killEnemy(e, byMissile) {
+    if (e.dead) return;
+    e.dead = true;
+    hitCount++;
+    stageKills++;
+    addScore(byMissile ? 1000 : 1200);
+    booms.push({ x: e.x, y: e.y, z: e.z, t: 0 });
+    sfx.boom();
+    const qi = lockQueue.indexOf(e);
+    if (qi >= 0) lockQueue.splice(qi, 1);
+  }
+
+  // ── Update ─────────────────────────────────────────────
+  function update(dt) {
+    blink += dt; tClock += dt;
+    if (shakeT > 0) shakeT -= dt;
+    if (hiFlash > 0) hiFlash -= dt;
+
+    if (state === "title") { attractT += dt; updateTitle(dt); return; }
+    if (state === "howto") { stateT += dt; if (stateT > 7) { startGame(); } return; }
+    if (state === "over") {
+      stateT += dt;
+      if (stateT > 8) toTitle();
+      return;
+    }
+    if (state === "ending") { stateT += dt; if (stateT > 9) { saveHi(); state = "over"; stateT = 0; } return; }
+    if (state === "intro") {
+      stateT += dt;
+      updateFlight(dt, true);
+      if (stateT > 1.6) { state = "play"; stateT = 0; }
+      return;
+    }
+    if (state === "refuel") {
+      stateT += dt;
+      updateFlight(dt, true);
+      // smooth integer refill once the boom connects
+      if (stateT > 1.2) {
+        refillAcc += dt * 16;
+        while (refillAcc >= 1 && missiles < MISSILE_MAX) { missiles++; refillAcc -= 1; }
+      }
+      if (stateT > 5.2) {
+        missiles = MISSILE_MAX;
+        sfx.refuel();
+        if (stage + 1 < STAGES.length) startStage(stage + 1);
+        else { state = "ending"; stateT = 0; }
+      }
+      return;
+    }
+    if (state === "landing") {
+      stateT += dt;
+      traveled += speed * dt * 0.5;
+      // glide: level the wings, center up, ease down toward the runway
+      px += (0 - px) * dt * 1.4;
+      py = Math.max(-0.72, py - dt * 0.16);
+      worldTilt += (0 - worldTilt) * dt * 2.5;
+      vroll += (0 - vroll) * dt * 2.5;
+      pitchOff += (10 - pitchOff) * dt * 2;
+      speed += ((CRUISE * 0.7) - speed) * dt;
+      if (stateT > 5.6) {
+        addScore(10000);
+        missiles = MISSILE_MAX;
+        sfx.refuel();
+        if (STAGES[stage].last) { saveHi(); state = "ending"; stateT = 0; }
+        else startStage(stage + 1);
+      }
+      return;
+    }
+
+    // ── play ──
+    stageT += dt;
+    if (deathT > 0) {
+      deathT -= dt;
+      updateBooms(dt);
+      traveled += speed * dt;
+      if (deathT <= 0) {
+        if (lives <= 0) { saveHi(); state = "over"; stateT = 0; sfx.warn(); }
+        else { px = 0; py = 0; speed = CRUISE; invulnT = 2.2; eMissiles = []; bullets = []; rearLock = null; }
+      }
+      return;
+    }
+    if (invulnT > 0) invulnT -= dt;
+    if (botOn) runBot(dt);
+    updateFlight(dt, false);
+    updateLocks(dt);
+
+    // vulcan autofire while held
+    if (keys.vulcan) {
+      vulcanT += dt;
+      vulcanPhase += dt;
+      if (vulcanPhase > 0.09) { vulcanPhase = 0; sfx.vulcan(); }
+      vulcanHits(dt);
+    } else vulcanT = 0;
+
+    // distance scoring (the AB2 addition) — faster = more
+    flowT += dt * (speed / CRUISE);
+    while (flowT >= 1) { addScore(120); flowT -= 1; }
+
+    // stages are fixed flight blocks (like the arcade): waves keep coming
+    // until the block is flown through — kills are score, not progress
+    const STAGE_LEN = stageType() === "canyon" ? 26 : 22 + Math.min(stage * 0.4, 8);
+    const alive = enemies.filter(e => !e.dead).length;
+    waveClock -= dt;
+    if ((alive === 0 || waveClock <= 0) && stageT < STAGE_LEN - 4) {
+      spawnWave(); waveIdx++;
+      waveClock = 6.5 - Math.min(stage * 0.12, 2.5);
+    }
+    if (stageT > STAGE_LEN) { endStage(); return; }
+
+    updateEnemies(dt);
+    updateProjectiles(dt);
+    updateBooms(dt);
+    if (stageType() === "canyon") updateTurrets(dt);
+  }
+
+  let refillAcc = 0;
+
+  function updateFlight(dt, cutscene) {
+    // stick
+    const sx = (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
+    const sy = (keys.up ? 1 : 0) + (keys.down ? -1 : 0);
+    if (!cutscene) {
+      px = clamp(px + sx * dt * 1.35, -1, 1);
+      py = clamp(py + sy * dt * 1.15, -1, 1);
+    }
+    // throttle lever: Shift = afterburner detent, Ctrl = pull back
+    throttle = keys.ab ? 1 : keys.brake ? -1 : 0;
+    const target = throttle > 0 ? AB_SPEED : throttle < 0 ? MIN_SPEED : CRUISE;
+    speed += (target - speed) * dt * (throttle > 0 ? 2.2 : 1.6);
+    traveled += speed * dt;
+
+    // barrel roll
+    if (rollT > 0) rollT -= dt;
+
+    // world tilt follows bank; jet rolls harder than the world counter-tilts
+    const bank = sx + (rollT > 0 ? Math.sin(rollT * 10.5) * 2.2 : 0);
+    worldTilt += (sx * -0.42 - worldTilt) * dt * 3.2;
+    vroll += (bank * 0.5 + (rollT > 0 ? Math.sin(rollT * 10.5) * 1.9 : 0) - vroll) * dt * (rollT > 0 ? 10 : 5.5);
+    pitchOff += (py * -22 - pitchOff) * dt * 3.5;
+  }
+
+  function tryRollTap(dir) {
+    if (state !== "play" || rollT > 0) { if (dir < 0) lastTapL = tClock; else lastTapR = tClock; return; }
+    const last = dir < 0 ? lastTapL : lastTapR;
+    if (tClock - last < 0.28) { rollT = 0.62; sfx.roll(); }
+    if (dir < 0) lastTapL = tClock; else lastTapR = tClock;
+  }
+
+  function updateEnemies(dt) {
+    const st = stage + 1;
+    for (const e of enemies) {
+      if (e.dead) continue;
+      e.jinkP += dt * 2.1;
+      e.x += (e.vx + Math.cos(e.jinkP) * e.jinkA) * dt;
+      e.y += (e.vy + Math.sin(e.jinkP * 0.8) * e.jinkA * 0.5) * dt;
+      e.x = clamp(e.x, -420, 420); e.y = clamp(e.y, -180, 190);
+
+      if (e.rear) {
+        // rear attacker: overtakes from behind at RELATIVE speed — throttle
+        // changes how fast it blows past (the AB2 throttle mechanic)
+        e.z += (e.closeSpeed + (speed - CRUISE) * -0.5) * dt;
+        if (e.z > 2400) e.dead = true;                // gone ahead, despawn
+        // fires while behind→abeam
+        e.fireT -= dt;
+        if (e.fireT <= 0 && e.z > -420 && e.z < 300) {
+          e.fireT = rand(1.1, 2.0) - clamp(st * 0.02, 0, 0.5);
+          spawnBullet(e, true);
+        }
+      } else if (e.attack) {
+        e.z -= (speed * 0.32 + e.closeSpeed) * dt;    // closing head-on
+        e.fireT -= dt;
+        if (e.fireT <= 0 && e.z > 420 && e.z < 1900) {
+          e.fireT = rand(0.9, 1.9) - clamp(st * 0.025, 0, 0.55);
+          spawnBullet(e, false);
+          // later stages: occasional front missile instead of bullets
+          if (st >= 4 && Math.random() < clamp(0.08 + st * 0.012, 0, 0.4)) spawnEMissile(e);
+        }
+        if (e.z < 40) e.dead = true;                  // whooshes past
+      } else {
+        // fleeing target: drifts away slower than you fly — catchable
+        e.z -= (speed * 0.3 + e.fleeSpeed) * dt;
+        if (e.z < 40) e.dead = true;
+        if (e.z > 2600) e.dead = true;
+      }
+    }
+    // rear missile events: the klaxon moment. One at a time, stage 6+.
+    if (!rearLock && st >= 6 && Math.random() < dt * clamp(0.05 + st * 0.006, 0, 0.16)) {
+      rearLock = { t: 2.2, speedAtLock: speed, resolved: false };
+      sfx.warn();
+    }
+    if (rearLock) {
+      rearLock.t -= dt;
+      if (Math.abs(speed - rearLock.speedAtLock) > 130 || rollT > 0) rearLock.resolved = true;
+      if (rearLock.t < 0.9 && rearLock.t + dt >= 0.9) sfx.warn();
+      if (rearLock.t <= 0) {
+        if (rearLock.resolved) { addScore(800); sfx.whoosh(); }
+        else killPlayer();
+        rearLock = null;
+      }
+    }
+  }
+
+  function spawnBullet(e, fromRear) {
+    // aimed at where the player IS, with spread — dodging works
+    bullets.push({
+      x: e.x + rand(-14, 14), y: e.y + rand(-10, 10),
+      z: fromRear ? Math.max(e.z, 30) : e.z,
+      tx: px * 130 + rand(-1, 1) * Math.max(60, 100 - stage * 4),
+      ty: py * 92 + rand(-1, 1) * Math.max(44, 72 - stage * 3),
+      v: 340 + stage * 12, fromRear,
+      t: 0,
+    });
+  }
+  function spawnEMissile(e) {
+    eMissiles.push({
+      x: e.x, y: e.y, z: e.z,
+      v: 300 + stage * 8, t: 0, trail: [],
+    });
+  }
+
+  function updateProjectiles(dt) {
+    // player missiles: screen-space swoop onto the target
+    for (const m of pMissiles) {
+      m.t += dt;
+      const k = m.t / m.dur;
+      if (m.target && !m.target.dead) {
+        const p = project(m.target);
+        m.sx += (p.sx - m.sx) * clamp(k * 2.2, 0, 1) * dt * 18;
+        m.sy += (p.sy - m.sy) * clamp(k * 2.0, 0, 1) * dt * 16 - dt * (1 - k) * 130;
+      } else {
+        m.sx += m.missT * dt * 60;
+        m.sy -= dt * 190;
+      }
+      m.trail.push({ x: m.sx, y: m.sy, a: 1 });
+      if (m.trail.length > 26) m.trail.shift();
+      if (m.t >= m.dur) {
+        m.done = true;
+        if (m.target && !m.target.dead) killEnemy(m.target, true);
+      }
+    }
+    pMissiles = pMissiles.filter(m => !m.done);
+
+    // enemy bullets
+    for (const b of bullets) {
+      b.t += dt;
+      b.z -= (b.v + speed * (b.fromRear ? -0.2 : 0.4)) * dt * (b.fromRear ? -1 : 1);
+      b.x += (b.tx - b.x) * dt * 1.6;
+      b.y += (b.ty - b.y) * dt * 1.6;
+      if (b.fromRear ? b.z > 2200 : b.z < 18) {
+        b.gone = true;
+        // crossing the player plane: hit test in world units
+        if (!b.fromRear && Math.abs(b.x - px * 130) < 34 && Math.abs(b.y - py * 92) < 26) killPlayer();
+      }
+      if (b.fromRear && b.z > -10 && b.z < 40 && !b.tested) {
+        b.tested = true;
+        if (Math.abs(b.x - px * 130) < 30 && Math.abs(b.y - py * 92) < 22) killPlayer();
+      }
+    }
+    bullets = bullets.filter(b => !b.gone && b.t < 8);
+
+    // enemy missiles (frontal, visible incoming)
+    for (const m of eMissiles) {
+      m.t += dt;
+      m.z -= (m.v + speed * 0.5) * dt;
+      m.x += (px * 130 - m.x) * dt * clamp(1.9 - stage * 0.02, 1.1, 1.9);
+      m.y += (py * 92 - m.y) * dt * 1.7;
+      m.trail.push({ x: m.x, y: m.y, z: m.z });
+      if (m.trail.length > 14) m.trail.shift();
+      if (m.z < 26) {
+        m.gone = true;
+        if (Math.abs(m.x - px * 130) < 40 && Math.abs(m.y - py * 92) < 30) killPlayer();
+        else sfx.whoosh();
+      }
+    }
+    eMissiles = eMissiles.filter(m => !m.gone);
+
+    // collisions with enemy airframes crossing the player plane
+    for (const e of enemies) {
+      if (e.dead || e.rear) continue;
+      if (e.z < 60 && e.z > 20 &&
+          Math.abs(e.x - px * 130) < 42 && Math.abs(e.y - py * 92) < 30) {
+        killEnemy(e, false);
+        killPlayer();
+      }
+    }
+  }
+
+  function updateTurrets(dt) {
+    for (const t of turrets) {
+      if (t.dead) continue;
+      const z = t.gz - traveled;
+      if (z < -100) continue;
+      if (z > 60 && z < 1400) {
+        t.fireT -= dt;
+        if (t.fireT <= 0) {
+          t.fireT = rand(1.3, 2.4);
+          bullets.push({
+            x: t.gx, y: -160, z,
+            tx: px * 130 + rand(-80, 80), ty: py * 92 + rand(-40, 60),
+            v: 280 + stage * 8, fromRear: false, t: 0,
+          });
+        }
+      }
+    }
+    if (turrets.length && turrets.every(t => t.dead || t.gz - traveled < -60)) spawnTurrets();
+  }
+
+  function updateBooms(dt) {
+    for (const b of booms) b.t += dt;
+    booms = booms.filter(b => b.t < 0.8);
+  }
+
+  function updateTitle(dt) { /* sphere field shimmer is time-based in draw */ }
+
+  // ── Autopilot bot (skilled) ────────────────────────────
+  // One function, four masters: difficulty meter, screenshot driver,
+  // attract demo, regression probe.
+  function runBot(dt) {
+    keys.vulcan = false; keys.ab = false; keys.brake = false;
+    keys.left = keys.right = keys.up = keys.down = false;
+    if (botAimless) return;                    // aimless: hands off everything
+    // evade: rear lock → slam throttle; front missile → roll timed to impact
+    if (rearLock && !rearLock.resolved) { keys.ab = true; return; }
+    const threat = eMissiles.filter(m => m.z < 800).sort((a, b) => a.z - b.z)[0];
+    if (threat) {
+      if (threat.z < 320 && rollT <= 0) rollT = 0.62;   // i-frames at impact
+      keys[px > 0 ? "left" : "right"] = true;
+      keys[py > 0 ? "down" : "up"] = true;
+      return;
+    }
+    // bullet dodge outranks aiming: sidestep the nearest converging round
+    const hot = bullets.filter(b => !b.fromRear && b.z < 560 &&
+      Math.abs(b.x - px * 130) < 70 && Math.abs(b.y - py * 92) < 55)
+      .sort((a, b) => a.z - b.z)[0];
+    if (hot) {
+      keys[hot.x >= px * 130 ? "left" : "right"] = true;
+      keys[hot.y >= py * 92 ? "down" : "up"] = true;
+      return;
+    }
+    // aim: nearest lockable enemy, but BREAK OFF close-in (ram avoidance)
+    if (!botTarget || botTarget.dead || botTarget.rear || botTarget.z < 380)
+      botTarget = enemies.filter(e => !e.dead && !e.rear && e.z > 430 && e.z < 2100)
+        .sort((a, b) => a.z - b.z)[0] || null;
+    if (botTarget) {
+      const p = project(botTarget);
+      const bs = boresight();
+      if (p.sx < bs.sx - 6) keys.left = true;
+      if (p.sx > bs.sx + 6) keys.right = true;
+      if (p.sy < bs.sy - 6) keys.up = true;
+      if (p.sy > bs.sy + 6) keys.down = true;
+      keys.vulcan = botTarget.z < 1200;
+      if (lockQueue.length && missiles > 4 && tClock - botFireT > 0.4) {
+        if (fireMissile()) botFireT = tClock;
+      }
+    } else {
+      // no target: dodge whatever is crossing the player plane, drift center
+      const rammer = enemies.find(e => !e.dead && !e.rear && e.z < 380 && e.z > 20);
+      if (rammer) {
+        keys[rammer.x >= px * 130 ? "left" : "right"] = true;
+        keys[rammer.y >= py * 92 ? "down" : "up"] = true;
+      } else {
+        if (px > 0.25) keys.left = true;
+        if (px < -0.25) keys.right = true;
+        if (py > 0.3) keys.down = true;
+        if (py < -0.3) keys.up = true;
+      }
+    }
+  }
+
+  // ── Drawing ────────────────────────────────────────────
+  function text(str, x, y, size, color, align) {
+    ctx.fillStyle = color;
+    ctx.font = "bold " + size + "px ui-monospace, Menlo, monospace";
+    ctx.textAlign = align || "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(str, x, y);
+  }
+  // chunky 4×6 bitmap glyphs for the score (yellow arcade digits)
+  const GLYPHS = {
+    "0": ["####", "#..#", "#..#", "#..#", "#..#", "####"],
+    "1": ["..#.", ".##.", "..#.", "..#.", "..#.", ".###"],
+    "2": ["####", "...#", "####", "#...", "#...", "####"],
+    "3": ["####", "...#", ".###", "...#", "...#", "####"],
+    "4": ["#..#", "#..#", "####", "...#", "...#", "...#"],
+    "5": ["####", "#...", "####", "...#", "...#", "####"],
+    "6": ["####", "#...", "####", "#..#", "#..#", "####"],
+    "7": ["####", "...#", "..#.", "..#.", ".#..", ".#.."],
+    "8": ["####", "#..#", "####", "#..#", "#..#", "####"],
+    "9": ["####", "#..#", "####", "...#", "...#", "####"],
+  };
+  function drawGlyphs(str, x, y, cell, color) {
+    ctx.fillStyle = color;
+    let cx = x;
+    for (const ch of str) {
+      const g = GLYPHS[ch];
+      if (g) for (let r = 0; r < 6; r++)
+        for (let i = 0; i < 4; i++)
+          if (g[r][i] === "#") ctx.fillRect(cx + i * cell, y + r * cell, cell, cell);
+      cx += 5 * cell;
+    }
+  }
+
+  function drawWorld() {
+    const pal = stagePal();
+    const hy = 96 + pitchOff;              // horizon before tilt
+    ctx.save();
+    ctx.translate(CX, hy);
+    ctx.rotate(worldTilt);
+    // sky: two bands + glow at horizon (oversized for rotation coverage)
+    const g = ctx.createLinearGradient(0, -170, 0, 0);
+    g.addColorStop(0, pal.skyTop); g.addColorStop(1, pal.skyBot);
+    ctx.fillStyle = g;
+    ctx.fillRect(-260, -220, 520, 220);
+    ctx.fillStyle = pal.glow;
+    ctx.fillRect(-260, -4, 520, 4);
+
+    // ground: perspective bands rushing at the viewer
+    for (let i = 1; i <= 170; i++) {
+      const z = 5200 / i;
+      const band = (((z + traveled * 0.55) / 190) | 0) % 2;
+      ctx.fillStyle = band ? pal.gA : pal.gB;
+      ctx.fillRect(-260, i - 1, 520, 1.5);
+    }
+    // terrain patches (islands / trees / city lights), stable via hash —
+    // the mottled super-scaler ground from the reference shots
+    const night = STAGES[stage].pal === "night";
+    for (const p of patches) {
+      let z = ((p.gz - traveled * 0.55) % 900 + 900) % 900;
+      if (z < 30) continue;
+      const s = FOCAL / z;
+      const row = 5200 / z;                // scanline from depth
+      if (row < 10 || row > 168) continue;     // far field hazes out entirely
+      if (p.kind !== 0 && row < 24) continue;  // only land masses read far out
+      const w = clamp(p.w * s * 3.2, 2, 84);
+      // white marks (waves/lights) stay THIN — they are surface texture,
+      // never solid objects
+      const hgt = p.kind === 0 ? clamp(w * 0.34, 1.5, 24)
+                               : clamp(w * 0.13, 1, 5);
+      const bx = p.gx * s - w / 2, by = row - hgt * 0.4;
+      ctx.fillStyle = p.kind === 1 ? (night ? pal.patch : pal.patch2) : pal.patch;
+      if (p.kind === 2) ctx.fillStyle = pal.patch2;
+      ctx.fillRect(bx, by, w, hgt);
+      if (p.big && p.kind === 0) {
+        // mottled land cluster: shadow lobe + offset second mass + light cap
+        ctx.fillStyle = "rgba(0,0,0,0.22)";
+        ctx.fillRect(bx + w * (0.15 + p.j * 0.3), by + hgt * 0.45, w * 0.55, hgt * 0.5);
+        ctx.fillStyle = pal.patch;
+        ctx.fillRect(bx + w * (p.j * 0.5 - 0.18), by - hgt * 0.3, w * 0.5, hgt * 0.5);
+        if (!night && row > 40) {          // caps only read close-in
+          ctx.fillStyle = pal.patch2;
+          ctx.fillRect(bx, by, w * (0.5 + p.j * 0.4), Math.max(1, hgt * 0.24));
+        }
+      }
+    }
+    // canyon walls
+    if (stageType() === "canyon") {
+      ctx.fillStyle = pal.patch;
+      for (let i = 4; i <= 168; i += 2) {
+        const z = 5200 / i;
+        const s = FOCAL / z;
+        const half = 470 * s * 2.2;
+        const hgt = clamp(56 * s * 5, 2, 90);
+        const jig = (h32(((z + traveled * 0.55) / 90) | 0) % 14);
+        ctx.fillRect(-half - 60 * s * 2 - jig, i - hgt, 46 * s * 2.4 + jig, hgt);
+        ctx.fillRect(half + 14 * s * 2, i - hgt, 46 * s * 2.4 + jig, hgt);
+      }
+      // turrets
+      for (const t of turrets) {
+        if (t.dead) continue;
+        const z = t.gz - traveled;
+        if (z < 40 || z > 2400) continue;
+        const s = FOCAL / z;
+        const row = 5200 / z;
+        if (row > 168) continue;
+        const w = Math.max(3, 30 * s * 2);
+        ctx.drawImage(sprTurret, t.gx * s * 2.2 - w / 2, row - w * 0.5, w, w * 0.5);
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawEnemies() {
+    const pal = stagePal();
+    const night = STAGES[stage].pal === "night" || STAGES[stage].pal === "dusk";
+    const list = enemies.filter(e => !e.dead && e.z > 16).sort((a, b) => b.z - a.z);
+    for (const e of list) {
+      const p = project(e);
+      const spr = e.attack && !e.rear
+        ? (night ? sprMigFrontN : sprMigFront)
+        : (night ? sprMigRearN : sprMigRear);
+      const w = clamp(spr.width * p.s * 1.3, 3, 130);   // source is 2× dense
+      const h = w * spr.height / spr.width;
+      // contrail: thin white diagonal line behind the ship
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = Math.max(0.7, p.s * 2);
+      ctx.beginPath();
+      ctx.moveTo(p.sx, p.sy);
+      ctx.lineTo(p.sx - e.vx * 0.55 - 26 * Math.sign(e.vx || 1), p.sy - e.vy * 0.4 - 18);
+      ctx.stroke();
+      ctx.drawImage(spr, p.sx - w / 2, p.sy - h / 2, w, h);
+    }
+  }
+
+  function drawBullets() {
+    for (const b of bullets) {
+      if (b.fromRear && b.z < 20) continue;
+      const p = project(b);
+      const r = clamp(FOCAL / Math.max(b.z, 20) * 6, 1.2, 7);
+      ctx.fillStyle = (b.t * 9 | 0) % 2 ? "#ffd21f" : "#ff7c1a";
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, r, 0, 7); ctx.fill();
+    }
+  }
+
+  function drawEMissiles() {
+    for (const m of eMissiles) {
+      // smoke trail
+      for (let i = 0; i < m.trail.length; i++) {
+        const t = m.trail[i];
+        const p = project(t);
+        ctx.fillStyle = "rgba(220,220,224," + (i / m.trail.length * 0.5) + ")";
+        const r = clamp(FOCAL / Math.max(t.z, 20) * 7, 1, 9);
+        ctx.fillRect(p.sx - r / 2, p.sy - r / 2, r, r);
+      }
+      const p = project(m);
+      const s = clamp(FOCAL / Math.max(m.z, 20), 0.1, 5);
+      const w = clamp(26 * s, 3, 42);
+      ctx.fillStyle = "#e8eaee";
+      ctx.fillRect(p.sx - w / 2, p.sy - w * 0.14, w, w * 0.28);
+      ctx.fillStyle = (blink * 14 | 0) % 2 ? "#ffd21f" : "#ff7c1a";  // flame
+      ctx.fillRect(p.sx - w / 2 - w * 0.36, p.sy - w * 0.11, w * 0.36, w * 0.22);
+    }
+  }
+
+  function drawPMissiles() {
+    for (const m of pMissiles) {
+      // white smoke trail (the AB signature)
+      for (let i = 1; i < m.trail.length; i++) {
+        const a = i / m.trail.length;
+        ctx.strokeStyle = "rgba(235,235,240," + (a * 0.85) + ")";
+        ctx.lineWidth = 3.4 * (1 - a) + 1;
+        ctx.beginPath();
+        ctx.moveTo(m.trail[i - 1].x, m.trail[i - 1].y);
+        ctx.lineTo(m.trail[i].x, m.trail[i].y);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#f2f2f4";
+      ctx.fillRect(m.sx - 3, m.sy - 1.6, 7, 3.2);
+      ctx.fillStyle = "#ff7c1a";
+      ctx.fillRect(m.sx - 6, m.sy - 1.2, 3, 2.4);
+    }
+  }
+
+  function drawBooms() {
+    for (const b of booms) {
+      if (b.t < 0) continue;               // staggered fireballs not born yet
+      const p = project(b);
+      const k = b.t / 0.8;
+      const base = (b.big ? 90 : 60) * clamp(FOCAL / Math.max(b.z, 30), 0.14, 2.2);
+      const r = Math.max(0.5, base * (0.3 + k * 0.9));
+      // concentric fireball: red ring, orange, yellow-white core
+      ctx.fillStyle = "rgba(200,30,20," + (0.85 - k * 0.7) + ")";
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, r, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(255,120,20," + (0.9 - k * 0.75) + ")";
+      ctx.beginPath(); ctx.arc(p.sx, p.sy, r * 0.66, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(255,225,90," + (0.95 - k * 0.8) + ")";
+      ctx.beginPath(); ctx.arc(p.sx + Math.sin(b.t * 31) * r * 0.1, p.sy, r * 0.34, 0, 7); ctx.fill();
+    }
+  }
+
+  function drawPlayer() {
+    if (deathT > 0) {
+      // tumbling flaming jet
+      const k = 1 - deathT / 2.4;
+      const jx = CX + px * 100 + Math.sin(k * 9) * 30;
+      const jy = 160 + py * -56 + k * 46;
+      ctx.save();
+      ctx.translate(jx, jy);
+      ctx.rotate(k * 12);
+      ctx.drawImage(sprJetLevel, -20, -9, 40, 14);
+      ctx.fillStyle = (blink * 16 | 0) % 2 ? "#ff7c1a" : "#e6252b";
+      ctx.fillRect(-10, -6, 20, 12);
+      ctx.restore();
+      return;
+    }
+    if (invulnT > 0 && (blink * 10 | 0) % 2) return;   // respawn flicker
+    const spr = py > 0.34 ? sprJetClimb : py < -0.4 ? sprJetDive : sprJetLevel;
+    const jx = CX + px * 100;
+    const jy = 162 + py * -56;
+    const w = 64, h = w * spr.height / spr.width;
+    ctx.save();
+    ctx.translate(jx, jy);
+    ctx.rotate(vroll);
+    // afterburner flames lengthen with throttle
+    const flame = throttle > 0 ? 13 : throttle < 0 ? 2 : 6;
+    if (speed > MIN_SPEED + 40) {
+      ctx.fillStyle = (blink * 18 | 0) % 2 ? "#ffd21f" : "#ff7c1a";
+      ctx.fillRect(-9.5, h * 0.34, 4.5, flame);
+      ctx.fillRect(5, h * 0.34, 4.5, flame);
+      if (throttle > 0) {
+        ctx.fillStyle = "#9adcf8";
+        ctx.fillRect(-8.6, h * 0.34 + flame, 2.8, 4);
+        ctx.fillRect(5.9, h * 0.34 + flame, 2.8, 4);
+      }
+    }
+    ctx.drawImage(spr, -w / 2, -h / 2, w, h);
+    ctx.restore();
+  }
+
+  function drawReticle() {
+    if (state !== "play") return;
+    const bs = boresight();
+    const anyLock = lockQueue.length > 0;
+    // boresight mini-cross
+    ctx.strokeStyle = "rgba(255,255,255,0.8)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bs.sx - 3, bs.sy - 3, 6, 6);
+    // big bracket reticle on the nearest locked enemy (red = locked)
+    let drawn = false;
+    for (const e of lockQueue) {
+      const p = project(e);
+      const r = clamp(14 + p.s * 26, 12, 30);
+      ctx.strokeStyle = drawn ? "rgba(255,80,60,0.6)" : "#ff3a2a";
+      ctx.lineWidth = drawn ? 1 : 1.6;
+      corner(p.sx - r, p.sy - r, 1, 1); corner(p.sx + r, p.sy - r, -1, 1);
+      corner(p.sx - r, p.sy + r, 1, -1); corner(p.sx + r, p.sy + r, -1, -1);
+      drawn = true;
+    }
+    if (!anyLock) {
+      // white search reticle floats at the boresight
+      const r = 22;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 1.2;
+      corner(bs.sx - r, bs.sy - r, 1, 1); corner(bs.sx + r, bs.sy - r, -1, 1);
+      corner(bs.sx - r, bs.sy + r, 1, -1); corner(bs.sx + r, bs.sy + r, -1, -1);
+    }
+    if (anyLock && (REDUCED || (blink % 0.5) < 0.3))
+      text("FIRE!", bs.sx, bs.sy - 36, 9, "#ff3a2a", "center");
+    function corner(x, y, dx, dy) {
+      ctx.beginPath();
+      ctx.moveTo(x + dx * 7, y);
+      ctx.lineTo(x, y); ctx.lineTo(x, y + dy * 7);
+      ctx.stroke();
+    }
+  }
+
+  function drawVulcan() {
+    if (!keys.vulcan || state !== "play" || deathT > 0) return;
+    const bs = boresight();
+    const jx = CX + px * 100, jy = 162 + py * -56;
+    ctx.strokeStyle = (blink * 22 | 0) % 2 ? "#ffd21f" : "#fff0a0";
+    ctx.lineWidth = 1.4;
+    for (const side of [-16, 16]) {
+      ctx.beginPath();
+      ctx.moveTo(jx + side, jy - 2);
+      ctx.lineTo(bs.sx + rand(-3, 3), bs.sy + rand(-3, 3));
+      ctx.stroke();
+    }
+  }
+
+  function drawHUD() {
+    const pal = stagePal();
+    // SCORE wing badge (red/white/blue, from reference)
+    ctx.fillStyle = "#f0f0f0"; ctx.fillRect(8, 7, 46, 12);
+    ctx.fillStyle = "#2f52dc"; ctx.fillRect(8, 7, 46, 2); ctx.fillRect(8, 17, 46, 2);
+    ctx.fillStyle = "#e6252b";
+    text("SCORE", 31, 8.5, 8, "#e6252b", "center");
+    // yellow chunky score, top-center (no leading zeros, per reference)
+    const scStr = String(Q(score));
+    drawGlyphs(scStr, CX - scStr.length * 5 * 2.5 / 2, 7, 2.5, "#ffd21f");
+    // HIT counter top-right (red badge)
+    ctx.fillStyle = "#e6252b"; ctx.fillRect(W - 74, 7, 26, 12);
+    text("HIT", W - 61, 8.5, 8, "#fff", "center");
+    text(String(hitCount), W - 34, 7.5, 10, "#ffd21f", "left");
+
+    // bottom band
+    // SPEED gauge (red label + segmented green bar + AB zone)
+    text("SPEED", 9, H - 17, 8, "#ff4438", "left");
+    const segs = 12;
+    const level = clamp((speed - MIN_SPEED) / (AB_SPEED - MIN_SPEED), 0, 1);
+    for (let i = 0; i < segs; i++) {
+      const on = level * segs > i;
+      const abZone = i >= 9;
+      ctx.fillStyle = on ? (abZone ? "#ff7c1a" : "#30d840") : "#183018";
+      ctx.fillRect(42 + i * 6, H - 16, 5, 7);
+    }
+    // throttle lever pictogram: slotted quadrant, AB detent marked orange
+    const tx = 42 + segs * 6 + 6;
+    ctx.fillStyle = "#10121c"; ctx.fillRect(tx, H - 20, 12, 15);
+    ctx.fillStyle = "#ff7c1a"; ctx.fillRect(tx, H - 20, 12, 3);       // AB zone
+    ctx.fillStyle = "#3a3e56"; ctx.fillRect(tx + 5, H - 19, 2, 13);   // slot
+    const lever = throttle > 0 ? 0 : throttle < 0 ? 11 : 6;
+    ctx.fillStyle = throttle > 0 ? "#ff7c1a" : "#e8eaee";
+    ctx.fillRect(tx + 2, H - 20 + lever, 8, 3);
+    if (throttle > 0 && (REDUCED || (blink % 0.4) < 0.25))
+      text("AFTERBURNER", tx + 52, H - 17, 7, "#ff7c1a", "center");
+
+    // lives: small jet icons above the speed gauge
+    for (let i = 0; i < lives; i++) {
+      ctx.drawImage(sprJetLevel, 9 + i * 14, H - 30, 12, 4.5);
+    }
+
+    // STAGE, pink, bottom-center-right (clear of the missile column)
+    text("STAGE", W - 128, H - 17, 9, "#ff9ad8", "left");
+    text(String(stage + 1), W - 84, H - 18, 10, "#ffd21f", "left");
+
+    // missile stock bottom-right: large icon = 10, ticks = 1
+    const tens = (missiles / 10) | 0, ones = missiles % 10;
+    let mx = W - 10;
+    for (let i = 0; i < ones; i++) {
+      mx -= 4;
+      ctx.fillStyle = "#e8eaee"; ctx.fillRect(mx, H - 12, 2, 7);
+    }
+    mx -= 4;
+    for (let i = 0; i < tens; i++) {
+      mx -= 7;
+      ctx.fillStyle = "#e8eaee"; ctx.fillRect(mx, H - 20, 4, 15);
+      ctx.fillStyle = "#e6252b"; ctx.fillRect(mx, H - 20, 4, 3);
+    }
+
+    // rear-lock warning: bezel LOCK lamps + the SPEED CHANGE plate
+    if (rearLock && !rearLock.resolved && deathT <= 0) {
+      if ((blink % 0.3) < 0.18 || REDUCED) {
+        ctx.fillStyle = "#ff2020";
+        ctx.fillRect(4, 4, 10, 6); ctx.fillRect(W - 14, 4, 10, 6);
+        ctx.fillStyle = "rgba(120,0,0,0.55)";
+        ctx.fillRect(CX - 74, 60, 148, 26);
+        text("MISSILE LOCKED ON YOU", CX, 63, 8, "#ffd21f", "center");
+        text("SPEED CHANGE! SHIFT / CTRL", CX, 74, 8, "#ffffff", "center");
+      }
+    }
+    // low missiles nudge
+    if (missiles <= 6 && state === "play" && (blink % 1) < 0.55)
+      text("MISSILES LOW", W - 54, H - 32, 7, "#ff4438", "center");
+    if (invulnT > 0 && deathT <= 0 && state === "play")
+      text("GET READY", CX, 52, 10, "#ffd21f", "center");
+  }
+
+  // ── Title / cards ──────────────────────────────────────
+  function drawLogo(y, scale) {
+    // per-character monospace layout: first letter colored (blue A / red B),
+    // black offset shadow — the arcade logo language
+    const s = scale || 1;
+    const size = 26 * s, cw = size * 0.62;
+    ctx.save();
+    ctx.font = "900 " + size + "px ui-monospace, Menlo, monospace";
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    const word = (str, yy, firstCol) => {
+      const x0 = CX - (str.length * cw) / 2;
+      for (let i = 0; i < str.length; i++) {
+        ctx.fillStyle = "#101014";
+        ctx.fillText(str[i], x0 + i * cw + 2.4, y + yy + 2.4);
+        ctx.fillStyle = i === 0 ? firstCol : "#f0f0f4";
+        ctx.fillText(str[i], x0 + i * cw, y + yy);
+      }
+      return x0 + str.length * cw;
+    };
+    word("AFTER", 0, "#2fa6dc");
+    const endX = word("BURNER", 24 * s, "#e6252b");
+    ctx.font = "900 " + (16 * s) + "px ui-monospace, Menlo, monospace";
+    ctx.fillStyle = "#101014";
+    ctx.fillText("II", endX + 4 * s + 1.8, y + 34 * s + 1.8);
+    ctx.fillStyle = "#e6252b";
+    ctx.fillText("II", endX + 4 * s, y + 34 * s);
+    ctx.restore();
+  }
+
+  function drawTitle() {
+    // the AB2 attract: red/blue sphere lattice in a diamond
+    ctx.fillStyle = "#000006";
+    ctx.fillRect(0, 0, W, H);
+    const t = REDUCED ? 0 : attractT;
+    // tight diamond lattice of touching red/steel balls (the AB2 attract)
+    for (let r = 0; r < 13; r++) {
+      for (let c = 0; c < 19; c++) {
+        const dx = (c - 9) * 16 + ((r % 2) * 8);
+        const dy = (r - 6) * 11;
+        const dia = Math.abs(c - 9) / 1.35 + Math.abs(r - 6);
+        if (dia > 6.4) continue;
+        const wob = Math.sin(t * 1.4 + r * 0.7 + c * 0.5) * 1.4;
+        const x = CX + dx, y = 126 + dy + wob;
+        const rad = 8.6 - dia * 0.5;
+        ctx.fillStyle = ((r + c) % 2) ? "#b02020" : "#8a9ab8";
+        ctx.beginPath(); ctx.arc(x, y, rad, 0, 7); ctx.fill();
+        ctx.fillStyle = ((r + c) % 2) ? "#e05a4a" : "#c8d4ea";
+        ctx.beginPath(); ctx.arc(x - rad * 0.32, y - rad * 0.32, rad * 0.38, 0, 7); ctx.fill();
+      }
+    }
+    drawLogo(24, 1);
+    text("HI SCORE  " + Q(hiScore), CX, 8, 8, "#9adcf8", "center");
+    if (REDUCED || (blink % 1) < 0.62)
+      text("PUSH ENTER BUTTON", CX, 152, 10, "#ff9ad8", "center");
+    text("AFTER BURNER II · SEGA AM2 · X-BOARD", CX, 200, 7, "#8a90a6", "center");
+    text("PERSONAL TRIBUTE — NOT FOR SALE", CX, 211, 7, "#8a90a6", "center");
+    text("CREDIT 1", 12, 226, 8, "#79c6e8", "left");
+    text("©SEGA 1987", W - 12, 226, 8, "#ff9ad8", "right");
+  }
+
+  function drawHowto() {
+    ctx.fillStyle = "#000006"; ctx.fillRect(0, 0, W, H);
+    drawLogo(14, 0.8);
+    text("HOW TO FLY", CX, 74, 11, "#ffd21f", "center");
+    const rows = [
+      ["ARROWS", "FLY — full screen, pull to climb"],
+      ["Z", "VULCAN CANNON — hold for autofire"],
+      ["X", "MISSILE — sweep reticle, FIRE! when red"],
+      ["SHIFT", "AFTERBURNER — hold: full throttle"],
+      ["CTRL", "THROTTLE BACK — hold: slow down"],
+      ["TAP ← ← / → →", "BARREL ROLL — dodges everything"],
+    ];
+    let y = 92;
+    for (const [k, v] of rows) {
+      text(k, CX - 120, y, 8, "#79c6e8", "left");
+      text(v, CX - 30, y, 8, "#e8eaee", "left");
+      y += 14;
+    }
+    text("MISSILE LOCKED ON YOU? CHANGE SPEED.", CX, y + 6, 9, "#ff4438", "center");
+    if (REDUCED || (blink % 1) < 0.62)
+      text("ENTER — TAKE OFF", CX, 208, 9, "#ffffff", "center");
+  }
+
+  function drawCard(lines) {
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(0, 84, W, 64);
+    ctx.fillStyle = "#e6252b";
+    ctx.fillRect(0, 84, W, 3); ctx.fillRect(0, 145, W, 3);
+    let y = 96;
+    for (const [s, size, col] of lines) { text(s, CX, y, size, col, "center"); y += size + 8; }
+  }
+
+  function drawRefuel() {
+    drawWorld();
+    // tanker ahead-above, boom down to the F-14
+    const k = clamp(stateT / 1.2, 0, 1);
+    const ty = 46 + k * 26, tw = 60 + k * 54;
+    const tx = CX;
+    ctx.drawImage(sprTanker, tx - tw / 2, ty - tw * 0.18, tw, tw * 0.375);
+    if (k >= 1) {
+      ctx.strokeStyle = "#c8ccd4"; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(tx, ty + tw * 0.2); ctx.lineTo(CX, 150); ctx.stroke();
+    }
+    drawPlayer();
+    drawHUD();
+    drawCard([["AERIAL REFUELING", 12, "#79c6e8"],
+              ["MISSILES " + missiles + " / " + MISSILE_MAX, 9, "#ffffff"],
+              [stateT > 4.4 ? "TANKS FULL — BREAK AWAY" : "HOLD FORMATION", 8, "#ffd21f"]]);
+  }
+
+  function drawLanding() {
+    drawWorld();
+    // runway converging ahead
+    ctx.save();
+    ctx.translate(CX, 96 + pitchOff);
+    ctx.rotate(worldTilt);
+    ctx.fillStyle = "#3a3a42";
+    ctx.beginPath();
+    ctx.moveTo(-8, 8); ctx.lineTo(8, 8); ctx.lineTo(90, 144); ctx.lineTo(-90, 144);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#f0f0f0";
+    for (let i = 0; i < 9; i++) {
+      const yy = 14 + i * 14 + ((traveled * 0.2) % 14);
+      const s = yy / 144;
+      ctx.fillRect(-1.5 * s * 4, yy, 3 * s * 4, 6 * s);
+    }
+    ctx.restore();
+    drawPlayer();
+    drawHUD();
+    drawCard([[STAGES[stage].last ? "FINAL APPROACH" : "LANDING — WELL DONE", 12, "#ffd21f"],
+              ["BONUS 10000 · MISSILES RESTORED", 9, "#ffffff"]]);
+  }
+
+  function drawEnding() {
+    ctx.fillStyle = "#000006"; ctx.fillRect(0, 0, W, H);
+    drawLogo(20, 0.9);
+    text("MISSION COMPLETE", CX, 92, 14, "#ffd21f", "center");
+    text("ALL 23 STAGES CLEARED", CX, 116, 9, "#ffffff", "center");
+    text("SCORE  " + Q(score), CX, 136, 10, "#9adcf8", "center");
+    if (newHi) text("NEW HI SCORE!", CX, 154, 10, "#30d840", "center");
+    text("SEE YOU AGAIN — SEGA AM2", CX, 182, 8, "#5a6276", "center");
+  }
+
+  function drawOver() {
+    ctx.fillStyle = "rgba(0,0,16,0.82)";
+    ctx.fillRect(0, 0, W, H);
+    text("GAME OVER", CX, 62, 18, "#e6252b", "center");
+    text("STAGE " + (stage + 1) + " · HIT " + hitCount, CX, 96, 9, "#ffffff", "center");
+    text("SCORE", CX, 116, 8, "#9adcf8", "center");
+    drawGlyphs(String(Q(score)).padStart(7, "0"), CX - 44, 128, 2.5, "#ffffff");
+    if (newHi && (REDUCED || (blink % 0.9) < 0.55))
+      text("NEW HI SCORE!", CX, 152, 10, "#30d840", "center");
+    else text("HI SCORE  " + Q(hiScore), CX, 152, 8, "#7a8296", "center");
+    text("ENTER — AGAIN   ·   ESC — TITLE", CX, 190, 8, "#7a8296", "center");
+  }
+
+  function draw() {
+    if (state === "title") { drawTitle(); return; }
+    if (state === "howto") { drawHowto(); return; }
+    if (state === "ending") { drawEnding(); return; }
+    if (state === "refuel") { drawRefuel(); return; }
+    if (state === "landing") { drawLanding(); return; }
+
+    let shx = 0, shy = 0;
+    if ((shakeT > 0 || throttle > 0) && !REDUCED) {
+      const a = shakeT > 0 ? 1.8 : 0.5;
+      shx = rand(-a, a); shy = rand(-a, a);
+    }
+    ctx.save();
+    ctx.translate(shx, shy);
+    drawWorld();
+    drawEnemies();
+    drawBooms();
+    drawBullets();
+    drawEMissiles();
+    drawPMissiles();
+    drawVulcan();
+    drawPlayer();
+    ctx.restore();
+    drawReticle();
+    drawHUD();
+
+    if (state === "intro")
+      drawCard([["STAGE " + (stage + 1), 14, "#ffd21f"],
+                [stagePal().name + (stageType() === "canyon" ? " — CANYON RUN" : ""), 9, "#ffffff"]]);
+    if (state === "over") drawOver();
+  }
+
+  // ── Input ──────────────────────────────────────────────
+  const crtEl = document.querySelector(".crt");
+  function toggleTheater() {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); return; }
+      if (crtEl.classList.contains("theater")) { crtEl.classList.remove("theater"); return; }
+      const p = crtEl.requestFullscreen();
+      if (p && p.catch) p.catch(() => crtEl.classList.add("theater"));
+    } catch (e) { crtEl.classList.toggle("theater"); }
+  }
+
+  const GAME_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "Enter",
+    "KeyZ", "KeyX", "KeyR", "KeyM", "KeyF", "ShiftLeft", "ShiftRight", "ControlLeft", "ControlRight"];
+
+  window.addEventListener("keydown", (e) => {
+    if (GAME_KEYS.includes(e.code)) e.preventDefault();
+    ensureAudio();
+    switch (e.code) {
+      case "ArrowLeft": keys.left = true; botOn = false; break;
+      case "ArrowRight": keys.right = true; botOn = false; break;
+      case "ArrowUp": keys.up = true; botOn = false; break;
+      case "ArrowDown": keys.down = true; botOn = false; break;
+      case "KeyZ": keys.vulcan = true; botOn = false; break;
+      case "ShiftLeft": case "ShiftRight": keys.ab = true; botOn = false; break;
+      case "ControlLeft": case "ControlRight": keys.brake = true; botOn = false; break;
+    }
+    if (e.repeat) return;
+    switch (e.code) {
+      case "ArrowLeft": tryRollTap(-1); break;
+      case "ArrowRight": tryRollTap(1); break;
+      case "KeyX": fireMissile(); break;
+      case "Enter": case "Space":
+        if (state === "title") { state = "howto"; stateT = 0; sfx.stage(); }
+        else if (state === "howto") startGame();
+        else if (state === "over") startGame();
+        break;
+      case "KeyR": if (state !== "title") startGame(); break;
+      case "KeyM": setMuted(!muted); break;
+      case "KeyF": toggleTheater(); break;
+      case "Escape":
+        if (crtEl.classList.contains("theater")) { crtEl.classList.remove("theater"); break; }
+        if (state === "over" || state === "ending") toTitle();
+        else if (state !== "title") { saveHi(); state = "over"; stateT = 0; }
+        break;
+    }
+  });
+  window.addEventListener("keyup", (e) => {
+    switch (e.code) {
+      case "ArrowLeft": keys.left = false; break;
+      case "ArrowRight": keys.right = false; break;
+      case "ArrowUp": keys.up = false; break;
+      case "ArrowDown": keys.down = false; break;
+      case "KeyZ": keys.vulcan = false; break;
+      case "ShiftLeft": case "ShiftRight": keys.ab = false; break;
+      case "ControlLeft": case "ControlRight": keys.brake = false; break;
+    }
+  });
+
+  // ── Main loop ──────────────────────────────────────────
+  seedPatches();
+  const STEP = 1000 / 120;
+  let last = performance.now(), acc = 0;
+  function frame(now) {
+    acc += Math.min(now - last, 100);
+    last = now;
+    while (acc >= STEP) { update(STEP / 1000); acc -= STEP; }
+    updateEngine();
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ── Debug / testing hook ───────────────────────────────
+  window.__ab = {
+    state: () => state,
+    stage: () => stage + 1,
+    score: () => Q(score),
+    hi: () => hiScore,
+    lives: () => lives,
+    missiles: () => missiles,
+    speed: () => speed,
+    pos: () => ({ px, py }),
+    hit: () => hitCount,
+    stageType,
+    enemies: () => enemies.filter(e => !e.dead).map(e => ({ x: e.x, y: e.y, z: e.z, rear: !!e.rear, attack: !!e.attack, locked: e.lockedT > 0 })),
+    locks: () => lockQueue.length,
+    rearLock: () => rearLock ? { t: rearLock.t, resolved: rearLock.resolved } : null,
+    bullets: () => bullets.length,
+    eMissiles: () => eMissiles.length,
+    deathT: () => deathT,
+    invuln: () => invulnT,
+    rolling: () => rollT > 0,
+    start: startGame,
+    toTitle,
+    jump: (n) => { startStage(clamp(n - 1, 0, 22)); state = stageType() === "landing" ? "landing" : "play"; stateT = 0; },
+    skipCard: () => { if (state === "intro") { state = "play"; stateT = 0; } },
+    input: (o) => { for (const k of ["left", "right", "up", "down", "vulcan", "ab", "brake"]) keys[k] = !!(o && o[k]); },
+    fire: fireMissile,
+    roll: () => { rollT = 0.62; },
+    spawnAt: (o) => { enemies.push(Object.assign({ x: 0, y: 0, z: 900, vx: 0, vy: 0, rear: false, attack: false, fleeSpeed: 0, closeSpeed: 0, fireT: 99, hp: 1, lockedT: 0, dead: false, jinkP: 0, jinkA: 0 }, o)); return enemies[enemies.length - 1]; },
+    forceRearLock: () => { rearLock = { t: 2.2, speedAtLock: speed, resolved: false }; },
+    kill: killPlayer,
+    god: (v) => { invulnT = v ? 1e9 : 0; },
+    setMissiles: (n) => { missiles = clamp(n | 0, 0, MISSILE_MAX); },
+    setLives: (n) => { lives = n | 0; },
+    endStage,
+    bot: (v, aimless) => { botOn = !!v; botAimless = !!aimless; },
+  };
+})();
+</script>

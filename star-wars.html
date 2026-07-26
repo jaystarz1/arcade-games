@@ -1,0 +1,1546 @@
+<title>Star Wars — 1983 Tribute</title>
+<style>
+  :root {
+    --cabinet: #0b0b0e;
+    --bezel: #08080a;
+    --panel: #101018;
+    --panel-edge: #1e1e30;
+    --phosphor: #e8ecff;
+    --phosphor-dim: #8b93a8;
+    --yellow: #ffd94a;
+    --red: #ff4136;
+    --blue: #4fc3ff;
+    color-scheme: dark;
+  }
+  html, body { background: var(--cabinet); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    color: var(--phosphor);
+  }
+  .cabinet {
+    /* sized so marquee + screen + controls fill the viewport, screen dominant */
+    width: min(97vw, calc((100dvh - 210px) * 1.3333));
+    min-width: 320px;
+    padding: 10px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cabinet > * {
+    /* never let flex shrink the CRT — a shrunken .crt clips the bottom of
+       the canvas behind overflow:hidden */
+    flex-shrink: 0;
+  }
+
+  /* ── Marquee ── */
+  .marquee {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 18px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #12121c, #0a0a10);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+  }
+  .marquee .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--phosphor-dim);
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .marquee h1 {
+    margin: 0;
+    font-size: clamp(18px, 2.6vw, 30px);
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    white-space: nowrap;
+    text-transform: uppercase;
+    color: var(--yellow);
+    text-shadow: 0 0 18px rgba(255, 217, 74, 0.35), 0 0 2px rgba(255, 217, 74, 0.9);
+  }
+  .marquee .rule {
+    align-self: center;
+    width: 60px;
+    height: 3px;
+    background: var(--red);
+    box-shadow: 0 0 12px rgba(255, 65, 54, 0.55);
+  }
+
+  /* ── CRT screen ── */
+  .crt {
+    position: relative;
+    border-radius: 22px;
+    border: 10px solid var(--bezel);
+    outline: 1px solid var(--panel-edge);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 12px 40px rgba(0,0,0,0.6);
+    overflow: hidden;
+    background: #000;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #000;
+  }
+  .crt::after {
+    /* scanlines */
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.22) 3px,
+      rgba(0,0,0,0) 4px
+    );
+  }
+  .crt::before {
+    /* vignette + glass */
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(ellipse 115% 105% at 50% 45%,
+      rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%);
+  }
+
+  /* true fullscreen: the glass IS the room */
+  .crt:fullscreen,
+  .crt.theater {
+    border: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+  .crt:fullscreen canvas,
+  .crt.theater canvas {
+    width: auto;
+    height: 100vh;
+    max-width: 100vw;
+  }
+  /* theater mode: fullscreen API is blocked in sandboxed iframes, so pin
+     the CRT over the whole viewport instead */
+  .crt.theater {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+  }
+
+  /* ── Control panel ── */
+  .panel {
+    background: linear-gradient(180deg, var(--panel), #0b0b12);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    justify-content: center;
+    align-items: center;
+  }
+  .panel .key {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--phosphor-dim);
+    white-space: nowrap;
+  }
+  kbd {
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--yellow);
+    background: #060608;
+    border: 1px solid #262640;
+    border-bottom-width: 3px;
+    border-radius: 5px;
+    padding: 3px 8px;
+    min-width: 14px;
+    text-align: center;
+  }
+  .footnote {
+    text-align: center;
+    font-size: 11.5px;
+    line-height: 1.7;
+    letter-spacing: 0.06em;
+    color: var(--phosphor-dim);
+    max-width: 60ch;
+    margin: 0 auto;
+  }
+  .footnote strong { color: var(--phosphor); font-weight: 700; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee h1 { animation: hum 4s ease-in-out infinite alternate; }
+    @keyframes hum {
+      from { text-shadow: 0 0 14px rgba(255,217,74,0.28), 0 0 2px rgba(255,217,74,0.9); }
+      to   { text-shadow: 0 0 24px rgba(255,217,74,0.5), 0 0 2px rgba(255,217,74,0.9); }
+    }
+  }
+</style>
+
+<div class="cabinet">
+  <header class="marquee">
+    <p class="eyebrow">Atari · 1983 · Color-Vector Tribute</p>
+    <h1>Star Wars</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="crt">
+    <canvas id="game" width="1600" height="1200" aria-label="Star Wars game screen. Use arrow keys to fly, space to fire."></canvas>
+  </div>
+
+  <div class="panel" aria-label="Controls">
+    <span class="key"><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>WASD</kbd> Yoke</span>
+    <span class="key"><kbd>Space</kbd><kbd>V</kbd> Fire / Start</span>
+    <span class="key"><kbd>R</kbd> Restart</span>
+    <span class="key"><kbd>Esc</kbd> End</span>
+    <span class="key"><kbd>F</kbd> Fullscreen</span>
+    <span class="key"><kbd>M</kbd> Sound</span>
+  </div>
+
+  <p class="footnote">
+    A tribute to <strong>Star Wars</strong> (Atari, 1983) — the color X-Y
+    vector cabinet. Shoot Vader's fighters and their fireballs, sweep the
+    Death Star towers, thread the trench catwalks — then put your shot in
+    the <strong>exhaust port</strong>. Shields are your lives.
+    The Force will be with you.
+  </p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ── Canvas ─────────────────────────────────────────────
+  // Vector game: logic runs in 800×600, backing store 1600×1200 with smooth
+  // 2× scaling (crisp lines, no pixelation — this is X-Y phosphor, not raster).
+  const cvs = document.getElementById("game");
+  const ctx = cvs.getContext("2d");
+  ctx.scale(2, 2);
+  const W = 800, H = 600, CX = W / 2, CY = H / 2;
+
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ── Phosphor palette ───────────────────────────────────
+  const C = {
+    blue:    "#4fc3ff",
+    blueDim: "#2a6f9e",
+    green:   "#3dff7a",
+    greenDim:"#1f9e4c",
+    red:     "#ff4136",
+    orange:  "#ff8c1a",
+    yellow:  "#ffd94a",
+    white:   "#eef2ff",
+    magenta: "#ff5ce1",
+    dim:     "#8b93a8",
+    walk:    "#cdd6ff",
+  };
+
+  // ── Small helpers ──────────────────────────────────────
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pad = (n, w = 6) => String(n).padStart(w, "0");
+
+  // ── Vector batch renderer ──────────────────────────────
+  // Segments accumulate per color; flush draws each color twice —
+  // a wide translucent pass for glow, a thin bright pass for the beam.
+  // (Cheaper than shadowBlur by an order of magnitude.)
+  const batch = new Map();
+  function seg(x1, y1, x2, y2, c) {
+    let a = batch.get(c);
+    if (!a) { a = []; batch.set(c, a); }
+    a.push(x1, y1, x2, y2);
+  }
+  function flush() {
+    for (const [c, a] of batch) {
+      ctx.strokeStyle = c;
+      ctx.globalAlpha = 0.3; ctx.lineWidth = 3.6;
+      ctx.beginPath();
+      for (let i = 0; i < a.length; i += 4) {
+        ctx.moveTo(a[i], a[i + 1]); ctx.lineTo(a[i + 2], a[i + 3]);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < a.length; i += 4) {
+        ctx.moveTo(a[i], a[i + 1]); ctx.lineTo(a[i + 2], a[i + 3]);
+      }
+      ctx.stroke();
+    }
+    batch.clear();
+  }
+
+  // ── 3D projection (perspective divide, near-plane clip) ─
+  const FOCAL = 430, NEAR = 6;
+  let camX = 0, camY = 0;     // camera position in the trench cross-section
+  let panX = 0, panY = 0;     // view sway from the yoke (screen-space)
+  const projX = (x, z) => CX + (x - camX) * (FOCAL / z) + panX;
+  const projY = (y, z) => CY - (y - camY) * (FOCAL / z) + panY;
+  function line3(x1, y1, z1, x2, y2, z2, c) {
+    if (z1 < NEAR && z2 < NEAR) return;
+    if (z1 < NEAR || z2 < NEAR) {
+      const t = (NEAR - z1) / (z2 - z1);
+      const xi = x1 + (x2 - x1) * t, yi = y1 + (y2 - y1) * t;
+      if (z1 < NEAR) { x1 = xi; y1 = yi; z1 = NEAR; }
+      else           { x2 = xi; y2 = yi; z2 = NEAR; }
+    }
+    seg(projX(x1, z1), projY(y1, z1), projX(x2, z2), projY(y2, z2), c);
+  }
+  // screen-space circle/ellipse as a polyline (jit wobbles the radius —
+  // used for the Death Star and explosion shockwaves)
+  function ellipseSeg(cx, cy, rx, ry, c, n, jit, ph) {
+    n = n || 40;
+    let px0 = 0, py0 = 0;
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const w = jit ? 1 + jit * Math.sin(i * 2.7 + (ph || 0)) : 1;
+      const x = cx + Math.cos(a) * rx * w;
+      const y = cy + Math.sin(a) * ry * w;
+      if (i > 0) seg(px0, py0, x, y, c);
+      px0 = x; py0 = y;
+    }
+  }
+
+  // ── Catmull-Rom splines with arc-length sampling ───────
+  // (Ported from the Galaga entrance system, extended to 3D — this is what
+  // keeps TIE weave paths evenly paced through tight curves.)
+  function buildPath(wps) {
+    const pts = [], cum = [0];
+    const get = i => wps[Math.max(0, Math.min(wps.length - 1, i))];
+    for (let i = 0; i < wps.length - 1; i++) {
+      const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
+      for (let j = (i === 0 ? 0 : 1); j <= 14; j++) {
+        const t = j / 14, t2 = t * t, t3 = t2 * t, pt = [0, 0, 0];
+        for (let k = 0; k < 3; k++) {
+          pt[k] = 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * t +
+            (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 +
+            (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3);
+        }
+        pts.push(pt);
+      }
+    }
+    for (let i = 1; i < pts.length; i++) {
+      const dx = pts[i][0] - pts[i - 1][0];
+      const dy = pts[i][1] - pts[i - 1][1];
+      const dz = pts[i][2] - pts[i - 1][2];
+      cum.push(cum[i - 1] + Math.sqrt(dx * dx + dy * dy + dz * dz));
+    }
+    return { pts, cum, len: cum[cum.length - 1] };
+  }
+  function sampleAt(path, s) {
+    const { pts, cum } = path;
+    s = clamp(s, 0, path.len);
+    let lo = 0, hi = cum.length - 1;
+    while (lo < hi - 1) {
+      const mid = (lo + hi) >> 1;
+      if (cum[mid] <= s) lo = mid; else hi = mid;
+    }
+    const span = cum[hi] - cum[lo] || 1;
+    const t = (s - cum[lo]) / span;
+    const a = pts[lo], b = pts[hi];
+    return {
+      p: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t],
+      d: [b[0] - a[0], b[1] - a[1], b[2] - a[2]],
+    };
+  }
+
+  // ── Wireframe models ───────────────────────────────────
+  // TIE fighter: two hex solar panels + octagon cockpit + struts.
+  // Vader's TIE Advanced: the same hexes bent outboard (x grows with |y|).
+  function buildTieModel(vader) {
+    const v = [], e = [];
+    for (const s of [-1, 1]) {
+      const base = v.length;
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 6 + i * Math.PI / 3;
+        const y = 15 * Math.cos(a), z = 15 * Math.sin(a);
+        const x = vader ? s * (9 + 0.55 * Math.abs(y)) : s * 16;
+        v.push([x, y, z]);
+      }
+      for (let i = 0; i < 6; i++) e.push([base + i, base + ((i + 1) % 6)]);
+      v.push([s * (vader ? 9 : 16), 0, 0]);
+      const hub = v.length - 1;
+      v.push([s * 6, 0, 0]);
+      e.push([hub, v.length - 1]);
+    }
+    const cb = v.length;
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4;
+      v.push([6 * Math.cos(a), 6 * Math.sin(a), 0]);
+    }
+    for (let i = 0; i < 8; i++) e.push([cb + i, cb + ((i + 1) % 8)]);
+    return { v, e };
+  }
+  const TIE_M = buildTieModel(false);
+  const VADER_M = buildTieModel(true);
+
+  function drawModel(m, px, py, pz, yaw, roll, sc, c) {
+    const cyw = Math.cos(yaw), syw = Math.sin(yaw);
+    const cr = Math.cos(roll), sr = Math.sin(roll);
+    const P = [];
+    for (const [x0, y0, z0] of m.v) {
+      const x = x0 * cr - y0 * sr, y = x0 * sr + y0 * cr;   // roll (z axis)
+      const x2 = x * cyw + z0 * syw, z2 = -x * syw + z0 * cyw; // yaw (y axis)
+      P.push([px + x2 * sc, py + y * sc, pz + z2 * sc]);
+    }
+    for (const [i, j] of m.e) {
+      line3(P[i][0], P[i][1], P[i][2], P[j][0], P[j][1], P[j][2], c);
+    }
+  }
+
+  // ── Starfield ──────────────────────────────────────────
+  const stars = [];
+  for (let i = 0; i < 130; i++) {
+    stars.push({
+      x: Math.random() * W, y: Math.random() * H,
+      par: 0.25 + Math.random() * 0.75,
+      tw: Math.random() * 6.28,
+      c: [C.white, C.blue, C.dim][i % 3],
+    });
+  }
+  function drawStars(maxY) {
+    for (const st of stars) {
+      const a = REDUCED ? 0.8 : 0.45 + 0.55 * Math.sin(gt * 2 + st.tw);
+      if (a < 0.15) continue;
+      const x = (((st.x + panX * st.par * 0.6) % W) + W) % W;
+      const y = (((st.y + panY * st.par * 0.6) % H) + H) % H;
+      if (maxY !== undefined && y > maxY) continue;
+      ctx.globalAlpha = a * 0.9;
+      ctx.fillStyle = st.c;
+      ctx.fillRect(x, y, 1.7, 1.7);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Audio (all synthesized — nothing external) ─────────
+  let actx = null, master = null, noiseBuf = null;
+  let rumbleGain = null, rumbleFilter = null;
+  let muted = false;
+  function ensureAudio() {
+    if (actx) { if (actx.state === "suspended") actx.resume(); return; }
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      actx = new AC();
+      master = actx.createGain();
+      master.gain.value = muted ? 0 : 1;
+      master.connect(actx.destination);
+      noiseBuf = actx.createBuffer(1, actx.sampleRate * 1.2, actx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      // engine rumble loop — level/cutoff follow the phase, never dangles
+      const o1 = actx.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = 33;
+      const o2 = actx.createOscillator(); o2.type = "sawtooth"; o2.frequency.value = 47.3;
+      rumbleFilter = actx.createBiquadFilter();
+      rumbleFilter.type = "lowpass"; rumbleFilter.frequency.value = 120;
+      rumbleGain = actx.createGain(); rumbleGain.gain.value = 0;
+      o1.connect(rumbleFilter); o2.connect(rumbleFilter);
+      rumbleFilter.connect(rumbleGain); rumbleGain.connect(master);
+      o1.start(); o2.start();
+      applyRumble();
+    } catch (e) { actx = null; }
+  }
+  function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 1; }
+  function tone(f0, dur, o) {
+    if (!actx) return;
+    o = o || {};
+    const t0 = actx.currentTime + (o.at || 0);
+    const osc = actx.createOscillator();
+    osc.type = o.type || "square";
+    osc.frequency.setValueAtTime(Math.max(20, f0), t0);
+    if (o.f1) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.f1), t0 + dur);
+    const g = actx.createGain();
+    g.gain.setValueAtTime(o.vol || 0.14, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  }
+  function noiseHit(dur, freq, vol, at) {
+    if (!actx) return;
+    const t0 = actx.currentTime + (at || 0);
+    const src = actx.createBufferSource();
+    src.buffer = noiseBuf; src.loop = true;
+    const bp = actx.createBiquadFilter();
+    bp.type = "bandpass"; bp.frequency.value = freq; bp.Q.value = 0.8;
+    const g = actx.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    src.connect(bp); bp.connect(g); g.connect(master);
+    src.start(t0); src.stop(t0 + dur + 0.05);
+  }
+  let lastSwoopAt = -9;
+  const sfx = {
+    fire()      { tone(920, 0.14, { f1: 180, vol: 0.09 }); tone(1240, 0.1, { f1: 300, vol: 0.045, type: "sawtooth" }); },
+    fbLaunch()  { tone(170, 0.22, { f1: 60, vol: 0.05, type: "sawtooth" }); },
+    fbBoom()    { noiseHit(0.16, 900, 0.2); tone(220, 0.12, { f1: 60, vol: 0.08 }); },
+    tieBoom()   { noiseHit(0.3, 500, 0.28); tone(300, 0.26, { f1: 50, vol: 0.12, type: "sawtooth" }); },
+    towerBoom() { noiseHit(0.34, 300, 0.28); tone(160, 0.3, { f1: 40, vol: 0.13 }); },
+    thud()      { noiseHit(0.4, 140, 0.45); tone(70, 0.35, { f1: 36, vol: 0.24, type: "sine" }); },
+    vaderHit()  { tone(500, 0.18, { f1: 900, vol: 0.12 }); },
+    swoop() {   // the TIE flyby scream, approximated with detuned saws
+      if (gt - lastSwoopAt < 0.35) return;
+      lastSwoopAt = gt;
+      tone(310, 0.7, { f1: 68, vol: 0.07, type: "sawtooth" });
+      tone(324, 0.7, { f1: 74, vol: 0.06, type: "sawtooth" });
+    },
+    alarm()     { tone(1150, 0.08, { vol: 0.08 }); tone(1150, 0.08, { vol: 0.08, at: 0.13 }); },
+    miss()      { tone(300, 0.4, { f1: 150, vol: 0.11 }); tone(200, 0.55, { f1: 85, vol: 0.11, at: 0.32 }); },
+    bigBoom()   { noiseHit(2.6, 220, 0.5); noiseHit(1.8, 90, 0.45, 0.12); tone(60, 2.4, { f1: 24, vol: 0.28, type: "sine" }); },
+    approach()  { tone(90, 2.2, { f1: 44, vol: 0.1, type: "sawtooth" }); },
+    blip()      { tone(880, 0.06, { vol: 0.07 }); },
+    fanfare() { // heroic triad fanfare — original composition, evokes not copies
+      const seq = [[392, 0, .16], [523, .16, .16], [659, .32, .16],
+                   [784, .48, .42], [659, .92, .14], [784, 1.06, .55]];
+      for (const [f, at, d] of seq) {
+        tone(f, d, { at, vol: 0.1 });
+        tone(f / 2, d, { at, vol: 0.08, type: "triangle" });
+      }
+    },
+    triumph() {
+      const seq = [[523, 0, .15], [659, .15, .15], [784, .3, .15], [1046, .45, .6]];
+      for (const [f, at, d] of seq) tone(f, d, { at, vol: 0.11 });
+    },
+  };
+  function applyRumble() {
+    if (!rumbleGain) return;
+    let lvl = 0, cut = 110;
+    if (state === "space") { lvl = 0.12; cut = 110; }
+    else if (state === "approach") { lvl = 0.16; cut = 90; }
+    else if (state === "surface") { lvl = 0.22; cut = 130; }
+    else if (state === "trench") { lvl = 0.3; cut = 155; }
+    else if (state === "boom") { lvl = 0.14; cut = 80; }
+    rumbleGain.gain.setTargetAtTime(lvl, actx.currentTime, 0.2);
+    rumbleFilter.frequency.setTargetAtTime(cut, actx.currentTime, 0.25);
+  }
+
+  // ── Game state ─────────────────────────────────────────
+  let state = "attract", stateT = 0, gt = 0;
+  let wave = 1, score = 0, shields = 6, hi = 0, god = false;
+  try { hi = parseInt(localStorage.getItem("starwars-hi") || "0", 10) || 0; } catch (e) {}
+
+  let chx = CX, chy = CY;          // crosshair
+  let flashT = 0, shakeT = 0, whiteT = 0, fireCd = 0;
+
+  let ties = [], fireballs = [], volleys = [], debris = [], floats = [];
+  let launched = 0, quota = 0, spawnCd = 0;
+  let vader = null, vaderState = "none";
+
+  let traveled = 0;
+  let surfDist = 0, towers = [], towersTotal = 0, towersKilled = 0;
+
+  const TRW = 64, FLOOR = -46, TOP = 64;   // trench cross-section
+  let trenchDist = 0, catwalks = [], turrets = [], port = null, portAlarmT = 0;
+
+  let boomHit = false, bonusApplied = false;
+  let portBonus = 0, towerBonus = 0, shieldBonus = 0;
+
+  let attractTies = [];
+
+  const keys = Object.create(null);
+
+  // ── Entity factories ───────────────────────────────────
+  function newTie() {
+    const sx = rnd(-520, 520), sy = rnd(-240, 300);
+    const wps = [[sx, sy, 1650]];
+    const n = 2 + (Math.random() * 2 | 0);
+    for (let k = 1; k <= n; k++) {
+      wps.push([rnd(-430, 430), rnd(-230, 260), 1650 - k * (1500 / (n + 1))]);
+    }
+    wps.push([rnd(-300, 300), rnd(-190, 210), 120]);
+    wps.push([rnd(-650, 650), rnd(-420, 420), -180]);
+    return {
+      path: buildPath(wps), s: 0,
+      speed: rnd(330, 420) + wave * 22,
+      fireCd: rnd(0.4, 1.6), flashT: 0, swooped: false,
+      x: sx, y: sy, z: 1650, yaw: 0, roll: 0,
+    };
+  }
+  function newVader() {
+    const wps = [[rnd(-200, 200), rnd(80, 260), 1700]];
+    for (let k = 0; k < 4; k++) {
+      wps.push([rnd(-380, 380), rnd(-200, 240), 1450 - k * 320]);
+    }
+    wps.push([rnd(-240, 240), rnd(-140, 160), 180]);
+    wps.push([rnd(-520, 520), rnd(-320, 320), -160]);
+    return {
+      path: buildPath(wps), s: 0, speed: 290 + wave * 15,
+      hp: 3, escaping: false, fireCd: 1.2, flashT: 0, swooped: false,
+      x: 0, y: 0, z: 1700, yaw: 0, roll: 0,
+    };
+  }
+  function spawnFireball(x, y, z, forceAim) {
+    const aimedTight = forceAim || Math.random() < 0.5;
+    const jr = aimedTight ? rnd(0, 9) : rnd(28, 90);
+    const ja = rnd(0, Math.PI * 2);
+    const tx = camX + Math.cos(ja) * jr, ty = camY + Math.sin(ja) * jr;
+    const spd = 230 + wave * 20;
+    const dx = tx - x, dy = ty - y, dz = -20 - z;
+    const L = Math.hypot(dx, dy, dz);
+    fireballs.push({
+      x, y, z,
+      vx: dx / L * spd, vy: dy / L * spd, vz: dz / L * spd,
+      seed: Math.random() * 10, size: rnd(7, 10),
+    });
+    sfx.fbLaunch();
+  }
+  function addFloat(txt, x, y, c) { floats.push({ txt, x, y, c, t: 0 }); }
+  function spawnBurst(sx, sy, scale, c, n) {
+    for (let i = 0; i < n; i++) {
+      debris.push({
+        x: sx, y: sy, a: rnd(0, 6.28),
+        spd: rnd(40, 190) * scale, len: rnd(4, 15) * scale,
+        rot: rnd(0, 6.28), vr: rnd(-7, 7), t: 0, c,
+      });
+    }
+  }
+
+  // ── Phase transitions ──────────────────────────────────
+  function startGame() {
+    score = 0; wave = 1; shields = 6; chx = CX; chy = CY;
+    startSpace(true);
+  }
+  function startSpace(first) {
+    state = "space"; stateT = first ? -2.6 : -1.7;
+    camX = 0; camY = 0;
+    ties = []; fireballs = []; volleys = []; debris = []; floats = [];
+    launched = 0; quota = Math.min(18, 6 + wave * 2);
+    spawnCd = 0.6; vader = null; vaderState = "pending";
+    if (first) sfx.fanfare();
+    applyRumble();
+  }
+  function startApproach() {
+    state = "approach"; stateT = 0;
+    ties = []; vader = null; fireballs = []; volleys = [];
+    sfx.approach();
+    applyRumble();
+  }
+  function startSurface() {
+    state = "surface"; stateT = -1.7;
+    camX = 0; camY = 26; traveled = 0;
+    surfDist = 8000 + 1200 * wave;
+    towers = []; towersKilled = 0;
+    const lanes = [-320, -240, -160, -80, 80, 160, 240, 320];
+    let z = 1000;
+    while (z < surfDist + 1400) {
+      towers.push({
+        wz: z, z: 9999,
+        x: lanes[(Math.random() * lanes.length) | 0] + rnd(-24, 24),
+        h: rnd(28, 80), gun: Math.random() < 0.45,
+        alive: true, cd: rnd(0.5, 2),
+      });
+      z += Math.max(200, rnd(260, 560) - wave * 18);
+    }
+    towersTotal = towers.length;
+    fireballs = []; volleys = [];
+    applyRumble();
+  }
+  function startTrench() {
+    state = "trench"; stateT = -1.8;
+    camX = 0; camY = 6; traveled = 0;
+    trenchDist = 5200 + 800 * wave;
+    port = null; portAlarmT = 0;
+    catwalks = []; turrets = [];
+    const kinds = wave === 1
+      ? ["high", "low", "left", "right"]
+      : ["high", "low", "left", "right", "slot", "gate"];
+    let z = 1500;
+    while (z < trenchDist - 400) {
+      catwalks.push({ wz: z, kind: kinds[(Math.random() * kinds.length) | 0], done: false });
+      z += Math.max(300, rnd(430, 780) - wave * 30);
+    }
+    let tz = 1100, side = 1;
+    while (tz < trenchDist - 300) {
+      turrets.push({ wz: tz, z: 9999, side, alive: true, cd: rnd(0.5, 1.5) });
+      side = -side;
+      tz += rnd(750, 1150);
+    }
+    fireballs = []; volleys = [];
+    applyRumble();
+  }
+  function boomStart(hit) {
+    boomHit = hit; state = "boom"; stateT = 0; bonusApplied = false;
+    fireballs = []; volleys = [];
+    portBonus = hit ? 25000 : 0;
+    towerBonus = (hit && towersTotal > 0 && towersKilled >= towersTotal) ? 10000 : 0;
+    shieldBonus = hit ? shields * 1000 : 0;
+    if (hit) { whiteT = 0.9; sfx.bigBoom(); }
+    else sfx.miss();
+    applyRumble();
+  }
+  function nextWave() { wave++; startSpace(false); }
+  function toAttract() {
+    state = "attract"; stateT = 0;
+    ties = []; fireballs = []; volleys = []; debris = []; floats = [];
+    camX = 0; camY = 0; chx = CX; chy = CY;
+    attractTies = [newTie(), newTie()];
+    attractTies[1].s = attractTies[1].path.len * 0.4;
+    applyRumble();
+  }
+  function gameOver() {
+    state = "over"; stateT = 0;
+    sfx.bigBoom();
+    spawnBurst(CX, CY, 3, C.red, 26);
+    spawnBurst(CX, CY, 2, C.yellow, 20);
+    if (score > hi) {
+      hi = score;
+      try { localStorage.setItem("starwars-hi", String(hi)); } catch (e) {}
+    }
+    applyRumble();
+  }
+  const inPlay = () => state === "space" || state === "surface" || state === "trench";
+  let hitGrace = 0;   // brief invulnerability so stacked fireballs cost one shield
+  function damage(force) {
+    if (!inPlay()) return;
+    if (god) { flashT = 0.2; return; }
+    if (!force && hitGrace > 0) return;
+    hitGrace = 0.9;
+    flashT = 0.5;
+    shakeT = REDUCED ? 0 : 0.35;
+    sfx.thud();
+    if (shields > 0) shields--;
+    else gameOver();
+  }
+
+  // ── Firing ─────────────────────────────────────────────
+  const VDUR = 0.2;
+  const aimX = () => state === "trench" ? CX : chx;
+  const aimY = () => state === "trench" ? CY - 12 : chy;
+  function fireVolley() {
+    if (!inPlay() || stateT < 0 || fireCd > 0 || volleys.length >= 3) return;
+    fireCd = 0.16;
+    volleys.push({ ax: aimX(), ay: aimY(), t: 0 });
+    sfx.fire();
+  }
+  function resolveHit(ax, ay) {
+    let best = null, bestD = 1e9, bestKind = null;
+    const consider = (sx, sy, r, kind, obj) => {
+      const d = Math.hypot(sx - ax, sy - ay);
+      if (d < r && d < bestD) { bestD = d; best = obj; bestKind = kind; }
+    };
+    for (const f of fireballs) {
+      if (f.z > NEAR) {
+        consider(projX(f.x, f.z), projY(f.y, f.z),
+          Math.max(10, f.size * FOCAL / f.z) + 14, "fb", f);
+      }
+    }
+    for (const t of ties) {
+      if (t.z > NEAR && t.z < 1400) {
+        consider(projX(t.x, t.z), projY(t.y, t.z),
+          Math.max(12, 18 * FOCAL / t.z) + 12, "tie", t);
+      }
+    }
+    if (vader && !vader.escaping && vader.z > NEAR && vader.z < 1400) {
+      consider(projX(vader.x, vader.z), projY(vader.y, vader.z),
+        Math.max(12, 20 * FOCAL / vader.z) + 12, "vader", vader);
+    }
+    if (state === "surface") {
+      for (const tw of towers) {
+        if (tw.alive && tw.z > NEAR && tw.z < 1500) {
+          consider(projX(tw.x, tw.z), projY(-40 + tw.h * 0.6, tw.z),
+            Math.max(10, 24 * FOCAL / tw.z) + 10, "tower", tw);
+        }
+      }
+    }
+    if (state === "trench") {
+      for (const tr of turrets) {
+        if (tr.alive && tr.z > NEAR && tr.z < 1300) {
+          consider(projX(tr.side * (TRW - 6), tr.z), projY(TOP - 8, tr.z),
+            Math.max(10, 16 * FOCAL / tr.z) + 12, "turret", tr);
+        }
+      }
+      if (port && !port.hit && port.z > NEAR && port.z < 1000) {
+        consider(projX(port.x, port.z), projY(-40, port.z),
+          Math.max(14, 28 * FOCAL / port.z) + 20, "port", port);
+      }
+    }
+    if (!best) return;
+    const sx = bestKind === "port" ? projX(best.x, best.z) : ax;
+    const sy = bestKind === "port" ? projY(-40, best.z) : ay;
+    switch (bestKind) {
+      case "fb": {
+        fireballs.splice(fireballs.indexOf(best), 1);
+        score += 33;
+        addFloat("+33", sx, sy, C.orange);
+        spawnBurst(sx, sy, 0.9, C.orange, 8);
+        sfx.fbBoom();
+        break;
+      }
+      case "tie": {
+        ties.splice(ties.indexOf(best), 1);
+        score += 1000;
+        addFloat("+1000", sx, sy, C.blue);
+        spawnBurst(sx, sy, 1.4, C.blue, 12);
+        spawnBurst(sx, sy, 1, C.white, 6);
+        sfx.tieBoom();
+        break;
+      }
+      case "vader": {
+        best.hp--; best.flashT = 0.3;
+        score += 2000;
+        addFloat("+2000", sx, sy, C.magenta);
+        sfx.vaderHit();
+        if (best.hp <= 0) {
+          best.escaping = true;
+          best.speed *= 2.2;
+          addFloat("VADER SPINS AWAY", CX, 170, C.magenta);
+        }
+        break;
+      }
+      case "tower": {
+        best.alive = false; towersKilled++;
+        score += best.gun ? 500 : 200;
+        addFloat(best.gun ? "+500" : "+200", sx, sy, C.green);
+        spawnBurst(sx, sy, 1.2, C.green, 10);
+        sfx.towerBoom();
+        break;
+      }
+      case "turret": {
+        best.alive = false;
+        score += 500;
+        addFloat("+500", sx, sy, C.blue);
+        spawnBurst(sx, sy, 1.1, C.blue, 10);
+        sfx.towerBoom();
+        break;
+      }
+      case "port": {
+        boomStart(true);
+        break;
+      }
+    }
+  }
+
+  // ── Updates ────────────────────────────────────────────
+  function moveInput() {
+    const mvx = (keys.ArrowRight || keys.KeyD ? 1 : 0) - (keys.ArrowLeft || keys.KeyA ? 1 : 0);
+    const mvy = (keys.ArrowUp || keys.KeyW ? 1 : 0) - (keys.ArrowDown || keys.KeyS ? 1 : 0);
+    return [mvx, mvy];
+  }
+  function updateCrosshair(dt) {
+    const [mvx, mvy] = moveInput();
+    chx = clamp(chx + mvx * 310 * dt, 60, W - 60);
+    chy = clamp(chy - mvy * 270 * dt, 80, H - 64);
+    panX = -(chx - CX) * 0.22;
+    panY = -(chy - CY) * 0.22;
+  }
+  function updateTieLike(t, dt) {
+    t.s += t.speed * dt;
+    if (t.s >= t.path.len) return false;
+    const sm = sampleAt(t.path, t.s);
+    t.x = sm.p[0]; t.y = sm.p[1]; t.z = sm.p[2];
+    const dl = Math.hypot(sm.d[0], sm.d[1], sm.d[2]) || 1;
+    t.yaw = Math.atan2(sm.d[0], sm.d[2]);
+    t.roll = clamp(-(sm.d[0] / dl) * 0.8, -0.8, 0.8);
+    t.flashT = Math.max(0, t.flashT - dt);
+    if (!t.swooped && t.z < 320 && t.z > 0) { t.swooped = true; sfx.swoop(); }
+    return true;
+  }
+  function updateFireballs(dt) {
+    for (let i = fireballs.length - 1; i >= 0; i--) {
+      const f = fireballs[i];
+      f.x += f.vx * dt; f.y += f.vy * dt; f.z += f.vz * dt;
+      if (f.z <= 10) {
+        if (Math.abs(f.x - camX) < 16 && Math.abs(f.y - camY) < 14) damage();
+        fireballs.splice(i, 1);
+      }
+    }
+  }
+  function updateVolleys(dt) {
+    for (let i = volleys.length - 1; i >= 0; i--) {
+      const v = volleys[i];
+      v.t += dt;
+      if (v.t >= VDUR) { volleys.splice(i, 1); resolveHit(v.ax, v.ay); }
+    }
+  }
+
+  function updateSpace(dt) {
+    updateCrosshair(dt);
+    if (stateT > 0) {
+      spawnCd -= dt;
+      if (spawnCd <= 0 && launched < quota) {
+        ties.push(newTie());
+        launched++;
+        spawnCd = Math.max(1.0, 1.9 - wave * 0.07);
+      }
+      if (vaderState === "pending" && launched >= Math.ceil(quota / 2)) {
+        vader = newVader();
+        vaderState = "active";
+      }
+      for (let i = ties.length - 1; i >= 0; i--) {
+        const t = ties[i];
+        if (!updateTieLike(t, dt)) { ties.splice(i, 1); continue; }
+        t.fireCd -= dt;
+        if (t.fireCd <= 0 && t.z > 350 && t.z < 1150 && fireballs.length < 2 + wave) {
+          spawnFireball(t.x, t.y, t.z);
+          t.fireCd = Math.max(1.4, 2.7 - wave * 0.12) + rnd(0, 0.8);
+        }
+      }
+      if (vader) {
+        if (!updateTieLike(vader, dt)) {
+          vaderState = "gone";
+          addFloat("VADER'S TIE ESCAPES", CX, 200, C.magenta);
+          vader = null;
+        } else if (!vader.escaping) {
+          vader.fireCd -= dt;
+          if (vader.fireCd <= 0 && vader.z > 240 && vader.z < 1300 && fireballs.length < 3 + wave) {
+            spawnFireball(vader.x, vader.y, vader.z, true);
+            vader.fireCd = Math.max(1.2, 2.2 - wave * 0.1);
+          }
+        }
+      }
+      if ((launched >= quota && ties.length === 0 && !vader) || stateT > 55) {
+        startApproach();
+      }
+    }
+    updateFireballs(dt);
+  }
+
+  function updateApproach(dt) {
+    if (stateT > 3.2) startSurface();
+  }
+
+  function updateSurface(dt) {
+    updateCrosshair(dt);
+    if (stateT > 0) {
+      const spd = 520 + wave * 30;
+      traveled += spd * dt;
+      surfDist -= spd * dt;
+      for (const tw of towers) {
+        tw.z = tw.wz - traveled;
+        if (tw.alive && tw.gun && tw.z > 350 && tw.z < 1350) {
+          tw.cd -= dt;
+          if (tw.cd <= 0 && fireballs.length < 3 + wave) {
+            spawnFireball(tw.x, -40 + tw.h, tw.z);
+            tw.cd = Math.max(1.0, rnd(1.6, 2.8) - wave * 0.08);
+          }
+        }
+      }
+      if (surfDist <= 0) startTrench();
+    }
+    updateFireballs(dt);
+  }
+
+  function updateTrench(dt) {
+    if (stateT > 0) {
+      const spd = 560 + wave * 25;
+      traveled += spd * dt;
+      if (!port) trenchDist -= spd * dt;
+      const [mvx, mvy] = moveInput();
+      camX = clamp(camX + mvx * 175 * dt, -TRW + 18, TRW - 18);
+      camY = clamp(camY + mvy * 155 * dt, FLOOR + 16, TOP - 18);
+      panX = 0; panY = 0;
+      for (const cw of catwalks) {
+        const z = cw.wz - traveled;
+        if (!cw.done && z <= 10) {
+          cw.done = true;
+          if (hitCatwalk(cw)) damage();
+        }
+      }
+      for (const tr of turrets) {
+        tr.z = tr.wz - traveled;
+        if (tr.alive && tr.z > 300 && tr.z < 1300) {
+          tr.cd -= dt;
+          if (tr.cd <= 0 && fireballs.length < 3 + wave) {
+            spawnFireball(tr.side * (TRW - 6), TOP - 8, tr.z);
+            tr.cd = Math.max(0.9, rnd(1.4, 2.4) - wave * 0.06);
+          }
+        }
+      }
+      if (trenchDist <= 0 && !port) {
+        port = { x: 0, z: 1500, hit: false };
+        sfx.alarm();
+      }
+      if (port && !port.hit) {
+        port.z -= spd * dt;
+        portAlarmT -= dt;
+        if (portAlarmT <= 0) { sfx.alarm(); portAlarmT = 0.55; }
+        if (port.z < 24) boomStart(false);
+      }
+    }
+    updateFireballs(dt);
+  }
+
+  function catwalkRects(cw) {
+    const T = TRW;
+    switch (cw.kind) {
+      case "high":  return [[-T, 4, T, TOP]];
+      case "low":   return [[-T, FLOOR, T, -2]];
+      case "left":  return [[-T, FLOOR, -6, TOP]];
+      case "right": return [[6, FLOOR, T, TOP]];
+      case "slot":  return [[-T, FLOOR, T, -16], [-T, 18, T, TOP]];
+      case "gate":  return [[-T, -18, T, 6]];
+      default:      return [];
+    }
+  }
+  function hitCatwalk(cw) {
+    for (const [x1, y1, x2, y2] of catwalkRects(cw)) {
+      if (camX + 11 > x1 && camX - 11 < x2 && camY + 9 > y1 && camY - 9 < y2) return true;
+    }
+    return false;
+  }
+
+  function updateBoom(dt) {
+    if (boomHit && !bonusApplied && stateT > 2.2) {
+      bonusApplied = true;
+      score += portBonus + towerBonus + shieldBonus;
+      if (towerBonus) shields = Math.min(9, shields + 1);
+      if (score > hi) {
+        hi = score;
+        try { localStorage.setItem("starwars-hi", String(hi)); } catch (e) {}
+      }
+      sfx.triumph();
+    }
+    if (stateT > (boomHit ? 7.2 : 3.6)) nextWave();
+  }
+
+  function updateAttract(dt) {
+    for (const at of attractTies) {
+      at.s += at.speed * 0.45 * dt;
+      if (at.s >= at.path.len) {
+        const idx = attractTies.indexOf(at);
+        attractTies[idx] = newTie();
+      } else {
+        const sm = sampleAt(at.path, at.s);
+        at.x = sm.p[0]; at.y = sm.p[1]; at.z = sm.p[2];
+        at.yaw = Math.atan2(sm.d[0], sm.d[2]);
+        const dl = Math.hypot(sm.d[0], sm.d[1], sm.d[2]) || 1;
+        at.roll = clamp(-(sm.d[0] / dl) * 0.8, -0.8, 0.8);
+      }
+    }
+  }
+
+  function update(dt) {
+    gt += dt; stateT += dt;
+    flashT = Math.max(0, flashT - dt);
+    shakeT = Math.max(0, shakeT - dt);
+    whiteT = Math.max(0, whiteT - dt);
+    fireCd = Math.max(0, fireCd - dt);
+    hitGrace = Math.max(0, hitGrace - dt);
+    if ((keys.Space || keys.KeyV) && inPlay()) fireVolley();
+    switch (state) {
+      case "attract":  updateAttract(dt); break;
+      case "space":    updateSpace(dt); break;
+      case "approach": updateApproach(dt); break;
+      case "surface":  updateSurface(dt); break;
+      case "trench":   updateTrench(dt); break;
+      case "boom":     updateBoom(dt); break;
+    }
+    updateVolleys(dt);
+    for (let i = debris.length - 1; i >= 0; i--) {
+      const d = debris[i];
+      d.t += dt;
+      if (d.t > 0.7) { debris.splice(i, 1); continue; }
+      d.x += Math.cos(d.a) * d.spd * dt;
+      d.y += Math.sin(d.a) * d.spd * dt;
+      d.rot += d.vr * dt;
+    }
+    for (let i = floats.length - 1; i >= 0; i--) {
+      floats[i].t += dt;
+      if (floats[i].t > 0.9) floats.splice(i, 1);
+    }
+  }
+
+  // ── Drawing ────────────────────────────────────────────
+  function text(str, x, y, size, color, align) {
+    ctx.fillStyle = color;
+    ctx.font = "700 " + size + "px ui-monospace, Menlo, Consolas, monospace";
+    ctx.textAlign = align || "center";
+    ctx.fillText(str, x, y);
+  }
+
+  function drawFireball(f) {
+    if (f.z < NEAR) return;
+    const sx = projX(f.x, f.z), sy = projY(f.y, f.z);
+    const r = Math.max(3, f.size * FOCAL / f.z);
+    const pulse = Math.sin(gt * 22 + f.seed * 7);
+    const n = 9;
+    let px0 = 0, py0 = 0;
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2 + f.seed;
+      const rr = r * (0.62 + 0.38 * Math.sin(f.seed + i * 2.4 + gt * 19));
+      const x = sx + Math.cos(a) * rr, y = sy + Math.sin(a) * rr;
+      if (i > 0) seg(px0, py0, x, y, pulse > 0 ? C.orange : C.red);
+      px0 = x; py0 = y;
+    }
+    seg(sx - r * 0.3, sy, sx + r * 0.3, sy, C.yellow);
+    seg(sx, sy - r * 0.3, sx, sy + r * 0.3, C.yellow);
+  }
+
+  function drawVolleys() {
+    for (const v of volleys) {
+      const p = Math.min(1, v.t / VDUR);
+      for (const x0 of [36, W - 36]) {
+        const y0 = H - 6;
+        const hx = x0 + (v.ax - x0) * p, hy = y0 + (v.ay - y0) * p;
+        const q = Math.max(0, p - 0.14);
+        const tx = x0 + (v.ax - x0) * q, ty = y0 + (v.ay - y0) * q;
+        seg(tx, ty, hx, hy, C.red);
+      }
+    }
+  }
+
+  function drawDebris() {
+    for (const d of debris) {
+      ctx.globalAlpha = 1 - d.t / 0.7;
+      ctx.strokeStyle = d.c;
+      ctx.lineWidth = 1.5;
+      const hx = Math.cos(d.rot) * d.len / 2, hy = Math.sin(d.rot) * d.len / 2;
+      ctx.beginPath();
+      ctx.moveTo(d.x - hx, d.y - hy);
+      ctx.lineTo(d.x + hx, d.y + hy);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function drawFloats() {
+    for (const f of floats) {
+      ctx.globalAlpha = 1 - f.t / 0.9;
+      text(f.txt, f.x, f.y - 26 * f.t, 13, f.c);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCrosshair() {
+    const x = state === "trench" ? CX : chx;
+    const y = state === "trench" ? CY - 12 : chy;
+    ctx.strokeStyle = C.green;
+    ctx.lineWidth = 1.6;
+    ctx.globalAlpha = 0.95;
+    const s = 16, g = 7;
+    ctx.beginPath();
+    for (const [dx, dy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      ctx.moveTo(x + dx * s, y + dy * (s - g));
+      ctx.lineTo(x + dx * s, y + dy * s);
+      ctx.lineTo(x + dx * (s - g), y + dy * s);
+    }
+    ctx.moveTo(x - 4, y); ctx.lineTo(x + 4, y);
+    ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 4);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawHUD() {
+    text("SCORE", 20, 24, 10, C.dim, "left");
+    text(pad(score), 20, 44, 18, C.yellow, "left");
+    text("WAVE " + wave, 20, 64, 11, C.blue, "left");
+    text("HI", CX, 24, 10, C.dim);
+    text(pad(hi), CX, 44, 15, C.white);
+    text("SHIELDS", W - 20, 24, 10, C.dim, "right");
+    ctx.strokeStyle = C.yellow;
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < shields; i++) {
+      ctx.strokeRect(W - 20 - (i + 1) * 20, 32, 15, 10);
+    }
+    if (state === "surface") {
+      text("TOWERS " + towersKilled + "/" + towersTotal, 20, 82, 11, C.green, "left");
+    }
+    if (state === "trench") {
+      if (!port) {
+        text("DISTANCE " + Math.max(0, Math.round(trenchDist)), CX, H - 18, 13, C.blue);
+      } else if (!port.hit && (REDUCED || gt % 0.5 < 0.35)) {
+        text("EXHAUST PORT — FIRE!", CX, H - 18, 15, C.red);
+      }
+    }
+  }
+
+  function drawCard() {
+    if (stateT > 1.1) return;
+    const a = stateT < 0 ? 1 : 1 - stateT / 1.1;
+    ctx.globalAlpha = Math.max(0, a);
+    if (state === "space") {
+      text("WAVE " + wave, CX, CY - 60, 34, C.yellow);
+      text(wave === 1 ? "MAY THE FORCE BE WITH YOU" : "THE EMPIRE PRESSES THE ATTACK",
+        CX, CY - 26, 13, C.blue);
+      text("TIE FIGHTERS INBOUND — SHOOT THE FIREBALLS", CX, CY, 12, C.dim);
+    } else if (state === "surface") {
+      text("THE DEATH STAR SURFACE", CX, CY - 60, 26, C.green);
+      text("DESTROY THE TOWERS FOR BONUS", CX, CY - 28, 13, C.dim);
+    } else if (state === "trench") {
+      text("THE TRENCH RUN", CX, CY - 60, 30, C.blue);
+      text("USE THE FORCE", CX, CY - 28, 14, C.yellow);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSpace() {
+    drawStars();
+    for (const t of ties) {
+      drawModel(TIE_M, t.x, t.y, t.z, t.yaw, t.roll, 1,
+        t.flashT > 0 ? C.white : C.blue);
+    }
+    if (vader) {
+      drawModel(VADER_M, vader.x, vader.y, vader.z, vader.yaw, vader.roll, 1.1,
+        vader.flashT > 0 ? C.white : C.magenta);
+    }
+    for (const f of fireballs) drawFireball(f);
+    drawVolleys();
+  }
+
+  function drawApproach() {
+    drawStars();
+    const p = Math.min(1, stateT / 3.0);
+    const R = 30 + p * p * 480;
+    const dx = CX + 40, dy = CY - 20;
+    ellipseSeg(dx, dy, R, R, C.blueDim, 64);
+    for (const off of [-0.45, 0.1, 0.5]) {
+      const rx = Math.sqrt(Math.max(0.05, 1 - off * off)) * R;
+      ellipseSeg(dx, dy + off * R, rx, R * 0.14, C.blueDim, 40);
+    }
+    for (const k of [0.3, 0.65]) ellipseSeg(dx, dy, R * k, R, C.blueDim, 40);
+    ellipseSeg(dx - R * 0.38, dy - R * 0.3, R * 0.18, R * 0.18, C.blue, 24);
+    const ch = R * 0.95;
+    seg(dx - ch, dy + R * 0.24, dx + ch, dy + R * 0.24, C.blue);
+    text("THE DEATH STAR", CX, H - 70, 22, C.blue);
+    text("SURFACE APPROACH", CX, H - 44, 12, C.dim);
+  }
+
+  function drawSurface() {
+    drawStars(CY + panY - 4);
+    seg(0, CY + panY, W, CY + panY, C.greenDim);
+    const GAP = 140;
+    const k0 = Math.ceil((traveled + NEAR) / GAP);
+    const k1 = Math.floor((traveled + 2100) / GAP);
+    for (let k = k0; k <= k1; k++) {
+      const z = k * GAP - traveled;
+      line3(-1300, -40, z, 1300, -40, z, C.greenDim);
+    }
+    for (let x = -1300; x <= 1300; x += 130) {
+      line3(x, -40, NEAR + 1, x, -40, 2100, C.greenDim);
+    }
+    for (const tw of towers) {
+      if (!tw.alive || tw.z < NEAR || tw.z > 2100) continue;
+      const c = tw.gun ? C.yellow : C.blue;
+      const w = 15, x = tw.x, z = tw.z, h = tw.h;
+      for (const [ox, oz] of [[-w, -w], [w, -w], [w, w], [-w, w]]) {
+        line3(x + ox, -40, z + oz, x + ox, -40 + h, z + oz, c);
+      }
+      line3(x - w, -40 + h, z - w, x + w, -40 + h, z - w, c);
+      line3(x + w, -40 + h, z - w, x + w, -40 + h, z + w, c);
+      line3(x + w, -40 + h, z + w, x - w, -40 + h, z + w, c);
+      line3(x - w, -40 + h, z + w, x - w, -40 + h, z - w, c);
+      if (tw.gun) {
+        line3(x, -40 + h, z, x, -30 + h, z, C.red);
+        line3(x - 3, -30 + h, z, x + 3, -30 + h, z, C.red);
+      }
+    }
+    for (const f of fireballs) drawFireball(f);
+    drawVolleys();
+  }
+
+  function drawTrenchScene() {
+    // longitudinal lines (the trench is straight — constant world x/y)
+    for (const s of [-1, 1]) {
+      for (const y of [FLOOR, -12, 24, TOP]) {
+        line3(s * TRW, y, NEAR + 1, s * TRW, y, 2000, C.blueDim);
+      }
+      for (let k = 1; k <= 4; k++) {
+        line3(s * (TRW + k * 130), TOP, NEAR + 1, s * (TRW + k * 130), TOP, 2000, C.blueDim);
+      }
+    }
+    line3(-22, FLOOR, NEAR + 1, -22, FLOOR, 2000, C.blueDim);
+    line3(22, FLOOR, NEAR + 1, 22, FLOOR, 2000, C.blueDim);
+    // ribs
+    const RIB = 130;
+    const k0 = Math.ceil((traveled + NEAR) / RIB);
+    const k1 = Math.floor((traveled + 2000) / RIB);
+    for (let k = k0; k <= k1; k++) {
+      const z = k * RIB - traveled;
+      line3(-TRW, FLOOR, z, -TRW, TOP, z, C.blue);
+      line3(TRW, FLOOR, z, TRW, TOP, z, C.blue);
+      line3(-TRW, FLOOR, z, TRW, FLOOR, z, C.blue);
+      if (k % 2 === 0) {
+        line3(-TRW, TOP, z, -(TRW + 520), TOP, z, C.blueDim);
+        line3(TRW, TOP, z, TRW + 520, TOP, z, C.blueDim);
+      }
+    }
+    // catwalks and laser gates
+    for (const cw of catwalks) {
+      const z = cw.wz - traveled;
+      if (z < NEAR || z > 1900) continue;
+      const gate = cw.kind === "gate";
+      const c = gate ? (Math.sin(gt * 18) > 0 ? C.red : C.orange) : C.walk;
+      for (const [x1, y1, x2, y2] of catwalkRects(cw)) {
+        line3(x1, y1, z, x2, y1, z, c);
+        line3(x2, y1, z, x2, y2, z, c);
+        line3(x2, y2, z, x1, y2, z, c);
+        line3(x1, y2, z, x1, y1, z, c);
+        const z2 = z + 10;
+        line3(x1, y1, z2, x2, y1, z2, c);
+        line3(x2, y1, z2, x2, y2, z2, c);
+        line3(x2, y2, z2, x1, y2, z2, c);
+        line3(x1, y2, z2, x1, y1, z2, c);
+        line3(x1, y1, z, x1, y1, z2, c);
+        line3(x2, y1, z, x2, y1, z2, c);
+        line3(x2, y2, z, x2, y2, z2, c);
+        line3(x1, y2, z, x1, y2, z2, c);
+        if (gate) {
+          line3(x1, y1, z, x2, y2, z, c);
+          line3(x1, y2, z, x2, y1, z, c);
+        }
+      }
+    }
+    // wall turrets
+    for (const tr of turrets) {
+      if (!tr.alive || tr.z < NEAR || tr.z > 1900) continue;
+      const x = tr.side * (TRW - 6), y = TOP - 8, z = tr.z, w = 6;
+      line3(x - w, y - w, z, x + w, y - w, z, C.red);
+      line3(x + w, y - w, z, x + w, y + w, z, C.red);
+      line3(x + w, y + w, z, x - w, y + w, z, C.red);
+      line3(x - w, y + w, z, x - w, y - w, z, C.red);
+      line3(x, y, z, x - tr.side * 8, y - 4, z - 8, C.red);
+    }
+    // exhaust port
+    if (port && !port.hit && port.z > NEAR) {
+      const z = port.z, x = port.x;
+      for (const s of [12, 22]) {
+        line3(x - s, FLOOR + 1, z - s, x + s, FLOOR + 1, z - s, C.yellow);
+        line3(x + s, FLOOR + 1, z - s, x + s, FLOOR + 1, z + s, C.yellow);
+        line3(x + s, FLOOR + 1, z + s, x - s, FLOOR + 1, z + s, C.yellow);
+        line3(x - s, FLOOR + 1, z + s, x - s, FLOOR + 1, z - s, C.yellow);
+      }
+      const m = 8 + 3 * Math.sin(gt * 12);
+      const my = FLOOR + 26;
+      const mc = Math.sin(gt * 12) > 0 ? C.red : C.yellow;
+      line3(x, my - m, z, x + m, my, z, mc);
+      line3(x + m, my, z, x, my + m, z, mc);
+      line3(x, my + m, z, x - m, my, z, mc);
+      line3(x - m, my, z, x, my - m, z, mc);
+    }
+    for (const f of fireballs) drawFireball(f);
+    drawVolleys();
+  }
+
+  function drawBoom() {
+    drawStars();
+    const t = stateT;
+    if (boomHit) {
+      for (let k = 0; k < 4; k++) {
+        const r = (t - 0.2 - k * 0.25) * [260, 340, 420, 520][k];
+        if (r > 4 && r < 900) {
+          ellipseSeg(CX, CY, r, r * 0.92,
+            [C.yellow, C.orange, C.red, C.white][k], 40, 0.16, gt * 13 + k);
+        }
+      }
+      const n = 14;
+      for (let i = 0; i < n; i++) {
+        const a = i / n * Math.PI * 2 + 0.2;
+        const r0 = Math.max(0, (t - 0.2) * 170);
+        const r1 = r0 + 55 + 35 * Math.sin(i * 1.7 + gt * 6);
+        if (r0 < 700) {
+          seg(CX + Math.cos(a) * r0, CY + Math.sin(a) * r0,
+            CX + Math.cos(a) * r1, CY + Math.sin(a) * r1,
+            i % 2 ? C.orange : C.yellow);
+        }
+      }
+      if (t > 1.6) text("THE FORCE WILL BE WITH YOU", CX, 150, 26, C.yellow);
+      if (t > 2.4) {
+        text("EXHAUST PORT DIRECT HIT  +25000", CX, 200, 14, C.white);
+        if (towerBonus) text("ALL TOWERS DESTROYED  +10000 · BONUS SHIELD", CX, 226, 13, C.green);
+        text("SHIELD BONUS  +" + shieldBonus, CX, towerBonus ? 252 : 226, 13, C.blue);
+      }
+      if (t > 3.4 && (REDUCED || gt % 1 < 0.6)) {
+        text("PRESS SPACE FOR WAVE " + (wave + 1), CX, H - 60, 13, C.dim);
+      }
+    } else {
+      text("THE EXHAUST PORT SLIPS PAST", CX, CY - 40, 22, C.red);
+      text("NO BONUS — THE BATTLE GOES ON", CX, CY - 8, 13, C.dim);
+      text("REMEMBER: TRUST YOUR FEELINGS", CX, CY + 24, 12, C.blue);
+    }
+  }
+
+  function drawOver() {
+    drawStars();
+    text("GAME OVER", CX, CY - 60, 40, C.red);
+    text("FINAL SCORE  " + pad(score), CX, CY - 10, 18, C.yellow);
+    text("HIGH SCORE   " + pad(hi), CX, CY + 20, 14, C.white);
+    if (stateT > 1.2 && (REDUCED || gt % 1 < 0.6)) {
+      text("PRESS SPACE", CX, CY + 80, 16, C.dim);
+    }
+  }
+
+  function drawAttract() {
+    drawStars();
+    for (const at of attractTies) {
+      if (at.z > NEAR) drawModel(TIE_M, at.x, at.y, at.z, at.yaw, at.roll, 1, C.blueDim);
+    }
+    flush();
+    text("HIGH SCORE", CX, 40, 11, C.dim);
+    text(pad(hi), CX, 62, 16, C.yellow);
+    text("ATARI PRESENTS", CX, 128, 13, C.dim);
+    ctx.font = "700 78px ui-monospace, Menlo, Consolas, monospace";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = C.yellow;
+    ctx.globalAlpha = 0.3;
+    ctx.strokeText("STAR WARS", CX, 205);
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.8;
+    ctx.strokeText("STAR WARS", CX, 205);
+    text("1983 COLOR X-Y VECTOR — KEYBOARD TRIBUTE", CX, 238, 12, C.blue);
+    const rows = [
+      ["FIREBALL", "33", C.orange],
+      ["TIE FIGHTER", "1000", C.blue],
+      ["DEATH STAR TOWER", "200 / 500", C.green],
+      ["TRENCH TURRET", "500", C.blue],
+      ["EXHAUST PORT", "25000", C.yellow],
+    ];
+    let y = 296;
+    for (const [label, pts, c] of rows) {
+      text(label, CX - 170, y, 13, c, "left");
+      text(pts, CX + 170, y, 13, c, "right");
+      y += 26;
+    }
+    text("PERSONAL TRIBUTE — NOT FOR SALE", CX, y + 28, 12, C.dim);
+    text("TM & © 1983 LUCASFILM LTD · LICENSED TO ATARI, INC.", CX, y + 50, 10, C.dim);
+    if (REDUCED || gt % 1.1 < 0.7) {
+      text("PRESS SPACE TO START", CX, y + 100, 18, C.yellow);
+    }
+    text("MAY THE FORCE BE WITH YOU", CX, y + 128, 11, C.green);
+  }
+
+  function draw() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    if (shakeT > 0) {
+      ctx.translate(rnd(-1, 1) * shakeT * 11, rnd(-1, 1) * shakeT * 11);
+    }
+    switch (state) {
+      case "attract":  drawAttract(); break;
+      case "space":    drawSpace(); break;
+      case "approach": drawApproach(); break;
+      case "surface":  drawSurface(); break;
+      case "trench":   drawTrenchScene(); break;
+      case "boom":     drawBoom(); break;
+      case "over":     drawOver(); break;
+    }
+    flush();
+    drawDebris();
+    drawFloats();
+    if (inPlay()) {
+      drawCrosshair();
+      drawHUD();
+      drawCard();
+    }
+    ctx.restore();
+    if (flashT > 0) {
+      ctx.globalAlpha = Math.min(0.55, flashT);
+      ctx.fillStyle = "#ff2211";
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+    if (whiteT > 0) {
+      ctx.globalAlpha = Math.min(1, whiteT * 1.4);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ── Input ──────────────────────────────────────────────
+  const GAME_KEYS = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+    "KeyA", "KeyD", "KeyW", "KeyS", "Space", "KeyV", "KeyR", "KeyF", "KeyM", "Escape"];
+  const crt = document.querySelector(".crt");
+  let theater = false;
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement || theater) {
+      theater = false;
+      crt.classList.remove("theater");
+      if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
+      return;
+    }
+    let p = null;
+    try { p = crt.requestFullscreen(); } catch (e) { p = null; }
+    if (p && p.catch) {
+      p.catch(() => { theater = true; crt.classList.add("theater"); });
+    } else if (!document.fullscreenElement) {
+      theater = true; crt.classList.add("theater");
+    }
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (GAME_KEYS.includes(e.code)) e.preventDefault();
+    ensureAudio();
+    if (e.repeat) { keys[e.code] = true; return; }
+    keys[e.code] = true;
+    switch (e.code) {
+      case "Space": case "KeyV":
+        if (state === "attract") startGame();
+        else if (state === "over" && stateT > 1.2) toAttract();
+        else if (state === "boom" && stateT > (boomHit ? 3.4 : 1.4)) nextWave();
+        break;
+      case "KeyR":
+        if (state !== "attract") startGame();
+        break;
+      case "KeyF": toggleFullscreen(); break;
+      case "KeyM": setMuted(!muted); break;
+      case "Escape":
+        if (theater || document.fullscreenElement) { toggleFullscreen(); break; }
+        if (inPlay() || state === "approach") gameOver();
+        break;
+    }
+  });
+  window.addEventListener("keyup", (e) => { keys[e.code] = false; });
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement && !theater) crt.classList.remove("theater");
+  });
+
+  // ── Main loop ──────────────────────────────────────────
+  toAttract();
+  const STEP = 1000 / 120;
+  let last = performance.now(), acc = 0;
+  function frame(now) {
+    acc += Math.min(now - last, 100);
+    last = now;
+    while (acc >= STEP) { update(STEP / 1000); acc -= STEP; }
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // debug/testing hook
+  window.__sw = {
+    state: () => state,
+    stateT: () => stateT,
+    wave: () => wave,
+    score: () => score,
+    shields: () => shields,
+    ties: () => ties.length,
+    fireballs: () => fireballs.length,
+    towers: () => towers.filter(t => t.alive).length,
+    towersTotal: () => towersTotal,
+    dist: () => trenchDist,
+    portZ: () => port ? port.z : null,
+    boomHit: () => boomHit,
+    god: (v) => { god = !!v; },
+    start: () => { if (state === "attract") startGame(); },
+    jump: (p) => {
+      if (state === "attract") startGame();
+      if (p === "space") startSpace(false);
+      else if (p === "approach") startApproach();
+      else if (p === "surface") startSurface();
+      else if (p === "trench") startTrench();
+      else if (p === "port") { startTrench(); trenchDist = 60; catwalks = []; }
+      else if (p === "boom") boomStart(true);
+      if (stateT < 0) stateT = 0.01;
+    },
+    skipIntro: () => { if (stateT < 0) stateT = 0.01; },
+    hitPort: () => { if (state === "trench") boomStart(true); },
+    damage: () => damage(true),
+    aim: (x, y) => { chx = x; chy = y; },
+  };
+})();
+</script>

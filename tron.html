@@ -1,0 +1,1543 @@
+<title>Tron — 1982 Tribute</title>
+<style>
+  :root {
+    --cabinet: #05070c;
+    --bezel: #05060a;
+    --panel: #0a0d16;
+    --panel-edge: #16233a;
+    --neon: #35d7ff;
+    --neon-dim: #4b7ea0;
+    --amber: #ff9c1a;
+    --red: #ff3b30;
+    --green: #3dff7a;
+    --magenta: #ff5ce1;
+    --phosphor: #cfe9ff;
+    --phosphor-dim: #6f88a6;
+    color-scheme: dark;
+  }
+  html, body { background: var(--cabinet); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    color: var(--phosphor);
+  }
+  /* portrait cabinet — Tron ran on a ROT90 vertical monitor (native 480×512, aspect 0.9375) */
+  .cabinet {
+    width: min(97vw, calc((100dvh - 210px) * 0.9375));
+    min-width: 300px;
+    padding: 10px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cabinet > * { flex-shrink: 0; }
+
+  /* ── Marquee (column layout — absorbs any title length) ── */
+  .marquee {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #0b1220, #060a12);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .marquee::before {
+    /* faint neon grid behind the wordmark, like the real marquee */
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--panel-edge) 1px, transparent 1px),
+      linear-gradient(90deg, var(--panel-edge) 1px, transparent 1px);
+    background-size: 16px 16px;
+    opacity: 0.25;
+    pointer-events: none;
+  }
+  .marquee .eyebrow {
+    font-size: 9.5px;
+    letter-spacing: 0.42em;
+    color: var(--phosphor-dim);
+    text-transform: uppercase;
+    margin: 0;
+    position: relative;
+  }
+  .marquee h1 {
+    margin: 0;
+    font-size: clamp(26px, 7vw, 52px);
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    white-space: nowrap;
+    text-transform: uppercase;
+    position: relative;
+    background: linear-gradient(180deg, #ff5ce1 0%, #c9a6ff 38%, #eef6ff 58%, #35d7ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 22px rgba(53, 215, 255, 0.25);
+    filter: drop-shadow(0 0 6px rgba(255, 92, 225, 0.35));
+  }
+  .marquee .rule {
+    width: 72px; height: 3px;
+    background: var(--neon);
+    box-shadow: 0 0 12px rgba(53, 215, 255, 0.7);
+    position: relative;
+  }
+
+  /* ── CRT screen ── */
+  .crt {
+    position: relative;
+    border-radius: 20px;
+    border: 10px solid var(--bezel);
+    outline: 1px solid var(--panel-edge);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 12px 40px rgba(0,0,0,0.6);
+    overflow: hidden;
+    background: #000;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 480 / 512;
+    background: #000;
+  }
+  .crt::after {
+    content: "";
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(180deg,
+      rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.20) 3px, rgba(0,0,0,0) 4px);
+  }
+  .crt::before {
+    content: "";
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 1;
+    background: radial-gradient(ellipse 118% 108% at 50% 45%,
+      rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%);
+  }
+  .crt:fullscreen, .crt.theater {
+    border: none; border-radius: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #000;
+  }
+  .crt:fullscreen canvas, .crt.theater canvas {
+    width: auto; height: 100vh; max-width: 100vw;
+  }
+  .crt.theater { position: fixed; inset: 0; z-index: 100; }
+
+  /* ── Control panel ── */
+  .panel {
+    background: linear-gradient(180deg, var(--panel), #05070e);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    justify-content: center;
+    align-items: center;
+  }
+  .panel .key {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--phosphor-dim);
+    white-space: nowrap;
+  }
+  kbd {
+    font-family: inherit; font-size: 11.5px;
+    color: var(--neon);
+    background: #04060b;
+    border: 1px solid #1c2c44;
+    border-bottom-width: 3px;
+    border-radius: 5px;
+    padding: 3px 7px; min-width: 13px; text-align: center;
+  }
+  .footnote {
+    text-align: center;
+    font-size: 11px; line-height: 1.7;
+    letter-spacing: 0.05em;
+    color: var(--phosphor-dim);
+    max-width: 62ch; margin: 0 auto;
+  }
+  .footnote strong { color: var(--phosphor); font-weight: 700; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee .rule { animation: pulse 2.6s ease-in-out infinite alternate; }
+    @keyframes pulse {
+      from { box-shadow: 0 0 8px rgba(53,215,255,0.5); }
+      to   { box-shadow: 0 0 18px rgba(53,215,255,0.95); }
+    }
+  }
+</style>
+
+<div class="cabinet">
+  <header class="marquee">
+    <p class="eyebrow">Bally Midway · 1982 · Neon-Raster Tribute</p>
+    <h1>Tron</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="crt">
+    <canvas id="game" width="960" height="1024"
+      aria-label="Tron game screen. Arrow keys move, Z and X aim the disc, Space fires or boosts."></canvas>
+  </div>
+
+  <div class="panel" aria-label="Controls">
+    <span class="key"><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>WASD</kbd> Joystick</span>
+    <span class="key"><kbd>Z</kbd><kbd>X</kbd> Aim Dial</span>
+    <span class="key"><kbd>Space</kbd> Fire / Boost / Start</span>
+    <span class="key"><kbd>R</kbd> Restart</span>
+    <span class="key"><kbd>Esc</kbd> End</span>
+    <span class="key"><kbd>F</kbd> Fullscreen</span>
+    <span class="key"><kbd>M</kbd> Sound</span>
+  </div>
+
+  <p class="footnote">
+    A tribute to <strong>Tron</strong> (Bally Midway, 1982) — the four-game Grid cabinet.
+    Pick a quadrant on the <strong>Game Grid</strong>, then survive all four:
+    <strong>Light Cycles</strong>, <strong>Battle Tanks</strong>,
+    <strong>I/O Tower</strong>, and the <strong>MCP Cone</strong>. Clear every quadrant to
+    advance a level. The joystick moves; the dial aims your disc. I fight for the Users.
+  </p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ── Canvas ─────────────────────────────────────────────
+  // Raster game, but Tron's signature is the NEON GLOW of bright lines on pure black.
+  // So: logic 480×512, backing store 2× (960×1024), SMOOTH scaling (no pixelated CSS) —
+  // the seg/flush glow batcher gives lines their bloom. Sprites are chunky filled cells.
+  const cvs = document.getElementById("game");
+  const ctx = cvs.getContext("2d");
+  ctx.scale(2, 2);
+  const W = 480, H = 512, CX = W / 2, CY = H / 2;
+  const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ── Palette ────────────────────────────────────────────
+  const C = {
+    blue:    "#35d7ff",
+    blueDim: "#1c6f96",
+    cyan:    "#7cf0ff",
+    navy:    "#0b1030",
+    navyLine:"#1b2a63",
+    steel:   "#8fa6bd",
+    yellow:  "#ffd21a",
+    amber:   "#ff9c1a",
+    red:     "#ff3b30",
+    green:   "#3dff7a",
+    greenDim:"#1f9e4c",
+    magenta: "#ff5ce1",
+    white:   "#eef6ff",
+    dim:     "#6f88a6",
+    grid:    "#12204a",
+  };
+  const RAINBOW = ["#ff3b30","#ff9c1a","#ffd21a","#3dff7a","#35d7ff","#5c7bff","#ff5ce1"];
+
+  // ── Helpers ────────────────────────────────────────────
+  const clamp = (v,a,b) => v<a?a:v>b?b:v;
+  const rnd = (a,b) => a + Math.random()*(b-a);
+  const irnd = (a,b) => (a + Math.random()*(b-a+1))|0;
+  const pad = (n,w=6) => String(n).padStart(w,"0");
+  const q = (n) => Math.round(n);            // single quantizer for every shown+stored value
+  const TAU = Math.PI*2;
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];} return a; }
+  const dirVec = [[0,-1],[1,0],[0,1],[-1,0]]; // up,right,down,left
+
+  // ── Neon glow line batcher (from the Star Wars session) ─
+  const batch = new Map();
+  function seg(x1,y1,x2,y2,c){ let a=batch.get(c); if(!a){a=[];batch.set(c,a);} a.push(x1,y1,x2,y2); }
+  function rectSeg(x,y,w,h,c){ seg(x,y,x+w,y,c); seg(x+w,y,x+w,y+h,c); seg(x+w,y+h,x,y+h,c); seg(x,y+h,x,y,c); }
+  function flush(){
+    for(const [c,a] of batch){
+      ctx.strokeStyle=c;
+      ctx.globalAlpha=0.28; ctx.lineWidth=3.4;
+      ctx.beginPath();
+      for(let i=0;i<a.length;i+=4){ ctx.moveTo(a[i],a[i+1]); ctx.lineTo(a[i+2],a[i+3]); }
+      ctx.stroke();
+      ctx.globalAlpha=1; ctx.lineWidth=1.4;
+      ctx.beginPath();
+      for(let i=0;i<a.length;i+=4){ ctx.moveTo(a[i],a[i+1]); ctx.lineTo(a[i+2],a[i+3]); }
+      ctx.stroke();
+    }
+    batch.clear();
+    ctx.globalAlpha=1;
+  }
+  // filled neon cell with a soft halo (for chunky sprites)
+  function glowRect(x,y,w,h,c,halo){
+    if(halo!==false){ ctx.globalAlpha=0.22; ctx.fillStyle=c; ctx.fillRect(x-2,y-2,w+4,h+4); ctx.globalAlpha=1; }
+    ctx.fillStyle=c; ctx.fillRect(x,y,w,h);
+  }
+  function glowDisc(x,y,r,c){
+    ctx.globalAlpha=0.30; ctx.fillStyle=c; ctx.beginPath(); ctx.arc(x,y,r*1.9,0,TAU); ctx.fill();
+    ctx.globalAlpha=1; ctx.fillStyle=c; ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fill();
+  }
+  function text(str,x,y,size,color,align){
+    ctx.fillStyle=color;
+    ctx.font="700 "+size+"px ui-monospace, Menlo, Consolas, monospace";
+    ctx.textAlign=align||"center";
+    ctx.fillText(str,x,y);
+  }
+
+  // ── Sprite art ─────────────────────────────────────────
+  // The arcade look IS sprite detail (see the zoomed reference grabs): a walking human Tron,
+  // studded-tread tanks with a turret hub, wire-spider grid bugs. String-grid → offscreen canvas.
+  function buildSprite(rows,map,cell){
+    cell=cell||2;
+    const h=rows.length, w=rows[0].length;
+    const cv=document.createElement("canvas");
+    cv.width=w*cell; cv.height=h*cell;
+    const c=cv.getContext("2d");
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+      const k=rows[y][x]; if(k==="."||k===" ") continue;
+      c.fillStyle=map[k]; c.fillRect(x*cell,y*cell,cell,cell);
+    }
+    return cv;
+  }
+  const SPAL={b:"#35d7ff",c:"#7cf0ff",w:"#eef6ff",d:"#1c6f96",k:"#05070c",r:"#ff3b30",o:"#ff9c1a",y:"#ffd21a"};
+  const SPR_TRON=buildSprite([
+    ".....cc......",
+    "....cwwc.....",
+    "....cwwc.....",
+    ".....bb......",
+    "....dbbd.....",
+    "...bbbbbb....",
+    "..bb.bb.bb...",
+    "..b..bb..b...",
+    ".....bb......",
+    "....bbbb.....",
+    "....bwwb.....",
+    "....b..b.....",
+    "...bb..bb....",
+    "...b....b....",
+    "...b....b....",
+    "..bb....bb...",
+    "..b......b...",
+    ".cb......bc..",
+  ],SPAL);
+  function buildTank(main,dark){
+    const m=Object.assign({},SPAL,{A:main,B:dark});
+    return buildSprite([
+      "w.w.w.w.w.w.w",
+      "ABABABABABABA",
+      "ABABABABABABA",
+      ".....AAA.....",
+      "..AAAAAAAAA..",
+      "..AA.kkk.AA..",
+      "..AAkkkkkAA..",
+      "..AA.kkk.AA..",
+      "..AAAAAAAAA..",
+      ".....AAA.....",
+      "ABABABABABABA",
+      "ABABABABABABA",
+      "w.w.w.w.w.w.w",
+    ],m);
+  }
+  const SPR_TANK_R=buildTank("#ff3b30","#7d150e");
+  const SPR_TANK_B=buildTank("#35d7ff","#155a7a");
+  const SPR_RECOG=buildSprite([
+    "AAAA.....AAAA",
+    "AAAA.....AAAA",
+    "AAAA.....AAAA",
+    "AAAA.....AAAA",
+    "AAAAAkkkAAAAA",
+    "AAAAAAAAAAAAA",
+    ".AA.......AA.",
+  ],Object.assign({},SPAL,{A:"#c96a1a"}));
+  function buildCycle(main){
+    const m=Object.assign({},SPAL,{A:main});
+    return buildSprite([
+      "..A..",
+      ".AAA.",
+      ".AwA.",
+      ".AAA.",
+      ".AAA.",
+      ".AAA.",
+      "AAAAA",
+      ".AAA.",
+      "..A..",
+    ],m);
+  }
+  const SPR_CYC_B=buildCycle("#35d7ff");
+  const SPR_CYC_Y=buildCycle("#ffd21a");
+  const DIR_ANG=[0,Math.PI/2,Math.PI,-Math.PI/2];   // sprite faces up; dir = up,right,down,left
+  function drawSprite(spr,x,y,ang,alpha){
+    ctx.save(); ctx.translate(x,y); if(ang) ctx.rotate(ang);
+    if(alpha!==undefined) ctx.globalAlpha=alpha;
+    ctx.drawImage(spr,-spr.width/2,-spr.height/2);
+    ctx.restore(); ctx.globalAlpha=1;
+  }
+  // grid bug — wire spider drawn as line art (the reference bugs are thin red LINES, not blobs)
+  function drawBug(x,y,ph){
+    const sway=Math.sin(ph)*2;
+    ctx.strokeStyle=SPAL.r; ctx.lineWidth=1.6;
+    ctx.beginPath();
+    for(const s of [-1,1]){
+      ctx.moveTo(x,y-1); ctx.lineTo(x+s*7,y-6+sway); ctx.lineTo(x+s*11,y-2+sway);
+      ctx.moveTo(x,y);   ctx.lineTo(x+s*8,y+1);      ctx.lineTo(x+s*12,y+5-sway);
+      ctx.moveTo(x,y+1); ctx.lineTo(x+s*6,y+6-sway); ctx.lineTo(x+s*9,y+9);
+    }
+    ctx.stroke();
+    ctx.fillStyle=SPAL.r; ctx.fillRect(x-3,y-3,6,6);          // body
+    ctx.fillStyle=SPAL.o; ctx.fillRect(x-2,y-6,4,3);          // crest
+    ctx.fillStyle=SPAL.w; ctx.fillRect(x-1,y-1,2,2);          // head dot
+  }
+
+  // ── Audio ──────────────────────────────────────────────
+  let actx=null, master=null, noiseBuf=null, muted=false;
+  function ensureAudio(){
+    if(actx){ if(actx.state==="suspended") actx.resume(); return; }
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+      actx=new AC(); master=actx.createGain(); master.gain.value=muted?0:1; master.connect(actx.destination);
+      noiseBuf=actx.createBuffer(1,actx.sampleRate*1.0,actx.sampleRate);
+      const d=noiseBuf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    }catch(e){ actx=null; }
+  }
+  function setMuted(m){ muted=m; if(master) master.gain.value=m?0:1; }
+  function tone(f0,dur,o){
+    if(!actx) return; o=o||{};
+    const t0=actx.currentTime+(o.at||0);
+    const osc=actx.createOscillator(); osc.type=o.type||"square";
+    osc.frequency.setValueAtTime(Math.max(20,f0),t0);
+    if(o.f1) osc.frequency.exponentialRampToValueAtTime(Math.max(20,o.f1),t0+dur);
+    const g=actx.createGain(); g.gain.setValueAtTime(o.vol||0.12,t0);
+    g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+    osc.connect(g); g.connect(master); osc.start(t0); osc.stop(t0+dur+0.02);
+  }
+  function noiseHit(dur,freq,vol,at){
+    if(!actx) return;
+    const t0=actx.currentTime+(at||0);
+    const src=actx.createBufferSource(); src.buffer=noiseBuf; src.loop=true;
+    const bp=actx.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=freq; bp.Q.value=0.8;
+    const g=actx.createGain(); g.gain.setValueAtTime(vol,t0); g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+    src.connect(bp); bp.connect(g); g.connect(master); src.start(t0); src.stop(t0+dur+0.05);
+  }
+  const sfx = {
+    fire(){ tone(760,0.10,{f1:220,vol:0.06}); },
+    disc(){ tone(520,0.14,{f1:900,vol:0.06,type:"sawtooth"}); tone(900,0.12,{f1:400,vol:0.04}); },
+    boost(){ tone(180,0.18,{f1:340,vol:0.05,type:"sawtooth"}); },
+    bug(){ tone(300,0.09,{f1:80,vol:0.07}); noiseHit(0.08,700,0.10); },
+    block(){ tone(660,0.07,{f1:990,vol:0.05}); },
+    tank(){ noiseHit(0.22,420,0.20); tone(220,0.2,{f1:50,vol:0.10,type:"sawtooth"}); },
+    derez(){ noiseHit(0.5,240,0.4); tone(300,0.4,{f1:40,vol:0.16,type:"sawtooth"}); },
+    win(){ const s=[[392,0,.14],[523,.14,.14],[659,.28,.14],[784,.42,.4]]; for(const[f,at,d]of s){tone(f,d,{at,vol:0.1});tone(f/2,d,{at,vol:0.07,type:"triangle"});} },
+    enter(){ tone(440,0.5,{f1:1320,vol:0.09,type:"sine"}); },
+    coin(){ tone(988,0.08,{vol:0.08}); tone(1319,0.12,{at:0.08,vol:0.08}); },
+    tick(){ tone(1200,0.03,{vol:0.05}); },
+    level(){ const s=[[523,0,.15],[659,.15,.15],[784,.3,.15],[1046,.45,.5]]; for(const[f,at,d]of s)tone(f,d,{at,vol:0.1}); },
+    over(){ noiseHit(1.6,180,0.4); tone(200,1.4,{f1:36,vol:0.18,type:"sawtooth"}); },
+  };
+
+  // ── Game state ─────────────────────────────────────────
+  const LEVELS = ["RPG","COBOL","BASIC","FORTRAN","SNOBOL","PL1","PASCAL","ALGOL","ASSEMBLY","OS","JCL","USER"];
+  const GAMES = ["lc","tanks","io","mcp"];
+  const GAME_LABEL = { lc:"LIGHT CYCLES", tanks:"BATTLE TANKS", io:"I/O TOWER", mcp:"MCP CONE" };
+  const GAME_COLOR = { lc:C.blue, tanks:C.red, io:C.green, mcp:C.magenta };
+
+  let state="attract", stateT=0, gt=0;
+  let level=0, lives=3, score=0, hi=0;
+  const EXTRA_AT=[6000,16000,32000,55000,90000,140000]; let extraIdx=0;   // period-style bonus lives
+  try{ hi=parseInt(localStorage.getItem("tron-hi")||"0",10)||0; }catch(e){}
+  let quads=[];               // 4 quadrant assignments for the current level: {game,done,failed}
+  let flashT=0, shakeT=0, derezT=0;
+  const keys=Object.create(null);
+  let aimAng=-Math.PI/2;       // rotary-dial aim angle (radians), decoupled from movement
+  let botTier="off";           // "off" | "aimless" | "skilled"
+
+  // per-subgame worlds (populated on entry)
+  let lc=null, tk=null, io=null, mcp=null, grid=null, floats=[];
+
+  function addFloat(txt,x,y,c){ floats.push({txt,x,y,c,t:0}); }
+  function addScore(n){
+    score+=n;
+    while(extraIdx<EXTRA_AT.length && score>=EXTRA_AT[extraIdx]){ extraIdx++; lives++; addFloat("EXTRA LIFE",CX,CY,C.green); sfx.win(); }
+  }
+  function saveHi(){ if(score>hi){ hi=q(score); try{ localStorage.setItem("tron-hi",String(hi)); }catch(e){} } }
+  const diff = () => level;    // 0-based difficulty ramp
+
+  // ── Flow ───────────────────────────────────────────────
+  function startGame(){
+    level=0; lives=3; score=0; extraIdx=0;
+    beginLevel();
+  }
+  function beginLevel(){
+    const g=shuffle(GAMES.slice());
+    quads=g.map(game=>({game,done:false,failed:false}));
+    toGrid(true);
+  }
+  function toGrid(intro){
+    state="grid"; stateT=0;
+    grid={ cx:CX, cy:300, x:CX, y:300, pickT:8.0, chosen:-1, moved:false };
+    // quadrant screen positions (UL,UR,LL,LR) around the grid circle
+    grid.slots=[{dx:-1,dy:-1},{dx:1,dy:-1},{dx:-1,dy:1},{dx:1,dy:1}];
+    // static orthogonal circuit mazes per quadrant (the reference grid is a fixed maze pattern,
+    // not per-frame noise) — generated once here so the screen doesn't flicker
+    grid.mazes=[];
+    for(let i=0;i<4;i++){
+      const s=grid.slots[i], cxq=s.dx*57, cyq=s.dy*57, walks=[];
+      // dense angular circuit fill — the reference mazes pack the whole quadrant
+      for(let w=0;w<7;w++){
+        const pts=[]; let px=cxq+rnd(-48,48), py=cyq+rnd(-44,44), horiz=Math.random()<0.5;
+        pts.push([px,py]);
+        for(let k=0;k<9;k++){
+          if(horiz) px=clamp(px+(Math.random()<0.5?-1:1)*rnd(10,26), cxq-52, cxq+52);
+          else      py=clamp(py+(Math.random()<0.5?-1:1)*rnd(8,20), cyq-48, cyq+48);
+          horiz=!horiz;
+          pts.push([px,py]);
+        }
+        walks.push(pts);
+      }
+      grid.mazes.push(walks);
+    }
+    if(intro) sfx.level();
+  }
+  function remainingQuads(){ return quads.map((q,i)=>({q,i})).filter(o=>!o.q.done); }
+  function pickQuad(i){
+    if(i<0||i>=quads.length||quads[i].done) return;
+    grid.chosen=i;
+    const g=quads[i].game;
+    if(g==="lc") startLC();
+    else if(g==="tanks") startTanks();
+    else if(g==="io") startIO();
+    else if(g==="mcp") startMCP();
+    sfx.enter();
+  }
+  function subgameWon(){
+    quads[grid.chosen].done=true; quads[grid.chosen].failed=false;
+    addScore(500+diff()*100);
+    saveHi();
+    if(quads.every(x=>x.done)){
+      addScore(2000+diff()*500);
+      level++;
+      if(level>=LEVELS.length){ victory(); return; }
+      state="levelclear"; stateT=0; sfx.level();
+    } else {
+      state="cleared"; stateT=0; sfx.win();
+    }
+  }
+  function subgameLost(){
+    sfx.derez(); derezT=0.7; shakeT=REDUCED?0:0.4; flashT=0.4;
+    lives--;
+    if(grid && grid.chosen>=0) quads[grid.chosen].failed=true;
+    saveHi();
+    if(lives<0){ gameOver(); return; }
+    state="derez"; stateT=0;
+  }
+  function victory(){ state="victory"; stateT=0; saveHi(); sfx.win(); }
+  function gameOver(){ state="over"; stateT=0; saveHi(); sfx.over(); }
+  function toAttract(){ state="attract"; stateT=0; botTier="off"; }
+
+  // ═══════════════════════════════════════════════════════
+  //  LIGHT CYCLES  (9×9 grid arena; trails = walls via occupancy grid)
+  // ═══════════════════════════════════════════════════════
+  const LC_A = 414, LC_X0 = (W-LC_A)/2|0, LC_Y0 = 66;   // arena square
+  const LC_CELL = 3, LC_GW = (LC_A/LC_CELL)|0;            // fine occupancy grid (138×138)
+  function startLC(){
+    const speed = 82 + diff()*7;
+    const nEnemy = clamp(1+Math.floor(diff()/3),1,3);      // 1..3 yellow cycles
+    const occ = new Uint8Array(LC_GW*LC_GW);
+    lc = { occ, speed, boost:false, trails:[], cycles:[], dead:false, winT:0, t:0 };
+    // player starts bottom-center heading up
+    lc.cycles.push(mkCycle(LC_A*0.5, LC_A*0.80, 0, C.blue, C.cyan, true));
+    // enemies across the top
+    for(let i=0;i<nEnemy;i++){
+      const px = LC_A*(0.25+0.5*(nEnemy===1?0.5:i/(nEnemy-1)));
+      lc.cycles.push(mkCycle(px, LC_A*0.18, 2, C.yellow, C.amber, false));
+    }
+    // seed each cycle's start cell so its first move doesn't re-test its own spawn
+    for(const cyc of lc.cycles){ const c=lcCell(cyc.x,cyc.y); if(c>=0){ lc.occ[c]=1; cyc.lastCell=c; } }
+    state="lc"; stateT=-1.4;
+  }
+  function mkCycle(x,y,dir,col,trailCol,player){
+    return { x,y,dir,col,trailCol,player,alive:true,
+      trail:[[x,y],[x,y]], think:0, lastCell:-1 };
+  }
+  function lcCell(x,y){
+    const cx=(x/LC_CELL)|0, cy=(y/LC_CELL)|0;
+    if(cx<0||cy<0||cx>=LC_GW||cy>=LC_GW) return -2;   // wall
+    return cy*LC_GW+cx;
+  }
+  function lcFree(x,y){ const c=lcCell(x,y); return c>=0 && lc.occ[c]===0; }
+  function lcMark(x,y){ const c=lcCell(x,y); if(c>=0) lc.occ[c]=1; }
+  function lcTurn(cyc,nd){ if(nd===((cyc.dir+2)&3)) return; if(nd!==cyc.dir){ cyc.dir=nd; cyc.trail.push([cyc.x,cyc.y]); } }
+  function updateLC(dt){
+    if(stateT<0) return;
+    lc.t+=dt;
+    // player input
+    const p=lc.cycles[0];
+    if(p.alive && !p.player_bot){
+      if(botTier==="off"){
+        if(keys.ArrowUp||keys.KeyW) lcTurn(p,0);
+        else if(keys.ArrowRight||keys.KeyD) lcTurn(p,1);
+        else if(keys.ArrowDown||keys.KeyS) lcTurn(p,2);
+        else if(keys.ArrowLeft||keys.KeyA) lcTurn(p,3);
+        lc.boost=!!(keys.Space);
+      }
+    }
+    if(botTier!=="off" && p.alive) botDriveLC(p,dt);
+    // enemy AI
+    for(let i=1;i<lc.cycles.length;i++){ const e=lc.cycles[i]; if(e.alive) aiLC(e,dt); }
+    // advance all cycles; a trail cell is tested + marked only when the head crosses into a
+    // NEW grid cell — otherwise a cycle collides with its own just-marked head (self-crash)
+    const spd = lc.speed*(lc.boost&&p.alive?2:1);
+    const eSpd = lc.speed*(diff()>=10?1.28:1.05);
+    for(const cyc of lc.cycles){
+      if(!cyc.alive) continue;
+      const move=(cyc.player?spd:eSpd)*dt;
+      const sub=Math.max(1,Math.ceil(move/(LC_CELL*0.6)));
+      const [vx,vy]=dirVec[cyc.dir];
+      let crashed=false;
+      for(let k=0;k<sub;k++){
+        const nx=cyc.x+vx*(move/sub), ny=cyc.y+vy*(move/sub);
+        const c=lcCell(nx,ny);
+        if(c!==cyc.lastCell){
+          if(c<0 || lc.occ[c]!==0){ crashed=true; break; }
+          lc.occ[c]=1; cyc.lastCell=c;
+        }
+        cyc.x=nx; cyc.y=ny;
+      }
+      if(crashed){
+        cyc.alive=false;
+        spawnDerez(LC_X0+cyc.x, LC_Y0+cyc.y, cyc.col);
+        if(cyc.player){ sfx.derez(); } else { sfx.tank(); addScore(1000+diff()*200); addFloat("+"+(1000+diff()*200),LC_X0+cyc.x,LC_Y0+cyc.y,C.yellow); }
+      }
+      cyc.trail[cyc.trail.length-1]=[cyc.x,cyc.y];
+    }
+    // win/lose
+    if(!lc.cycles[0].alive){ if(!lc.dead){ lc.dead=true; subgameLost(); } return; }
+    const enemiesLeft=lc.cycles.slice(1).some(e=>e.alive);
+    if(!enemiesLeft && !lc.dead){ lc.winT+=dt; if(lc.winT>0.7){ subgameWon(); } return; }
+    // outlast failsafe — the arena fills; if the player survives long enough, they win the
+    // round (also guarantees the timerless sub-game always terminates)
+    if(lc.t>45 && !lc.dead){ addFloat("OUTLASTED",LC_X0+lc.cycles[0].x,LC_Y0+lc.cycles[0].y,C.cyan); subgameWon(); }
+  }
+  function aiLC(e,dt){
+    // look ahead; if blocked soon, turn toward the freer side; occasional aggression toward player.
+    // Reaction distance RAMPS with level: early enemies react late and box themselves in (easy
+    // wins); by level 10+ they see far and drive sharp (the walkthrough's "quicker after L10").
+    const [vx,vy]=dirVec[e.dir];
+    const look = 9 + diff()*2.2 + Math.random()*8;
+    let blocked=false;
+    for(let d=LC_CELL; d<look; d+=LC_CELL){ if(!lcFree(e.x+vx*d,e.y+vy*d)){ blocked=true; break; } }
+    e.think-=dt;
+    let want=-1;
+    if(blocked){
+      const left=(e.dir+3)&3, right=(e.dir+1)&3;
+      const fl=freeRun(e,left), fr=freeRun(e,right);
+      want = fl>=fr?left:right;
+    } else if(e.think<=0 && Math.random()<0.5){
+      // steer to cut off the player
+      const p=lc.cycles[0];
+      if(p.alive){
+        const dx=p.x-e.x, dy=p.y-e.y;
+        const opt = Math.abs(dx)>Math.abs(dy) ? (dx>0?1:3) : (dy>0?2:0);
+        if(opt!==((e.dir+2)&3) && freeRun(e,opt)>16) want=opt;
+      }
+      e.think=rnd(0.4,1.1);
+    }
+    if(want>=0) lcTurn(e,want);
+  }
+  function freeRun(cyc,dir){
+    const [vx,vy]=dirVec[dir]; let d=0;
+    for(;d<126;d+=LC_CELL){ if(!lcFree(cyc.x+vx*(d+LC_CELL),cyc.y+vy*(d+LC_CELL))) break; }
+    return d;
+  }
+  function botDriveLC(p,dt){
+    // survival-first greedy steer: turn toward the more open side well before a wall,
+    // and only boost when there is a long clear run ahead (boosting into a trap is death)
+    const ahead=freeRun(p,p.dir);
+    const left=(p.dir+3)&3, right=(p.dir+1)&3;
+    const fl=freeRun(p,left), fr=freeRun(p,right);
+    // straight lines survive longest on a filling grid — turn late and decisively toward the
+    // longer free run; the bot never boosts (boost fills space fast = self-trap; it's a human tool)
+    if(botTier==="skilled"){
+      if(ahead<15) lcTurn(p, fl>=fr?left:right);
+    } else {
+      if(ahead<12) lcTurn(p, fl>=fr?left:right);
+    }
+    lc.boost=false;
+  }
+
+  function drawLC(){
+    // arena border
+    rectSeg(LC_X0-4,LC_Y0-4,LC_A+8,LC_A+8,C.steel);
+    // grid (9×9 visual cells)
+    for(let i=1;i<9;i++){
+      const p=LC_X0+LC_A*i/9;
+      seg(p,LC_Y0,p,LC_Y0+LC_A,C.grid);
+      const py=LC_Y0+LC_A*i/9;
+      seg(LC_X0,py,LC_X0+LC_A,py,C.grid);
+    }
+    flush();
+    // trails
+    for(const cyc of lc.cycles){
+      ctx.strokeStyle=cyc.trailCol; ctx.lineWidth=2.4; ctx.globalAlpha=0.9;
+      ctx.beginPath();
+      for(let i=0;i<cyc.trail.length;i++){ const [tx,ty]=cyc.trail[i]; if(i===0)ctx.moveTo(LC_X0+tx,LC_Y0+ty); else ctx.lineTo(LC_X0+tx,LC_Y0+ty); }
+      if(cyc.alive){ const [tx,ty]=cyc.trail[cyc.trail.length-1]; ctx.lineTo(LC_X0+tx,LC_Y0+ty); }
+      // glow
+      ctx.globalAlpha=0.22; ctx.lineWidth=6; ctx.stroke();
+      ctx.globalAlpha=1; ctx.lineWidth=2.4; ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    // cycle sprites, nose pointed along the heading
+    for(const cyc of lc.cycles){ if(!cyc.alive) continue;
+      drawSprite(cyc.player?SPR_CYC_B:SPR_CYC_Y, LC_X0+cyc.x, LC_Y0+cyc.y, DIR_ANG[cyc.dir]||0);
+    }
+    if(stateT<0){ text("LIGHT CYCLES", CX, CY-10, 24, C.blue); text("BOX IN THE YELLOW CYCLES — SPACE TO BOOST", CX, CY+16, 11, C.dim); }
+    // boost cue (Light Cycles uses the trigger for speed, not the dial)
+    text(lc.boost?"◤ BOOST ◥":"SPACE = BOOST", CX, LC_Y0+LC_A+22, 12, lc.boost?C.cyan:C.dim);
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  BATTLE TANKS  (top-down maze, bouncing shots, 3 hits per tank)
+  // ═══════════════════════════════════════════════════════
+  const TK_COLS=13, TK_ROWS=12, TK_CELL=34, TK_X0=(W-TK_COLS*TK_CELL)/2|0, TK_Y0=52;
+  function startTanks(){
+    const wall=new Uint8Array(TK_COLS*TK_ROWS);
+    const W_ = (c,r)=>wall[r*TK_COLS+c];
+    const setW=(c,r,v)=>{ if(c>=0&&r>=0&&c<TK_COLS&&r<TK_ROWS) wall[r*TK_COLS+c]=v; };
+    // border
+    for(let c=0;c<TK_COLS;c++){ setW(c,0,1); setW(c,TK_ROWS-1,1); }
+    for(let r=0;r<TK_ROWS;r++){ setW(0,r,1); setW(TK_COLS-1,r,1); }
+    // interior blocks — a symmetric scatter that leaves corridors
+    for(let r=2;r<TK_ROWS-2;r+=2){
+      for(let c=2;c<TK_COLS-2;c+=2){
+        if(Math.random()<0.55 && !(c===6&&(r===6||r===7))) setW(c,r,1);
+      }
+    }
+    // central teleporter chamber (open)
+    for(let r=6;r<=7;r++) for(let c=5;c<=7;c++) setW(c,r,0);
+    tk={ wall, tanks:[], shots:[], dead:false, winT:0 };
+    const cellC=(c)=>TK_X0+c*TK_CELL+TK_CELL/2, cellR=(r)=>TK_Y0+r*TK_CELL+TK_CELL/2;
+    tk.player={ x:cellC(6), y:cellR(9), dir:0, r:11, hp:1, gun:-Math.PI/2, fireCd:0, col:C.red, isPlayer:true };
+    tk.tanks.push(tk.player);
+    const nEnemy=clamp(2+Math.floor(diff()/2),2,7);
+    const recog = diff()>=4;
+    const spots=[[2,2],[10,2],[2,9],[10,9],[6,2],[2,6],[10,6],[6,4]];
+    for(let i=0;i<nEnemy;i++){
+      const [c,r]=spots[i%spots.length];
+      const isR = recog && i%3===2;
+      tk.tanks.push({ x:cellC(c), y:cellR(r), dir:irnd(0,3), r:11,
+        hp:isR?2:3, gun:0, fireCd:rnd(0.5,2), moveCd:0, col:isR?C.amber:C.blue,
+        recog:isR, isPlayer:false });
+    }
+    tk.cellC=cellC; tk.cellR=cellR;
+    // circuit-trace wall tiles (the reference walls are PCB traces on dark green, plus solid
+    // navy blocks) — a few variants, generated once so they're static
+    tk.tiles=[];
+    for(let v=0;v<4;v++){
+      const tile=document.createElement("canvas"); tile.width=TK_CELL; tile.height=TK_CELL;
+      const tc=tile.getContext("2d");
+      tc.fillStyle="#08260f"; tc.fillRect(0,0,TK_CELL,TK_CELL);
+      tc.strokeStyle="#3dff7a"; tc.fillStyle="#3dff7a"; tc.lineWidth=1.5;
+      for(let t=0;t<5;t++){
+        let x=rnd(4,TK_CELL-4), y=rnd(4,TK_CELL-4), horiz=Math.random()<0.5;
+        tc.beginPath(); tc.moveTo(x,y);
+        for(let k=0;k<3;k++){
+          if(horiz) x=clamp(x+rnd(-13,13),3,TK_CELL-3); else y=clamp(y+rnd(-11,11),3,TK_CELL-3);
+          horiz=!horiz; tc.lineTo(x,y);
+        }
+        tc.stroke(); tc.fillRect(x-1.5,y-1.5,3,3);
+      }
+      tc.strokeStyle="#1f9e4c"; tc.lineWidth=2; tc.strokeRect(1,1,TK_CELL-2,TK_CELL-2);
+      tk.tiles.push(tile);
+    }
+    // stable tile variant + solid-navy flag per wall cell
+    tk.tileIdx=new Uint8Array(TK_COLS*TK_ROWS);
+    for(let i=0;i<tk.tileIdx.length;i++) tk.tileIdx[i]=(Math.random()*4)|0;
+    tk.navy=new Uint8Array(TK_COLS*TK_ROWS);
+    for(let r=1;r<TK_ROWS-1;r++) for(let c=1;c<TK_COLS-1;c++)
+      if(wall[r*TK_COLS+c]===1 && Math.random()<0.28) tk.navy[r*TK_COLS+c]=1;
+    state="tanks"; stateT=-1.4;
+  }
+  function tkWallAt(px,py){
+    const c=((px-TK_X0)/TK_CELL)|0, r=((py-TK_Y0)/TK_CELL)|0;
+    if(c<0||r<0||c>=TK_COLS||r>=TK_ROWS) return true;
+    return tk.wall[r*TK_COLS+c]===1;
+  }
+  function tkBlocked(x,y,r){
+    return tkWallAt(x-r,y-r)||tkWallAt(x+r,y-r)||tkWallAt(x-r,y+r)||tkWallAt(x+r,y+r);
+  }
+  function tkMove(t,dir,dist){
+    const [vx,vy]=dirVec[dir];
+    const nx=t.x+vx*dist, ny=t.y+vy*dist;
+    if(!tkBlocked(nx,t.y,t.r)) t.x=nx;
+    if(!tkBlocked(t.x,ny,t.r)) t.y=ny;
+    t.dir=dir;
+  }
+  function tkFire(t){
+    if(t.fireCd>0) return;
+    // one shot per enemy at a time; player up to 3 rapid
+    const mine=tk.shots.filter(s=>s.owner===t).length;
+    if(t.isPlayer){ if(mine>=3) return; t.fireCd=0.16; } else { if(mine>=1) return; t.fireCd=Math.max(0.9, rnd(2.1,3.3)-diff()*0.13); }
+    const a=t.gun;
+    const spd=t.isPlayer?195:(120+diff()*6);    // enemy shots start slow (dodgeable), speed up with level
+    tk.shots.push({ x:t.x+Math.cos(a)*14, y:t.y+Math.sin(a)*14, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd, owner:t, life:2.6, bounces:4, col:t.isPlayer?C.cyan:C.amber });
+    sfx.fire();
+  }
+  function updateTanks(dt){
+    if(stateT<0) return;
+    const p=tk.player;
+    // player control
+    if(p.hp>0){
+      if(botTier==="off"){
+        let moved=false;
+        if(keys.ArrowUp||keys.KeyW){ tkMove(p,0,120*dt); moved=true; }
+        else if(keys.ArrowDown||keys.KeyS){ tkMove(p,2,120*dt); moved=true; }
+        else if(keys.ArrowLeft||keys.KeyA){ tkMove(p,3,120*dt); moved=true; }
+        else if(keys.ArrowRight||keys.KeyD){ tkMove(p,1,120*dt); moved=true; }
+        if(keys.KeyZ) aimAng-=3.2*dt;
+        if(keys.KeyX) aimAng+=3.2*dt;
+        p.gun=aimAng;
+        if(keys.Space) tkFire(p);
+      } else botDriveTanks(p,dt);
+    }
+    p.fireCd=Math.max(0,p.fireCd-dt);
+    // central teleporter — entering the diamond relocates you somewhere random on the maze
+    // (verified mechanic: it's an escape hatch that can dump you "in a hostile environment")
+    tk.teleCd=Math.max(0,(tk.teleCd||0)-dt);
+    {
+      const tx=TK_X0+6*TK_CELL+TK_CELL/2, ty=TK_Y0+6.5*TK_CELL;
+      if(tk.teleCd<=0 && p.hp>0 && Math.hypot(p.x-tx,p.y-ty)<24){
+        spawnDerez(p.x,p.y,C.magenta,10);
+        let c,r,guard=0;
+        do{ c=irnd(1,TK_COLS-2); r=irnd(1,TK_ROWS-2); guard++; }
+        while(guard<80 && (tk.wall[r*TK_COLS+c]===1 ||
+              tk.tanks.some(t=>!t.isPlayer&&t.hp>0&&Math.hypot(t.x-tk.cellC(c),t.y-tk.cellR(r))<40)));
+        p.x=tk.cellC(c); p.y=tk.cellR(r);
+        spawnDerez(p.x,p.y,C.magenta,10);
+        sfx.enter(); tk.teleCd=2.0;
+      }
+    }
+    // enemies
+    for(let i=1;i<tk.tanks.length;i++){ const e=tk.tanks[i]; if(e.hp<=0) continue; aiTank(e,dt); e.fireCd=Math.max(0,e.fireCd-dt); }
+    // shots
+    for(let i=tk.shots.length-1;i>=0;i--){ const s=tk.shots[i];
+      s.life-=dt; if(s.life<=0){ tk.shots.splice(i,1); continue; }
+      // step with wall reflection
+      let nx=s.x+s.vx*dt, ny=s.y+s.vy*dt;
+      if(tkWallAt(nx,s.y)){ s.vx=-s.vx; nx=s.x+s.vx*dt; if(--s.bounces<0){ tk.shots.splice(i,1); continue; } }
+      if(tkWallAt(s.x,ny)){ s.vy=-s.vy; ny=s.y+s.vy*dt; if(--s.bounces<0){ tk.shots.splice(i,1); continue; } }
+      s.x=nx; s.y=ny;
+      // hits
+      for(const t of tk.tanks){ if(t.hp<=0||t===s.owner) continue;
+        if(t.isPlayer===s.owner.isPlayer) continue;    // no friendly fire between same side
+        if(Math.hypot(t.x-s.x,t.y-s.y)<t.r+2){
+          tk.shots.splice(i,1);
+          if(t.isPlayer){ if(!tk.dead){ tk.dead=true; spawnDerez(t.x,t.y,C.red); subgameLost(); } }
+          else { t.hp--; t.flash=0.15; spawnDerez(t.x,t.y,t.col,4);
+                 if(t.hp<=0){ sfx.tank(); addScore(t.recog?300:500+diff()*100); addFloat("+"+(t.recog?300:500+diff()*100),t.x,t.y,C.yellow); } else sfx.block(); }
+          break;
+        }
+      }
+    }
+    if(tk.dead) return;
+    // recognizer ram
+    for(let i=1;i<tk.tanks.length;i++){ const e=tk.tanks[i]; if(e.hp<=0) continue;
+      if(e.recog && Math.hypot(e.x-p.x,e.y-p.y)<e.r+p.r-4){ tk.dead=true; spawnDerez(p.x,p.y,C.red); subgameLost(); return; } }
+    // win
+    const enemiesLeft=tk.tanks.slice(1).some(t=>t.hp>0);
+    if(!enemiesLeft){ tk.winT+=dt; if(tk.winT>0.6) subgameWon(); }
+    for(const t of tk.tanks) if(t.flash) t.flash=Math.max(0,t.flash-dt);
+  }
+  function aiTank(e,dt){
+    const p=tk.player;
+    e.moveCd-=dt;
+    // aim at player
+    const desired=Math.atan2(p.y-e.y,p.x-e.x);
+    let da=((desired-e.gun+Math.PI)%TAU)-Math.PI; e.gun+=clamp(da,-(1.5+diff()*0.12)*dt,(1.5+diff()*0.12)*dt);
+    // move: pick a direction periodically, biased toward player, blocked-aware
+    const spd=(e.recog? 96+diff()*6 : 58+diff()*4);
+    if(e.moveCd<=0){
+      const dx=p.x-e.x, dy=p.y-e.y;
+      let want = Math.abs(dx)>Math.abs(dy) ? (dx>0?1:3) : (dy>0?2:0);
+      if(Math.random()<0.35) want=irnd(0,3);
+      e.dir=want; e.moveCd=rnd(0.3,0.8);
+    }
+    tkMove(e,e.dir,spd*dt);
+    // fire if lined up — tighter aim required on the early levels
+    if(!e.recog){ const aErr=Math.abs(((desired-e.gun+Math.PI)%TAU)-Math.PI); if(aErr<(0.28+diff()*0.03)) tkFire(e); }
+  }
+  function botMoveToward(p,mvx,mvy,spd,dt){
+    // convert an analog wish into an axis move; if blocked, try the other axis
+    const primaryH=Math.abs(mvx)>=Math.abs(mvy);
+    const dH=mvx>0?1:3, dV=mvy>0?2:0;
+    const x0=p.x,y0=p.y;
+    tkMove(p, primaryH?dH:dV, spd*dt);
+    if(p.x===x0 && p.y===y0) tkMove(p, primaryH?dV:dH, spd*dt);
+  }
+  function botDriveTanks(p,dt){
+    let best=null,bd=1e9;
+    for(let i=1;i<tk.tanks.length;i++){ const e=tk.tanks[i]; if(e.hp<=0) continue; const d=Math.hypot(e.x-p.x,e.y-p.y); if(d<bd){bd=d;best=e;} }
+    if(!best) return;
+    const ang=Math.atan2(best.y-p.y,best.x-p.x);
+    p.gun=aimAng=ang;
+    if(botTier==="skilled"){
+      tkFire(p);
+      // dodge the nearest incoming enemy shot
+      let threat=null,td=1e9;
+      for(const s of tk.shots){ if(s.owner.isPlayer) continue; const d=Math.hypot(s.x-p.x,s.y-p.y); if(d<td){ td=d; threat=s; } }
+      if(threat && td<70){
+        const pa=Math.atan2(threat.vy,threat.vx)+Math.PI/2;
+        botMoveToward(p, Math.cos(pa), Math.sin(pa), 112, dt);
+      } else {
+        // circle-strafe: move tangentially around the target (dodges aimed shots) with a small
+        // radial correction to hold range and keep clear of ramming recognizers
+        const want = best.recog?175:120;
+        const tang=ang+Math.PI/2*(p.strafeDir||1);
+        const rerr=Math.sign(bd-want)*0.55;
+        const x0=p.x,y0=p.y;
+        botMoveToward(p, Math.cos(tang)+Math.cos(ang)*rerr, Math.sin(tang)+Math.sin(ang)*rerr, 96, dt);
+        if(p.x===x0 && p.y===y0) p.strafeDir=-(p.strafeDir||1);   // hit a wall → reverse the orbit
+      }
+    } else {
+      // aimless: drift, occasional fire in a fixed direction
+      if(Math.random()<0.02) p.botDir=irnd(0,3);
+      tkMove(p, p.botDir||0, 40*dt);
+      if(Math.random()<0.03) tkFire(p);
+    }
+  }
+  function drawTanks(){
+    // grid lines first (walls sit on top, like the reference)
+    for(let c=0;c<=TK_COLS;c++) seg(TK_X0+c*TK_CELL,TK_Y0,TK_X0+c*TK_CELL,TK_Y0+TK_ROWS*TK_CELL,C.navyLine);
+    for(let r=0;r<=TK_ROWS;r++) seg(TK_X0,TK_Y0+r*TK_CELL,TK_X0+TK_COLS*TK_CELL,TK_Y0+r*TK_CELL,C.navyLine);
+    flush();
+    // maze: circuit-trace tiles + solid navy blocks
+    for(let r=0;r<TK_ROWS;r++) for(let c=0;c<TK_COLS;c++){
+      const i=r*TK_COLS+c;
+      if(tk.wall[i]!==1) continue;
+      const x=TK_X0+c*TK_CELL, y=TK_Y0+r*TK_CELL;
+      if(tk.navy[i]){ ctx.fillStyle="#101a4a"; ctx.fillRect(x+4,y+4,TK_CELL-8,TK_CELL-8); }
+      else ctx.drawImage(tk.tiles[tk.tileIdx[i]],x,y);
+    }
+    // teleporter — the big faceted magenta diamond from the reference (~2.5 cells wide)
+    const tx=TK_X0+6*TK_CELL+TK_CELL/2, ty=TK_Y0+6.5*TK_CELL;
+    const pr=REDUCED?0:Math.sin(gt*5)*2;
+    const R=40+pr;
+    ctx.fillStyle=C.magenta;
+    ctx.beginPath(); ctx.moveTo(tx,ty-R); ctx.lineTo(tx+R,ty); ctx.lineTo(tx,ty+R); ctx.lineTo(tx-R,ty); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle="#8f2a7d"; ctx.lineWidth=2;                      // internal facets
+    ctx.beginPath();
+    ctx.moveTo(tx-R*0.55,ty-R*0.4); ctx.lineTo(tx+R*0.2,ty-R*0.15); ctx.lineTo(tx+R*0.05,ty+R*0.5);
+    ctx.moveTo(tx+R*0.2,ty-R*0.15); ctx.lineTo(tx+R*0.6,ty+R*0.28);
+    ctx.moveTo(tx-R*0.3,ty+R*0.2); ctx.lineTo(tx+R*0.05,ty+R*0.5);
+    ctx.stroke();
+    // tanks — studded-tread sprites, hull oriented to travel, barrel from the turret hub
+    for(const t of tk.tanks){ if(t.hp<=0) continue;
+      const spr=t.isPlayer?SPR_TANK_R:(t.recog?SPR_RECOG:SPR_TANK_B);
+      // damage shows as dimming (the real game has no hp digits)
+      const alpha=t.flash?1:(t.isPlayer||t.recog?1:0.55+0.15*t.hp);
+      ctx.strokeStyle=t.flash?C.white:(t.isPlayer?C.red:(t.recog?"#c96a1a":C.blue));
+      ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(t.x,t.y); ctx.lineTo(t.x+Math.cos(t.gun)*17,t.y+Math.sin(t.gun)*17); ctx.stroke();
+      drawSprite(spr,t.x,t.y,DIR_ANG[t.dir]||0,alpha);
+      if(t.flash){ ctx.globalAlpha=0.5; ctx.fillStyle=C.white; ctx.fillRect(t.x-8,t.y-8,16,16); ctx.globalAlpha=1; }
+    }
+    // shots
+    for(const s of tk.shots) glowDisc(s.x,s.y,3,s.col);
+    if(stateT<0){ text("BATTLE TANKS", CX, CY-10, 24, C.red); text("3 HITS PER TANK · THEY KILL YOU IN ONE", CX, CY+16, 11, C.dim); }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  I/O TOWER  (grid bugs + countdown; reach the tower)
+  // ═══════════════════════════════════════════════════════
+  const IO_TX=CX, IO_TY=132, IO_TW=120, IO_TH=96;        // tower rect
+  function startIO(){
+    const t0 = diff()===0?500:1000;
+    io={ timer:t0, tmax:t0, bugs:[], disc:null, dead:false, won:false,
+      px:CX, py:430, bitT:rnd(4,9), bit:null, ticks:0 };
+    const nBug = clamp(10+diff()*3,10,34);
+    for(let i=0;i<nBug;i++){
+      const col=i%2, row=(i/2)|0;
+      io.bugs.push({ x:CX-150+ (i%7)*46 + rnd(-8,8), y:250+ ((i/7)|0)*34 + rnd(-6,6),
+        vx:rnd(-10,10), vy:rnd(6,16)+diff()*1.5, alive:true, ph:rnd(0,TAU) });
+    }
+    state="io"; stateT=-1.4;
+  }
+  function ioTowerEntrance(){ return { x:IO_TX, y:IO_TY+IO_TH-8, w:44, h:20 }; }
+  function fireDisc(fromX,fromY,ang,onto){
+    // boomerang disc: out to max range then returns; kills on contact while out
+    return { x:fromX, y:fromY, ox:fromX, oy:fromY, ang, dist:0, max:240, out:true, col:C.green, onto };
+  }
+  function updateIO(dt){
+    if(stateT<0) return;
+    io.timer -= dt*(io.tmax/35);   // 1000→0 over ~35s
+    io.ticks+=dt; if(io.ticks>0.25){ io.ticks=0; if(io.timer>0) sfx.tick(); }
+    const p={x:io.px,y:io.py};
+    // control
+    if(botTier==="off"){
+      const sp=118*dt;
+      if(keys.ArrowUp||keys.KeyW) io.py-=sp;
+      if(keys.ArrowDown||keys.KeyS) io.py+=sp;
+      if(keys.ArrowLeft||keys.KeyA) io.px-=sp;
+      if(keys.ArrowRight||keys.KeyD) io.px+=sp;
+      if(keys.KeyZ) aimAng-=3.4*dt;
+      if(keys.KeyX) aimAng+=3.4*dt;
+      if(keys.Space && !io.disc) io.disc=fireDisc(io.px,io.py,aimAng,"io"),sfx.disc();
+    } else botDriveIO(dt);
+    io.px=clamp(io.px,20,W-20); io.py=clamp(io.py,IO_TY+40,H-24);
+    // bit
+    io.bitT-=dt;
+    if(!io.bit && io.bitT<=0 && io.timer>200){ io.bit={x:rnd(60,W-60),y:220,vy:26,t:0}; }
+    if(io.bit){ io.bit.y+=io.bit.vy*dt; io.bit.t+=dt; if(Math.hypot(io.bit.x-io.px,io.bit.y-io.py)<18){ addScore(5000); addFloat("BIT +5000",io.px,io.py,C.cyan); io.bit=null; sfx.win(); } else if(io.bit.y>H-20) io.bit=null; }
+    // disc
+    if(io.disc){ const d=io.disc;
+      if(d.out){ d.dist+=340*dt; d.x=d.ox+Math.cos(d.ang)*d.dist; d.y=d.oy+Math.sin(d.ang)*d.dist; if(d.dist>=d.max) d.out=false; }
+      else { const dx=io.px-d.x, dy=io.py-d.y, L=Math.hypot(dx,dy)||1; d.x+=dx/L*380*dt; d.y+=dy/L*380*dt; if(L<12) io.disc=null; }
+      if(io.disc) for(const b of io.bugs){ if(b.alive && Math.hypot(b.x-d.x,b.y-d.y)<12){ b.alive=false; addScore(60+diff()*10); spawnDerez(b.x,b.y,C.amber,5); sfx.bug(); } }
+    }
+    // bugs
+    let alive=0;
+    for(const b of io.bugs){ if(!b.alive) continue; alive++;
+      b.ph+=dt*6;
+      const dx=io.px-b.x, dy=io.py-b.y, L=Math.hypot(dx,dy)||1;
+      b.x+=(dx/L*(16+diff()*2)+b.vx*0.3)*dt; b.y+=(dy/L*(14+diff()*2))*dt;
+      if(Math.hypot(b.x-io.px,b.y-io.py)<13){ if(!io.dead){ io.dead=true; spawnDerez(io.px,io.py,C.blue); subgameLost(); } return; }
+    }
+    // win: reach tower entrance, or clear all bugs (early levels auto-enter)
+    const e=ioTowerEntrance();
+    const atTower = Math.abs(io.px-e.x)<e.w/2 && io.py<e.y+e.h && io.py>IO_TY;
+    if(atTower && !io.won){ io.won=true; addScore(1000+diff()*150); subgameWon(); return; }
+    if(alive===0 && !io.won){ io.won=true; addScore(1500); addFloat("ALL BUGS CLEARED",CX,CY,C.green); subgameWon(); return; }
+    if(io.timer<=0 && !io.dead){ io.dead=true; spawnDerez(io.px,io.py,C.blue); addFloat("TIME UP",CX,CY,C.red); subgameLost(); }
+  }
+  function botDriveIO(dt){
+    // skilled: aim nearest bug, fire, then climb to tower as timer runs low; aimless: drift up slowly
+    if(botTier==="skilled"){
+      let best=null,bd=1e9; for(const b of io.bugs){ if(!b.alive)continue; const d=Math.hypot(b.x-io.px,b.y-io.py); if(d<bd){bd=d;best=b;} }
+      if(best){ aimAng=Math.atan2(best.y-io.py,best.x-io.px); if(!io.disc) io.disc=fireDisc(io.px,io.py,aimAng,"io"); }
+      // move toward tower entrance while dodging nearest bug
+      const e=ioTowerEntrance();
+      let tx=e.x, ty=e.y-4;
+      if(io.timer>io.tmax*0.4 && best && bd<70){ io.px-=Math.sign(best.x-io.px)*90*dt; io.py-=Math.sign(best.y-io.py)*90*dt; }
+      else { io.px+=Math.sign(tx-io.px)*100*dt; io.py+=Math.sign(ty-io.py)*100*dt; }
+    } else {
+      if(Math.random()<0.03){ io.bx=rnd(-1,1); }
+      io.px+=(io.bx||0)*50*dt; io.py-=18*dt;
+      if(Math.random()<0.02 && !io.disc){ aimAng=rnd(0,TAU); io.disc=fireDisc(io.px,io.py,aimAng,"io"); }
+    }
+  }
+  function drawIO(){
+    // faint cross-hatch background
+    ctx.strokeStyle=C.grid; ctx.lineWidth=1; ctx.globalAlpha=0.5;
+    for(let x=-H;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,IO_TY-40); ctx.lineTo(x+H,H); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x+H,IO_TY-40); ctx.lineTo(x,H); ctx.stroke(); }
+    ctx.globalAlpha=1;
+    // tower — dark structural slab, two thick blue horseshoe arcs, red pillars, top diamond,
+    // dark entrance oval, boxed yellow counter (matches the reference structure)
+    const y0=IO_TY, tcy=y0+IO_TH/2;
+    ctx.fillStyle="#14172b"; ctx.fillRect(IO_TX-76,y0-8,152,IO_TH+18);
+    ctx.strokeStyle="#2a3054"; ctx.lineWidth=1; ctx.strokeRect(IO_TX-76,y0-8,152,IO_TH+18);
+    ctx.strokeStyle=C.blue; ctx.lineWidth=11;
+    ctx.beginPath(); ctx.arc(IO_TX,tcy,IO_TW/2,Math.PI*1.12,Math.PI*1.88); ctx.stroke();
+    ctx.beginPath(); ctx.arc(IO_TX,tcy,IO_TW/2,Math.PI*0.12,Math.PI*0.88); ctx.stroke();
+    ctx.lineWidth=1;
+    for(let i=-2;i<=2;i++){ seg(IO_TX+i*13,tcy-42,IO_TX+i*13,tcy-4,C.red); }
+    // small red diamond at the tower crown
+    ctx.fillStyle=C.red;
+    ctx.beginPath(); ctx.moveTo(IO_TX,tcy-52); ctx.lineTo(IO_TX+5,tcy-45); ctx.lineTo(IO_TX,tcy-38); ctx.lineTo(IO_TX-5,tcy-45); ctx.closePath(); ctx.fill();
+    // entrance oval
+    ctx.fillStyle="#05060d"; ctx.beginPath(); ctx.ellipse(IO_TX,tcy+4,28,20,0,0,TAU); ctx.fill();
+    ctx.strokeStyle=C.blueDim; ctx.lineWidth=1.5; ctx.beginPath(); ctx.ellipse(IO_TX,tcy+4,28,20,0,0,TAU); ctx.stroke();
+    // inward arrows
+    for(const s of [-1,1]){ const ax=IO_TX+s*(IO_TW/2+18); seg(ax,tcy,ax-s*14,tcy-8,C.blue); seg(ax,tcy,ax-s*14,tcy+8,C.blue); }
+    flush();
+    // boxed counter inside the lower arc
+    ctx.fillStyle="#05060d"; ctx.fillRect(IO_TX-30,y0+IO_TH-22,60,22);
+    text(pad(Math.max(0,q(io.timer)),4), IO_TX, y0+IO_TH-4, 20, io.timer<200?C.red:C.yellow);
+    // bit
+    if(io.bit){ glowRect(io.bit.x-6,io.bit.y-6,12,12,C.cyan,true); }
+    // bugs — wire spiders per the reference
+    for(const b of io.bugs){ if(!b.alive) continue; drawBug(b.x,b.y,b.ph); }
+    // disc
+    if(io.disc){ glowDisc(io.disc.x,io.disc.y,5,C.green); }
+    // player
+    drawTron(io.px,io.py, aimAng);
+    if(stateT<0){ text("I/O TOWER", CX, CY-10, 24, C.green); text("REACH THE TOWER BEFORE THE TIMER — Z / X AIM", CX, CY+16, 11, C.dim); }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  //  MCP CONE  (rotating multicolored wall + descending cone)
+  // ═══════════════════════════════════════════════════════
+  function startMCP(){
+    const rows = diff()<3?4:6;                 // "4-block" easy vs "6-block" harder
+    const cols = 10;
+    const alive=[];
+    for(let c=0;c<cols;c++){ alive[c]=[]; for(let r=0;r<rows;r++) alive[c][r]=true; }
+    mcp={ cols, rows, alive, offset:0, rotSpeed:(0.22+diff()*0.03)*(Math.random()<0.5?1:-1),
+      wallY:145, descend:(6+diff()*0.7), crushY:300, px:CX, py:430, disc:null, dead:false, won:false,
+      total:cols*rows, destroyed:0, gapCol:-1, targetC:-1, dither:[] };
+    // static dither points for the cone (fractions of the triangle — the reference cone is a
+    // STABLE speckle pattern; per-frame randomness shimmers)
+    for(let i=0;i<240;i++) mcp.dither.push({fx:Math.random()*2-1, fy:Math.random(), col:["#ff3b30","#3dff7a","#ff9c1a"][i%3]});
+    state="mcp"; stateT=-1.4;
+  }
+  const MCP_ARCW=280, MCP_ARCH=150;
+  function mcpColX(c){ // screen x of column c across the arc, given rotation offset
+    const a=((c+mcp.offset)%mcp.cols+mcp.cols)%mcp.cols;
+    const f=a/mcp.cols; // 0..1
+    return CX + Math.cos(Math.PI*(0.15+0.7*f))*(MCP_ARCW/2)* -1 + 0; // spread across arc
+  }
+  const MCP_R=7;
+  function updateMCP(dt){
+    if(stateT<0) return;
+    mcp.offset += mcp.rotSpeed*dt;
+    mcp.wallY += mcp.descend*dt;
+    // control — movement is blocked by live blocks (you can walk up through a cleared column)
+    if(botTier==="off"){
+      const sp=132*dt;
+      let nx=mcp.px, ny=mcp.py;
+      if(keys.ArrowLeft||keys.KeyA) nx-=sp;
+      if(keys.ArrowRight||keys.KeyD) nx+=sp;
+      if(keys.ArrowUp||keys.KeyW) ny-=sp;
+      if(keys.ArrowDown||keys.KeyS) ny+=sp;
+      if(!mcpBlockAt(nx,mcp.py,MCP_R)) mcp.px=nx;
+      if(!mcpBlockAt(mcp.px,ny,MCP_R)) mcp.py=ny;
+      if(keys.KeyZ) aimAng-=3.4*dt;
+      if(keys.KeyX) aimAng+=3.4*dt;
+      if(keys.Space && !mcp.disc) mcp.disc=fireDisc(mcp.px,mcp.py,aimAng,"mcp"),sfx.disc();
+    } else botDriveMCP(dt);
+    mcp.px=clamp(mcp.px,30,W-30); mcp.py=clamp(mcp.py,18,H-22);
+    // disc
+    if(mcp.disc){ const d=mcp.disc;
+      if(d.out){ d.dist+=360*dt; d.x=d.ox+Math.cos(d.ang)*d.dist; d.y=d.oy+Math.sin(d.ang)*d.dist; if(d.dist>=d.max) d.out=false; }
+      else { const dx=mcp.px-d.x, dy=mcp.py-d.y, L=Math.hypot(dx,dy)||1; d.x+=dx/L*400*dt; d.y+=dy/L*400*dt; if(L<12) mcp.disc=null; }
+      if(mcp.disc) mcpDiscHit(d);
+    }
+    // death: a live block overlaps the player (the descending wall came down on you)
+    if(mcpBlockAt(mcp.px,mcp.py,MCP_R-2)){ if(!mcp.dead){ mcp.dead=true; spawnDerez(mcp.px,mcp.py,C.blue); subgameLost(); } return; }
+    // win: climbed above the wall band into the cone (through a cleared column, or after clearing all)
+    if(mcp.py < mcp.wallY-4 && !mcp.won){
+      const allClear = mcp.destroyed>=mcp.total;
+      mcp.won=true; addScore(1000 + (allClear?1000:0) + diff()*150);
+      addFloat(allClear?"ALL BLOCKS +2000":"BROKE THROUGH +1000",CX,CY,C.magenta);
+      sfx.enter(); subgameWon(); return;
+    }
+    // fail: the cone descended past the danger line before you broke through
+    if(mcp.wallY > mcp.crushY && !mcp.dead){ mcp.dead=true; spawnDerez(mcp.px,mcp.py,C.blue); addFloat("CONE CRUSH",CX,CY,C.red); subgameLost(); }
+  }
+  function mcpBlockAt(x,y,r){
+    for(let c=0;c<mcp.cols;c++) for(let rr=0;rr<mcp.rows;rr++){ if(!mcp.alive[c][rr]) continue;
+      const b=mcpBlockRect(c,rr);
+      if(x>b.x-r && x<b.x+b.w+r && y>b.y-r && y<b.y+b.h+r) return true; }
+    return false;
+  }
+  function mcpColOff(c){
+    // cylinder bulge: columns near the arc front sit lower, edges rise — reads as rotation depth
+    const a=((c+mcp.offset)%mcp.cols+mcp.cols)%mcp.cols;
+    const f=(a+0.5)/mcp.cols;
+    return Math.cos((f-0.5)*Math.PI)*12;
+  }
+  function mcpBlockRect(c,r){
+    const x=mcpBlockX(c), y=mcp.wallY + r*22 + mcpColOff(c);
+    return {x:x-11,y,w:22,h:21};
+  }
+  function mcpBlockX(c){
+    const a=((c+mcp.offset)%mcp.cols+mcp.cols)%mcp.cols;
+    const f=(a+0.5)/mcp.cols;
+    return CX - MCP_ARCW/2 + f*MCP_ARCW;
+  }
+  function mcpDiscHit(d){
+    for(let c=0;c<mcp.cols;c++) for(let r=0;r<mcp.rows;r++){ if(!mcp.alive[c][r]) continue;
+      const b=mcpBlockRect(c,r);
+      if(d.x>b.x&&d.x<b.x+b.w&&d.y>b.y&&d.y<b.y+b.h){ mcp.alive[c][r]=false; mcp.destroyed++; addScore(40); spawnDerez(d.x,d.y,RAINBOW[(c+r)%7],4); sfx.block(); return; }
+    }
+  }
+  function colClear(c){ for(let r=0;r<mcp.rows;r++) if(mcp.alive[c][r]) return false; return true; }
+  function botDriveMCP(dt){
+    if(botTier==="skilled"){
+      // gap open → track its rotating x and climb through to the cone
+      if(mcp.gapCol>=0 && colClear(mcp.gapCol)){
+        const gx=mcpBlockX(mcp.gapCol);
+        if(Math.abs(gx-mcp.px)>3){ const nx=mcp.px+Math.sign(gx-mcp.px)*140*dt; if(!mcpBlockAt(nx,mcp.py,MCP_R)) mcp.px=nx; }
+        else { const ny=mcp.py-150*dt; if(!mcpBlockAt(mcp.px,ny,MCP_R)) mcp.py=ny; }
+        return;
+      }
+      // lock ONE target column (nearest) and fully clear it, chasing its rotation
+      if(mcp.targetC<0 || colClear(mcp.targetC)){
+        if(mcp.targetC>=0 && colClear(mcp.targetC)){ mcp.gapCol=mcp.targetC; return; }
+        let bestC=-1,bd=1e9;
+        for(let c=0;c<mcp.cols;c++){ if(colClear(c)) continue; const d=Math.abs(mcpBlockX(c)-mcp.px); if(d<bd){ bd=d; bestC=c; } }
+        mcp.targetC=bestC;
+        if(bestC<0){ const ny=mcp.py-150*dt; if(!mcpBlockAt(mcp.px,ny,MCP_R)) mcp.py=ny; return; }
+      }
+      const bx=mcpBlockX(mcp.targetC);
+      if(Math.abs(bx-mcp.px)>4){ const nx=mcp.px+Math.sign(bx-mcp.px)*110*dt; if(!mcpBlockAt(nx,mcp.py,MCP_R)) mcp.px=nx; }
+      let lowR=-1; for(let r=mcp.rows-1;r>=0;r--) if(mcp.alive[mcp.targetC][r]){ lowR=r; break; }
+      if(lowR>=0){ const b=mcpBlockRect(mcp.targetC,lowR);
+        const rangeY=b.y+90; if(mcp.py>rangeY){ const ny=mcp.py-70*dt; if(!mcpBlockAt(mcp.px,ny,MCP_R)) mcp.py=ny; }
+        aimAng=Math.atan2((b.y+9)-mcp.py,(b.x+11)-mcp.px);
+        if(!mcp.disc && Math.abs(bx-mcp.px)<12) mcp.disc=fireDisc(mcp.px,mcp.py,aimAng,"mcp");
+      }
+    } else {
+      if(Math.random()<0.03) mcp.bx=rnd(-1,1);
+      const nx=mcp.px+(mcp.bx||0)*60*dt; if(!mcpBlockAt(nx,mcp.py,MCP_R)) mcp.px=nx;
+      if(Math.random()<0.05 && !mcp.disc){ aimAng=-Math.PI/2+rnd(-0.5,0.5); mcp.disc=fireDisc(mcp.px,mcp.py,aimAng,"mcp"); }
+    }
+  }
+  function drawMCP(){
+    // cone — static dithered triangle riding on the descending wall
+    const coneTopY=24, coneBaseY=mcp.wallY-4, coneHalf=MCP_ARCW/2;
+    ctx.globalAlpha=0.85;
+    for(const d of mcp.dither){
+      const y=coneTopY + d.fy*(coneBaseY-coneTopY);
+      const x=CX + d.fx*(d.fy*coneHalf);
+      ctx.fillStyle=d.col;
+      ctx.fillRect(x,y,2,2);
+    }
+    ctx.globalAlpha=1;
+    // funnel side lines
+    seg(CX-coneHalf,coneBaseY,CX-coneHalf+30,H,C.magenta);
+    seg(CX+coneHalf,coneBaseY,CX+coneHalf-30,H,C.magenta);
+    flush();
+    // blocks — each COLUMN is one rainbow color (the reference wall reads as vertical striped
+    // bars), with dark stripe texture inside each block
+    for(let c=0;c<mcp.cols;c++){
+      const col=RAINBOW[c%7];
+      for(let r=0;r<mcp.rows;r++){ if(!mcp.alive[c][r]) continue;
+        const b=mcpBlockRect(c,r);
+        ctx.fillStyle=col; ctx.fillRect(b.x,b.y,b.w-1,b.h-1);
+        ctx.fillStyle="rgba(0,0,0,0.35)";
+        ctx.fillRect(b.x+4,b.y,2,b.h-1); ctx.fillRect(b.x+12,b.y,2,b.h-1); ctx.fillRect(b.x+18,b.y,2,b.h-1);
+      }
+    }
+    // disc
+    if(mcp.disc) glowDisc(mcp.disc.x,mcp.disc.y,5,C.yellow);
+    // player
+    drawTron(mcp.px,mcp.py,aimAng);
+    if(stateT<0){ text("MCP CONE", CX, CY+70, 24, C.magenta); text("BREAK THROUGH THE WALL — REACH THE CONE", CX, CY+94, 11, C.dim); }
+  }
+
+  // ── Tron figure + shared FX ────────────────────────────
+  function drawTron(x,y,ang){
+    // the walking-figure sprite + an aimed arm holding the green disc (arm pivots at the shoulder)
+    const bob=REDUCED?0:Math.sin(gt*7)*1.2;
+    drawSprite(SPR_TRON,x,y+bob,0);
+    const sx=x, sy=y-8+bob;                       // shoulder
+    ctx.strokeStyle=C.cyan; ctx.lineWidth=2.2;
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+Math.cos(ang)*13,sy+Math.sin(ang)*13); ctx.stroke();
+    glowDisc(sx+Math.cos(ang)*15, sy+Math.sin(ang)*15, 3, C.green);   // the identity disc
+  }
+  let derezBits=[];
+  function spawnDerez(x,y,col,n){ n=n||16; for(let i=0;i<n;i++) derezBits.push({x,y,a:rnd(0,TAU),spd:rnd(30,150),len:rnd(3,9),rot:rnd(0,TAU),vr:rnd(-6,6),t:0,c:col}); }
+  function updateFX(dt){
+    for(let i=derezBits.length-1;i>=0;i--){ const d=derezBits[i]; d.t+=dt; if(d.t>0.6){derezBits.splice(i,1);continue;} d.x+=Math.cos(d.a)*d.spd*dt; d.y+=Math.sin(d.a)*d.spd*dt; d.rot+=d.vr*dt; }
+    for(let i=floats.length-1;i>=0;i--){ floats[i].t+=dt; if(floats[i].t>1.0) floats.splice(i,1); }
+  }
+  function drawFX(){
+    for(const d of derezBits){ ctx.globalAlpha=1-d.t/0.6; ctx.strokeStyle=d.c; ctx.lineWidth=1.6;
+      const hx=Math.cos(d.rot)*d.len/2, hy=Math.sin(d.rot)*d.len/2;
+      ctx.beginPath(); ctx.moveTo(d.x-hx,d.y-hy); ctx.lineTo(d.x+hx,d.y+hy); ctx.stroke(); }
+    ctx.globalAlpha=1;
+    for(const f of floats){ ctx.globalAlpha=1-f.t/1.0; text(f.txt,f.x,f.y-24*f.t,12,f.c); }
+    ctx.globalAlpha=1;
+  }
+
+  // ── Game Grid select ───────────────────────────────────
+  function updateGrid(dt){
+    if(stateT<0.4) return;
+    grid.pickT-=dt;
+    if(botTier!=="off"){
+      // bot picks a random remaining quadrant quickly
+      if(stateT>0.6){ const rem=remainingQuads(); if(rem.length) pickQuad(rem[(Math.random()*rem.length)|0].i); }
+      return;
+    }
+    // move cursor toward a quadrant
+    const sp=190*dt;
+    let mx=(keys.ArrowRight||keys.KeyD?1:0)-(keys.ArrowLeft||keys.KeyA?1:0);
+    let my=(keys.ArrowDown||keys.KeyS?1:0)-(keys.ArrowUp||keys.KeyW?1:0);
+    if(mx||my) grid.moved=true;
+    grid.x+=mx*sp; grid.y+=my*sp;
+    // keep the cursor on the grid disc
+    const R=118;
+    let dx=grid.x-grid.cx, dy=grid.y-grid.cy;
+    const dd=Math.hypot(dx,dy);
+    if(dd>R){ grid.x=grid.cx+dx/dd*R; grid.y=grid.cy+dy/dd*R; dx=grid.x-grid.cx; dy=grid.y-grid.cy; }
+    // select only on a genuine DIAGONAL (both axes past the dead-zone). The four games sit in the
+    // four diagonal quadrants, so a single orthogonal key just slides the cursor along the divider
+    // and never triggers the wrong quadrant — you commit by angling into a corner (up+left, etc.).
+    const DZ=44;
+    if(Math.abs(dx)>DZ && Math.abs(dy)>DZ){
+      const qi = (dy<0? (dx<0?0:1) : (dx<0?2:3));
+      if(!quads[qi].done) pickQuad(qi); else { grid.x=grid.cx; grid.y=grid.cy; }
+    }
+    if(grid.pickT<=0){ const rem=remainingQuads(); if(rem.length) pickQuad(rem[(Math.random()*rem.length)|0].i); }
+  }
+  function drawGrid(){
+    // TRON gradient wordmark
+    drawWordmark(CX, 96, 46);
+    text(pad(score), 92, 34, 16, C.blue, "left");
+    text("HISCORE "+pad(hi), CX, 34, 13, C.blue);
+    // level keyword — the real grid shows it in green at the bottom
+    text(LEVELS[level], CX, 470, 20, C.green);
+    text("LEVEL "+(level+1)+" / 12", CX, 492, 11, C.dim);
+    // the circle grid with 4 quadrants
+    const gx=grid.cx, gy=grid.cy, R=118;
+    ctx.strokeStyle=C.dim; ctx.globalAlpha=0.22; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(gx,gy,R,0,TAU); ctx.stroke();
+    // divider cross — usability aid for the corner steering; kept faint (the real screen has none)
+    ctx.beginPath(); ctx.moveTo(gx-R,gy); ctx.lineTo(gx+R,gy); ctx.moveTo(gx,gy-R); ctx.lineTo(gx,gy+R); ctx.stroke();
+    ctx.globalAlpha=1;
+    // fixed quadrant colors per the reference grid (red / blue / orange / green circuit mazes) —
+    // NOT game colors: the sub-game in each quadrant is unknown until you enter it (verified,
+    // StrategyWiki). A failed quadrant gets marked with its game's name; nothing else leaks.
+    const QUAD_COL=["#ff3b30","#4a6bff","#ff7a1a","#3dff7a"];
+    // highlight the wedge the cursor is currently aiming at
+    { const cdx=grid.x-gx, cdy=grid.y-gy; const DZ=44;
+      if(Math.abs(cdx)>DZ && Math.abs(cdy)>DZ){
+        const hi=(cdy<0?(cdx<0?0:1):(cdx<0?2:3));
+        if(!quads[hi].done){ const a0=[Math.PI,Math.PI*1.5,Math.PI*0.5,0][hi];
+          ctx.fillStyle=QUAD_COL[hi]; ctx.globalAlpha=0.14;
+          ctx.beginPath(); ctx.moveTo(gx,gy); ctx.arc(gx,gy,R,a0,a0+Math.PI/2); ctx.closePath(); ctx.fill(); ctx.globalAlpha=1; }
+      } }
+    for(let i=0;i<4;i++){
+      const s=grid.slots[i]; const cxq=gx+s.dx*R*0.5, cyq=gy+s.dy*R*0.5;
+      const col=QUAD_COL[i];
+      // static circuit maze (generated in toGrid — no per-frame flicker)
+      ctx.strokeStyle=quads[i].done?C.dim:col; ctx.globalAlpha=quads[i].done?0.3:0.9; ctx.lineWidth=1.5;
+      ctx.beginPath();
+      for(const pts of grid.mazes[i]){
+        ctx.moveTo(gx+pts[0][0],gy+pts[0][1]);
+        for(let k=1;k<pts.length;k++) ctx.lineTo(gx+pts[k][0],gy+pts[k][1]);
+      }
+      ctx.stroke(); ctx.globalAlpha=1;
+      if(quads[i].done){ text("✓",cxq,cyq+6,26,C.green); }
+      else if(quads[i].failed){
+        // death marks the attempted area with its game — the one identity reveal (authentic)
+        text("!",cxq,cyq+8,24,C.red);
+        text(GAME_LABEL[quads[i].game], cxq, cyq+(s.dy<0?-46:52), 8.5, GAME_COLOR[quads[i].game]);
+      }
+    }
+    // cursor
+    if(!quads.every(x=>x.done)) glowDisc(grid.x,grid.y,7,C.yellow);
+    // timer
+    if(botTier==="off"){ const tleft=Math.ceil(grid.pickT); text("STEER INTO A CORNER  ·  "+tleft, CX, gy+R+30, 12, tleft<=3?C.red:C.dim); }
+  }
+  function drawWordmark(cx,cy,size){
+    // geometric letterform TRON logo — thick gradient strokes on letter skeletons (a monospace
+    // font reads as a terminal, not the marquee). cy is the vertical CENTER of the letters.
+    const s=size/26, LW=5.2*s, adv=26*s;
+    const g=ctx.createLinearGradient(0,cy-size*0.55,0,cy+size*0.55);
+    g.addColorStop(0,"#ff5ce1"); g.addColorStop(0.42,"#c9a6ff"); g.addColorStop(0.6,"#eef6ff"); g.addColorStop(1,"#35d7ff");
+    const letters=[
+      [[[0,3],[20,3]],[[10,3],[10,26]]],                              // T
+      [[[2,26],[2,3],[18,3],[18,12],[2,12]],[[10,12],[18,26]]],       // R
+      [[[3,3],[17,3],[17,23],[3,23],[3,3]]],                          // O
+      [[[2,26],[2,3]],[[2,3],[18,26]],[[18,26],[18,3]]],              // N
+    ];
+    const ox=cx-(adv*4-6*s)/2;
+    ctx.lineJoin="miter"; ctx.lineCap="butt";
+    for(let pass=0;pass<2;pass++){                                     // halo, then core
+      ctx.strokeStyle=g;
+      ctx.globalAlpha=pass?1:0.3;
+      ctx.lineWidth=pass?LW:LW*2.1;
+      let x=ox;
+      for(const L of letters){
+        ctx.beginPath();
+        for(const p of L){
+          ctx.moveTo(x+p[0][0]*s, cy+(p[0][1]-14.5)*s);
+          for(let i=1;i<p.length;i++) ctx.lineTo(x+p[i][0]*s, cy+(p[i][1]-14.5)*s);
+        }
+        ctx.stroke();
+        x+=adv;
+      }
+    }
+    ctx.globalAlpha=1;
+    // the target reticle inside the O (3rd letter)
+    const oxO=ox+adv*2+10*s, oyO=cy-1.5*s;
+    ctx.strokeStyle="#eef6ff"; ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.arc(oxO,oyO,4.5*s,0,TAU);
+    ctx.moveTo(oxO-7.5*s,oyO); ctx.lineTo(oxO+7.5*s,oyO);
+    ctx.moveTo(oxO,oyO-7.5*s); ctx.lineTo(oxO,oyO+7.5*s);
+    ctx.stroke();
+  }
+
+  // ── HUD (in-play) + rotary dial affordance ─────────────
+  function drawHUD(){
+    ctx.fillStyle="#000"; ctx.fillRect(0,0,W,46);
+    seg(0,46,W,46,C.navyLine); flush();
+    // player-figure icon + lives
+    ctx.fillStyle=C.blue; ctx.fillRect(20,14,4,10); ctx.fillRect(18,24,8,3);
+    text("x"+Math.max(0,lives), 34, 30, 15, C.blue, "left");
+    text(pad(score), 92, 30, 16, C.blue, "left");
+    text("HISCORE "+pad(hi), CX, 20, 12, C.blue);
+    text(GAME_LABEL[quads[grid.chosen].game], CX, 38, 11, GAME_COLOR[quads[grid.chosen].game]);
+    text(LEVELS[level], W-16, 20, 13, C.green, "right");
+    // completed-quadrant pips
+    for(let i=0;i<4;i++){ ctx.fillStyle=quads[i].done?C.green:(quads[i].failed?C.red:C.dim); ctx.globalAlpha=quads[i].done||quads[i].failed?1:0.4; ctx.fillRect(W-70+i*13,30,9,9); }
+    ctx.globalAlpha=1;
+    // rotary AIM dial affordance (dial-aimed sub-games only) — solid backing so it reads as a
+    // cabinet instrument even when it sits over the play field
+    if(state!=="lc"){
+      const dx=W-40, dy=H-40, r=20;
+      ctx.fillStyle="rgba(2,4,9,0.88)"; ctx.beginPath(); ctx.arc(dx,dy,r+8,0,TAU); ctx.fill();
+      ctx.strokeStyle=C.dim; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(dx,dy,r,0,TAU); ctx.stroke();
+      ctx.strokeStyle=C.blue; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(dx,dy); ctx.lineTo(dx+Math.cos(aimAng)*r,dy+Math.sin(aimAng)*r); ctx.stroke();
+      glowDisc(dx,dy,3,C.cyan);
+      text("AIM", dx, dy-r-6, 9, C.dim);
+      text("Z ◁", dx-r-4, dy+3, 9, C.dim, "right"); text("▷ X", dx+r+4, dy+3, 9, C.dim, "left");
+    }
+  }
+
+  // ── Update / draw dispatch ─────────────────────────────
+  function update(dt){
+    gt+=dt; stateT+=dt;
+    flashT=Math.max(0,flashT-dt); shakeT=Math.max(0,shakeT-dt); derezT=Math.max(0,derezT-dt);
+    updateFX(dt);
+    // softlock watchdog — no sub-game should ever run longer than this
+    if(inSub() && stateT>80){ subgameLost(); return; }
+    switch(state){
+      case "attract": break;
+      case "grid": updateGrid(dt); break;
+      case "lc": updateLC(dt); break;
+      case "tanks": updateTanks(dt); break;
+      case "io": updateIO(dt); break;
+      case "mcp": updateMCP(dt); break;
+      case "derez": if(stateT>1.3) toGrid(false); break;
+      case "cleared": if(stateT>1.6) toGrid(false); break;
+      case "levelclear": if(stateT>2.6) beginLevel(); break;
+      case "victory": if(stateT>1 && (keys.Space||botTier!=="off")) toAttract(); break;
+      case "over": if(stateT>1.4 && (keys.Space)) toAttract(); break;
+    }
+  }
+  const inSub = () => state==="lc"||state==="tanks"||state==="io"||state==="mcp";
+  function draw(){
+    ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H);
+    ctx.save();
+    if(shakeT>0) ctx.translate(rnd(-1,1)*shakeT*10, rnd(-1,1)*shakeT*10);
+    switch(state){
+      case "attract": drawAttract(); break;
+      case "grid": drawGrid(); break;
+      case "lc": drawLC(); break;
+      case "tanks": drawTanks(); break;
+      case "io": drawIO(); break;
+      case "mcp": drawMCP(); break;
+      case "derez": drawDerezScreen(); break;
+      case "cleared": drawCleared(); break;
+      case "levelclear": drawLevelClear(); break;
+      case "victory": drawVictory(); break;
+      case "over": drawOver(); break;
+    }
+    flush();
+    drawFX();
+    if(inSub()) drawHUD();
+    ctx.restore();
+    if(flashT>0){ ctx.globalAlpha=Math.min(0.5,flashT); ctx.fillStyle="#35d7ff"; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1; }
+  }
+
+  function drawAttract(){
+    drawWordmark(CX, 100, 50);
+    text("BALLY MIDWAY · 1982", CX, 150, 12, C.dim);
+    text("FOUR GAMES ON THE GRID", CX, 198, 14, C.blue);
+    const rows=[["LIGHT CYCLES",C.blue],["BATTLE TANKS",C.red],["I/O TOWER",C.green],["MCP CONE",C.magenta]];
+    let y=228; for(const [t,c] of rows){ text(t,CX,y,15,c); y+=24; }
+    text("JOYSTICK MOVES · DIAL AIMS THE DISC", CX, 336, 11, C.dim);
+    text("CLEAR ALL FOUR QUADRANTS TO ADVANCE", CX, 354, 11, C.dim);
+    if(REDUCED || gt%1.1<0.7) text("PRESS SPACE TO ENTER", CX, 396, 18, C.yellow);
+    text("HISCORE "+pad(hi), CX, 424, 12, C.cyan);
+    text("PERSONAL TRIBUTE — NOT FOR SALE", CX, 476, 11, C.dim);
+    text("TM & © MCMLXXXII WALT DISNEY PRODUCTIONS", CX, 496, 9, C.dim);
+  }
+  function drawDerezScreen(){
+    if(grid) drawGrid();
+    ctx.globalAlpha=0.6; ctx.fillStyle="#000"; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+    text("DEREZZED", CX, CY, 30, C.red);
+    text(lives>=0? (lives+" LIVES LEFT") : "", CX, CY+30, 13, C.dim);
+  }
+  function drawCleared(){
+    text(GAME_LABEL[quads[grid.chosen].game]+" CLEARED", CX, CY-10, 20, GAME_COLOR[quads[grid.chosen].game]);
+    const left=quads.filter(x=>!x.done).length;
+    text(left+" QUADRANT"+(left===1?"":"S")+" TO GO", CX, CY+20, 13, C.dim);
+  }
+  function drawLevelClear(){
+    text("LEVEL "+level+" COMPLETE", CX, CY-30, 22, C.green);
+    text(LEVELS[level-1]+" → "+LEVELS[level], CX, CY, 16, C.blue);
+    text("BONUS +"+q(2000+(level-1)*500), CX, CY+30, 13, C.yellow);
+    text("DIFFICULTY RISES", CX, CY+56, 11, C.dim);
+  }
+  function drawVictory(){
+    drawWordmark(CX, 140, 46);
+    text("ALL 12 LEVELS CLEARED", CX, 210, 20, C.green);
+    text("YOU FIGHT FOR THE USERS", CX, 242, 14, C.blue);
+    text("FINAL SCORE "+pad(score), CX, 300, 16, C.yellow);
+    text("HISCORE "+pad(hi), CX, 328, 13, C.cyan);
+    if(gt%1.1<0.7) text("PRESS SPACE", CX, 390, 15, C.yellow);
+  }
+  function drawOver(){
+    text("GAME OVER", CX, CY-30, 30, C.red);
+    text("SCORE "+pad(score), CX, CY+8, 16, C.yellow);
+    text("HISCORE "+pad(hi), CX, CY+34, 13, C.cyan);
+    text("END OF LINE", CX, CY+64, 12, C.dim);
+    if(gt%1.1<0.7) text("PRESS SPACE", CX, CY+104, 15, C.yellow);
+  }
+
+  // ── Input ──────────────────────────────────────────────
+  const GAME_KEYS=["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","KeyA","KeyD","KeyW","KeyS","KeyZ","KeyX","Space","KeyR","KeyF","KeyM","Escape"];
+  const crt=document.querySelector(".crt");
+  let theater=false;
+  function toggleFullscreen(){
+    if(document.fullscreenElement||theater){ theater=false; crt.classList.remove("theater"); if(document.fullscreenElement){try{document.exitFullscreen();}catch(e){}} return; }
+    let p=null; try{ p=crt.requestFullscreen(); }catch(e){ p=null; }
+    if(p&&p.catch) p.catch(()=>{ theater=true; crt.classList.add("theater"); });
+    else if(!document.fullscreenElement){ theater=true; crt.classList.add("theater"); }
+  }
+  window.addEventListener("keydown",(e)=>{
+    if(GAME_KEYS.includes(e.code)) e.preventDefault();
+    ensureAudio();
+    if(e.repeat){ keys[e.code]=true; return; }
+    keys[e.code]=true;
+    switch(e.code){
+      case "Space":
+        if(state==="attract"){ startGame(); }
+        else if(state==="over"&&stateT>1.4){ toAttract(); }
+        else if(state==="victory"&&stateT>1){ toAttract(); }
+        break;
+      case "KeyR": if(state!=="attract") startGame(); break;
+      case "KeyF": toggleFullscreen(); break;
+      case "KeyM": setMuted(!muted); break;
+      case "Escape":
+        if(theater||document.fullscreenElement){ toggleFullscreen(); break; }
+        if(state!=="attract") gameOver();
+        break;
+    }
+  });
+  window.addEventListener("keyup",(e)=>{ keys[e.code]=false; });
+  document.addEventListener("fullscreenchange",()=>{ if(!document.fullscreenElement&&!theater) crt.classList.remove("theater"); });
+
+  // ── Main loop ──────────────────────────────────────────
+  toAttract();
+  const STEP=1000/120;
+  let lastT=performance.now(), acc=0;
+  function frame(now){
+    acc+=Math.min(now-lastT,100); lastT=now;
+    while(acc>=STEP){ update(STEP/1000); acc-=STEP; }
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ── Debug / test hook ──────────────────────────────────
+  window.__tron={
+    state:()=>state, stateT:()=>stateT, level:()=>level, lives:()=>lives, score:()=>score, hi:()=>hi,
+    quads:()=>quads.map(q=>({g:q.game,done:q.done,failed:q.failed})),
+    aim:()=>aimAng,
+    bot:(t)=>{ botTier=t||"off"; },
+    reset:()=>{ botTier="off"; toAttract(); },
+    start:()=>{ if(state==="attract") startGame(); },
+    jump:(g)=>{ if(state==="attract") startGame(); grid.chosen=quads.findIndex(x=>x.game===g); if(grid.chosen<0){quads[0].game=g;grid.chosen=0;} if(g==="lc")startLC();else if(g==="tanks")startTanks();else if(g==="io")startIO();else if(g==="mcp")startMCP(); if(stateT<0)stateT=0.01; },
+    skipIntro:()=>{ if(stateT<0) stateT=0.01; },
+    win:()=>subgameWon(),
+    kill:()=>subgameLost(),
+    tankPos:()=>state==="tanks"?{x:tk.player.x,y:tk.player.y}:null,
+    warpTank:(x,y)=>{ if(state==="tanks"){ tk.player.x=x; tk.player.y=y; } },
+    setLevel:(n)=>{ level=clamp(n|0,0,11); },
+  };
+})();
+</script>

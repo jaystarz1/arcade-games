@@ -1,0 +1,1280 @@
+<title>Pole Position — 1982/83 Tribute</title>
+<style>
+  :root {
+    --cabinet: #0b0b10;
+    --bezel: #07070a;
+    --panel: #10111a;
+    --panel-edge: #22243a;
+    --phosphor: #eef0f6;
+    --phosphor-dim: #939ab0;
+    --pp-red: #e63329;
+    --pp-blue: #2f6fdc;
+    --pp-yellow: #ffd21f;
+    color-scheme: dark;
+  }
+  html, body { background: var(--cabinet); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+    color: var(--phosphor);
+  }
+  .cabinet {
+    /* landscape 4:3, screen dominant */
+    width: min(97vw, calc((100dvh - 210px) * 1.3333));
+    min-width: 320px;
+    padding: 10px 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cabinet > * {
+    /* never let flex shrink the CRT — a shrunken .crt clips the bottom of
+       the canvas behind overflow:hidden */
+    flex-shrink: 0;
+  }
+
+  /* ── Marquee ── */
+  .marquee {
+    /* column layout: a long title + long eyebrow in a flex row overflows
+       the cabinet even with nowrap — stack and center instead */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 14px 10px;
+    background: linear-gradient(180deg, #12131e, #0a0a10);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+  }
+  .marquee .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.4em;
+    color: var(--phosphor-dim);
+    text-transform: uppercase;
+    margin: 0;
+    white-space: nowrap;
+  }
+  .marquee h1 {
+    margin: 0;
+    font-size: clamp(18px, 2.6vw, 30px);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #fff;
+    white-space: nowrap;
+    text-shadow:
+      -2px 2px 0 var(--pp-red), 2px -2px 0 var(--pp-blue),
+      0 0 16px rgba(230, 51, 41, 0.4);
+  }
+  .marquee .rule {
+    align-self: center;
+    width: 128px;
+    height: 4px;
+    /* start-line checker flavor */
+    background: repeating-linear-gradient(90deg,
+      #f0f0f0 0 8px, var(--pp-red) 8px 16px);
+    box-shadow: 0 0 12px rgba(230, 51, 41, 0.5);
+  }
+
+  /* ── CRT screen ── */
+  .crt {
+    position: relative;
+    border-radius: 22px;
+    border: 10px solid var(--bezel);
+    outline: 1px solid var(--panel-edge);
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.9), 0 12px 40px rgba(0,0,0,0.6);
+    overflow: hidden;
+    background: #000;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    image-rendering: pixelated;
+  }
+  .crt::after {
+    /* scanlines */
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.22) 3px,
+      rgba(0,0,0,0) 4px
+    );
+  }
+  .crt::before {
+    /* vignette + glass */
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background: radial-gradient(ellipse 115% 105% at 50% 45%,
+      rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%);
+  }
+
+  /* true fullscreen: the glass IS the room */
+  .crt:fullscreen,
+  .crt.theater {
+    border: none;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+  .crt:fullscreen canvas,
+  .crt.theater canvas {
+    width: auto;
+    height: 100vh;
+    max-width: 100vw;
+  }
+  /* theater mode: fullscreen API is blocked in sandboxed iframes, so pin
+     the CRT over the whole viewport instead */
+  .crt.theater {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+  }
+
+  /* ── Control panel ── */
+  .panel {
+    background: linear-gradient(180deg, var(--panel), #0b0b12);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    justify-content: center;
+    align-items: center;
+  }
+  .panel .key {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--phosphor-dim);
+    white-space: nowrap;
+  }
+  kbd {
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--pp-yellow);
+    background: #05050a;
+    border: 1px solid #262a45;
+    border-bottom-width: 3px;
+    border-radius: 5px;
+    padding: 3px 8px;
+    min-width: 14px;
+    text-align: center;
+  }
+  .footnote {
+    text-align: center;
+    font-size: 11.5px;
+    line-height: 1.7;
+    letter-spacing: 0.06em;
+    color: var(--phosphor-dim);
+    max-width: 58ch;
+    margin: 0 auto;
+  }
+  .footnote strong { color: var(--phosphor); font-weight: 700; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee h1 { animation: hum 4s ease-in-out infinite alternate; }
+    @keyframes hum {
+      from { text-shadow: -2px 2px 0 var(--pp-red), 2px -2px 0 var(--pp-blue),
+             0 0 10px rgba(230,51,41,0.3); }
+      to   { text-shadow: -2px 2px 0 var(--pp-red), 2px -2px 0 var(--pp-blue),
+             0 0 22px rgba(230,51,41,0.55); }
+    }
+  }
+</style>
+
+<div class="cabinet">
+  <header class="marquee">
+    <p class="eyebrow">Namco · 1982–83 · Keyboard Tribute</p>
+    <h1>Pole Position</h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="crt">
+    <canvas id="game" width="1280" height="960" aria-label="Pole Position game screen. Steer with left and right arrows, accelerate with up arrow, brake with down arrow, shift gears with space."></canvas>
+  </div>
+
+  <div class="panel" aria-label="Controls">
+    <span class="key"><kbd>←</kbd><kbd>→</kbd><kbd>A</kbd><kbd>D</kbd> Steer</span>
+    <span class="key"><kbd>↑</kbd><kbd>W</kbd> Gas</span>
+    <span class="key"><kbd>↓</kbd><kbd>S</kbd> Brake</span>
+    <span class="key"><kbd>Space</kbd> Shift / Start</span>
+    <span class="key"><kbd>1</kbd>–<kbd>4</kbd> Course</span>
+    <span class="key"><kbd>R</kbd> Restart</span>
+    <span class="key"><kbd>F</kbd> Fullscreen</span>
+    <span class="key"><kbd>M</kbd> Sound</span>
+  </div>
+
+  <p class="footnote">
+    A tribute to <strong>Pole Position</strong> (Namco, 1982) and
+    <strong>Pole Position II</strong> (1983) in one cabinet. Qualify for the
+    grid, then race the clock — LO gear off the line, <strong>HI</strong> for
+    the straights. Touch a rival and you're a fireball. Course 1 is the
+    original Fuji; courses 2–4 are the sequel's Test, Suzuka and Seaside runs.
+    Best laps and top scores are saved.
+  </p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ── Canvas ─────────────────────────────────────────────
+  // Logic in 320×240, 4× backing store, chunky raster like the original.
+  const cvs = document.getElementById("game");
+  const ctx = cvs.getContext("2d");
+  ctx.scale(4, 4);
+  ctx.imageSmoothingEnabled = false;
+  const W = 320, H = 240, CX = W / 2;
+  const HORIZON = 100, ROWS = H - HORIZON;
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  // deterministic hash for backdrop dressing (stable, no flicker)
+  function h32(n) {
+    n = (n ^ 61) ^ (n >>> 16);
+    n = (n + (n << 3)) | 0;
+    n = (n ^ (n >>> 4)) * 0x27d4eb2d | 0;
+    return ((n ^ (n >>> 15)) >>> 0);
+  }
+
+  const REDUCED = (() => {
+    try { return matchMedia("(prefers-reduced-motion: reduce)").matches; }
+    catch (e) { return false; }
+  })();
+
+  // ── Storage ────────────────────────────────────────────
+  function loadLS(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }
+  function saveLS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  let muted = loadLS("pp.muted", "0") === "1";
+  const bestLaps = [0, 1, 2, 3].map(i => parseInt(loadLS("pp.best." + i, "0"), 10) || 0);
+  const hiScores = [0, 1, 2, 3].map(i => parseInt(loadLS("pp.hi." + i, "0"), 10) || 0);
+
+  // ── Audio (all synthesized) ────────────────────────────
+  let AC = null, master = null, engine = null;
+  let skidCool = 0;
+  function ensureAudio() {
+    if (!AC) {
+      try {
+        AC = new (window.AudioContext || window.webkitAudioContext)();
+        master = AC.createGain();
+        master.gain.value = muted ? 0 : 0.4;
+        master.connect(AC.destination);
+        // the Pole Position rasp: saw + detuned square through a lowpass
+        const o1 = AC.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = 55;
+        const o2 = AC.createOscillator(); o2.type = "square"; o2.frequency.value = 111;
+        const lp = AC.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 640;
+        const g = AC.createGain(); g.gain.value = 0;
+        const g2 = AC.createGain(); g2.gain.value = 0.3;
+        o1.connect(lp); o2.connect(g2); g2.connect(lp);
+        lp.connect(g); g.connect(master);
+        o1.start(); o2.start();
+        engine = { o1, o2, g };
+      } catch (e) { AC = null; }
+    }
+    if (AC && AC.state === "suspended") { try { AC.resume(); } catch (e) {} }
+  }
+  function setMuted(m) {
+    muted = m;
+    saveLS("pp.muted", m ? "1" : "0");
+    if (master) master.gain.value = m ? 0 : 0.4;
+  }
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  function tone(freq, dur, type, vol, when, slideTo) {
+    if (!AC) return;
+    const t0 = AC.currentTime + (when || 0);
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "square";
+    o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(master);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  }
+  function noiseBurst(dur, vol, when, fFrom, fTo) {
+    if (!AC) return;
+    const t0 = AC.currentTime + (when || 0);
+    const len = Math.max(1, Math.floor(AC.sampleRate * dur));
+    const buf = AC.createBuffer(1, len, AC.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const f = AC.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 0.7;
+    f.frequency.setValueAtTime(fFrom || 900, t0);
+    f.frequency.exponentialRampToValueAtTime(Math.max(40, fTo || 200), t0 + dur);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t0);
+  }
+  const sfx = {
+    select() { tone(880, 0.06, "square", 0.15); },
+    prepare() {
+      // the "prepare to qualify" fanfare motif, kept generic and period
+      const m = [[76, 0], [76, 0.14], [79, 0.28], [84, 0.42], [83, 0.62], [79, 0.76], [76, 0.9]];
+      m.forEach(([n, t]) => tone(mtof(n), 0.14, "square", 0.17, t));
+    },
+    lights() { tone(392, 0.2, "square", 0.2); tone(392, 0.2, "square", 0.2, 0.7); tone(784, 0.4, "square", 0.24, 1.4); },
+    skid() { noiseBurst(0.18, 0.22, 0, 2400, 700); },
+    kerb() { tone(140, 0.05, "square", 0.1, 0, 90); },
+    crash() {
+      noiseBurst(0.8, 0.8, 0, 1000, 50);
+      tone(120, 0.6, "sawtooth", 0.26, 0, 28);
+      tone(300, 0.25, "square", 0.16, 0.05, 60);
+    },
+    extend() { const m = [79, 84, 88]; m.forEach((n, i) => tone(mtof(n), 0.1, "square", 0.17, i * 0.09)); },
+    goal() {
+      const m = [[72, 0], [76, 0.12], [79, 0.24], [84, 0.36], [79, 0.52], [84, 0.64], [88, 0.78]];
+      m.forEach(([n, t]) => tone(mtof(n), 0.16, "square", 0.18, t));
+    },
+    pass() { tone(1500, 0.06, "square", 0.06, 0, 700); },
+  };
+  function updateEngine() {
+    if (!engine) return;
+    const on = (state === "qualify" || state === "race") && crashT <= 0;
+    const t = AC.currentTime;
+    engine.g.gain.setTargetAtTime(on ? 0.065 : 0, t, 0.07);
+    // rpm follows the gear: shifting LO→HI drops revs like the real shifter
+    const cap = gear ? 300 : 158;
+    const rpm = clamp(speed / cap, 0, 1.05);
+    const f = 50 + rpm * 165;
+    engine.o1.frequency.setTargetAtTime(f, t, 0.05);
+    engine.o2.frequency.setTargetAtTime(f * 2.01, t, 0.05);
+  }
+
+  // ── Sprites ────────────────────────────────────────────
+  function buildSprite(rows, map, cell) {
+    cell = cell || 2;
+    const c = document.createElement("canvas");
+    c.width = rows[0].length * cell;
+    c.height = rows.length * cell;
+    const g = c.getContext("2d");
+    for (let r = 0; r < rows.length; r++)
+      for (let i = 0; i < rows[r].length; i++) {
+        const col = map[rows[r][i]];
+        if (col) { g.fillStyle = col; g.fillRect(i * cell, r * cell, cell, cell); }
+      }
+    return c;
+  }
+
+  // rear-view F1 at 1px cells, drawn from the arcade reference: elevated
+  // rear wing on twin pylons, airbox + helmet, wide slicks, number panel
+  const FINE_ROWS = [
+    "kWWWWWWWWWWWWWWWWWWWWWWWWWWWWk",
+    "kWWWWWWWWWWWWWWWWWWWWWWWWWWWWk",
+    "...........RR....RR...........",
+    "...........RRRRRRRR...........",
+    "tttttt.....RRhhhhRR.....tttttt",
+    "tTTTTt.....RhhhhhhR.....tTTTTt",
+    "tTTTTt....RRhhhhhhRR....tTTTTt",
+    "tTTTTt....RRRhhhhRRR....tTTTTt",
+    "tTTTTt...RRRRRBBRRRRR...tTTTTt",
+    "tTTTTt...RRRRBBBBRRRR...tTTTTt",
+    "tTTTTt..RRRRRBBBBRRRRR..tTTTTt",
+    "tttttt..RRRRRRRRRRRRRR..tttttt",
+    "ssssss..RRRRWWWWWWRRRR..ssssss",
+    "........RRRWWWWWWWWRRR........",
+    ".........kkkkkkkkkkkk.........",
+    ".........kk........kk.........",
+  ];
+  const carMap = (body, cockpit) => ({
+    W: "#f0f0f0", k: "#2a2a2a", R: body, B: cockpit, h: "#ffd21f",
+    t: "#101010", T: "#2c2c2c", s: "#1a1a1a",
+  });
+  // authentic liveries: the '82 car is red, the '83 car is blue
+  const sprPlayerPP1c = buildSprite(FINE_ROWS, carMap("#e63329", "#2f6fdc"), 1);
+  const sprPlayerPP2c = buildSprite(FINE_ROWS, carMap("#2f6fdc", "#e63329"), 1);
+  // leaning poses: wing + helmet rows shift opposite the steer
+  function leanSprite(base, dir) {
+    const c = document.createElement("canvas");
+    c.width = base.width + 4; c.height = base.height;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.drawImage(base, 0, 0, base.width, 8, 2 + dir * 2, 0, base.width, 8);
+    g.drawImage(base, 0, 8, base.width, base.height - 8, 2, 8, base.width, base.height - 8);
+    return c;
+  }
+  const mkPoses = (b) => [leanSprite(b, -1), leanSprite(b, 0), leanSprite(b, 1)];
+  const sprPlayerPP1 = mkPoses(sprPlayerPP1c), sprPlayerPP2 = mkPoses(sprPlayerPP2c);
+
+  const RIVAL_LIVERIES = [
+    ["#ffd21f", "#8a6a00"], ["#18b0b0", "#0a5c5c"], ["#ff7c00", "#8a4200"],
+    ["#20a020", "#0c5a0c"], ["#9048d8", "#4a1e80"], ["#f0f0f0", "#707070"],
+  ];
+  const sprRivals = RIVAL_LIVERIES.map(([main, dark]) => buildSprite(FINE_ROWS, {
+    W: "#e8e8e8", k: "#2a2a2a", R: main, B: dark, h: "#e8e8e8",
+    t: "#101010", T: "#2c2c2c", s: "#1a1a1a",
+  }, 1));
+
+  // trackside billboard: white panel, colored border, legs
+  function buildBillboard(textStr, border, fg) {
+    const c = document.createElement("canvas");
+    c.width = 60; c.height = 40;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = border; g.fillRect(0, 0, 60, 30);
+    g.fillStyle = "#f0f0f0"; g.fillRect(3, 3, 54, 24);
+    g.fillStyle = fg;
+    g.font = "bold 13px ui-monospace, Menlo, monospace";
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(textStr, 30, 16);
+    g.fillStyle = "#333"; g.fillRect(8, 30, 5, 10); g.fillRect(47, 30, 5, 10);
+    return c;
+  }
+  const BILLBOARDS = [
+    buildBillboard("SPARK", "#e63329", "#e63329"),
+    buildBillboard("GP OIL", "#2f6fdc", "#2f6fdc"),
+    buildBillboard("TURBO", "#20a020", "#106010"),
+    buildBillboard("NAMCO", "#e63329", "#b01810"),
+    buildBillboard("PULP", "#ff7c00", "#b05000"),
+    buildBillboard("TIRES", "#202020", "#202020"),
+  ];
+
+  // explosion fireball frames
+  const BOOM_MAPS = { y: "#ffe040", o: "#ff7c00", r: "#e63329", k: "#3a3a3a" };
+  const sprBoom = [
+    ["....yy....", "..yyooyy..", ".yoorrooy.", "..yyooyy..", "....yy...."],
+    [".y..oo..y.", "yoorrrrooy", "oorryyrrog", "yoorrrrooy", ".y..oo..y."].map(r => r.replace("g", "o")),
+    ["o.k.yy.k.o", ".koyrryok.", "kyroyyoryk", ".koyrryok.", "o.k.yy.k.o"],
+  ].map(rows => buildSprite(rows, BOOM_MAPS, 3));
+
+  // chunky 4×6 bitmap glyphs
+  const GLYPHS = {
+    "0": ["####", "#..#", "#..#", "#..#", "#..#", "####"],
+    "1": ["..#.", ".##.", "..#.", "..#.", "..#.", ".###"],
+    "2": ["####", "...#", "####", "#...", "#...", "####"],
+    "3": ["####", "...#", ".###", "...#", "...#", "####"],
+    "4": ["#..#", "#..#", "####", "...#", "...#", "...#"],
+    "5": ["####", "#...", "####", "...#", "...#", "####"],
+    "6": ["####", "#...", "####", "#..#", "#..#", "####"],
+    "7": ["####", "...#", "..#.", "..#.", ".#..", ".#.."],
+    "8": ["####", "#..#", "####", "#..#", "#..#", "####"],
+    "9": ["####", "#..#", "####", "...#", "...#", "####"],
+    ":": ["....", ".#..", "....", "....", ".#..", "...."],
+    ".": ["....", "....", "....", "....", "....", ".#.."],
+    "-": ["....", "....", "####", "....", "....", "...."],
+  };
+  function drawGlyphs(str, x, y, cell, color) {
+    ctx.fillStyle = color;
+    let cx = x;
+    for (const ch of str) {
+      const g = GLYPHS[ch];
+      if (g) for (let r = 0; r < 6; r++)
+        for (let i = 0; i < 4; i++)
+          if (g[r][i] === "#") ctx.fillRect(cx + i * cell, y + r * cell, cell, cell);
+      cx += 5 * cell;
+    }
+    return cx - x;
+  }
+  const glyphW = (str, cell) => str.length * 5 * cell;
+
+  function text(str, x, y, size, color, align) {
+    ctx.fillStyle = color;
+    ctx.font = "bold " + size + "px ui-monospace, Menlo, monospace";
+    ctx.textAlign = align || "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(str, x, y);
+  }
+
+  // ── Courses ────────────────────────────────────────────
+  // segments: [length, curvature] — curvature in -1..1, 1 = hairpin
+  const COURSES = [
+    { name: "FUJI", game: "POLE POSITION", len: 16000, laps: 3, par: 62,
+      rivals: 8, bbEvery: 640,
+      grassA: "#2ca32c", grassB: "#238c23", roadA: "#9aa0a0", roadB: "#8f9595",
+      backdrop: "fuji",
+      segs: [[30, 0], [10, 0.3], [8, 0], [12, -0.55], [10, 0], [7, 1.0], [6, 0],
+             [14, 0.4], [8, -0.4], [10, 0], [12, 0.65], [6, 0], [10, -0.7], [17, 0]] },
+    { name: "TEST", game: "POLE POSITION II", len: 12000, laps: 3, par: 45,
+      rivals: 6, bbEvery: 700,
+      grassA: "#7ab030", grassB: "#6aa028", roadA: "#9aa0ac", roadB: "#8f95a2",
+      backdrop: "test",
+      segs: [[26, 0], [12, 0.5], [20, 0], [12, 0.5], [10, 0], [8, -0.35], [12, 0]] },
+    { name: "SUZUKA", game: "POLE POSITION II", len: 18000, laps: 3, par: 74,
+      rivals: 12, bbEvery: 520,
+      grassA: "#30a060", grassB: "#289055", roadA: "#8c93a2", roadB: "#828998",
+      backdrop: "suzuka",
+      segs: [[18, 0], [8, 0.45], [7, -0.5], [8, 0.45], [6, 0], [12, -0.6], [8, 0],
+             [7, 1.0], [5, 0], [14, 0.55], [10, 0], [9, -0.75], [6, 0], [11, 0.35], [11, 0]] },
+    { name: "SEASIDE", game: "POLE POSITION II", len: 16500, laps: 3, par: 66,
+      rivals: 10, bbEvery: 560,
+      grassA: "#d0b878", grassB: "#c2aa6a", roadA: "#a2a2aa", roadB: "#96969e",
+      backdrop: "seaside",
+      segs: [[22, 0], [14, 0.5], [10, -0.5], [12, 0.6], [8, 0], [10, -0.65], [8, 0],
+             [6, 0.9], [8, 0], [12, -0.45], [12, 0]] },
+  ];
+  // expand segments into a curvature lookup (50-unit resolution)
+  for (const c of COURSES) {
+    const total = c.segs.reduce((s, [l]) => s + l, 0);
+    const unit = c.len / total;
+    c.curve = new Float32Array(Math.ceil(c.len / 50) + 1);
+    let d = 0;
+    for (const [l, cv] of c.segs) {
+      const end = d + l * unit;
+      for (let z = d; z < end; z += 50) c.curve[(z / 50) | 0] = cv;
+      d = end;
+    }
+  }
+  const curveAt = (c, z) => c.curve[(((z % c.len) + c.len) % c.len / 50) | 0] || 0;
+
+  // ── Backdrops (built once per course at boot) ──────────
+  // Styled from the arcade reference shots: PP1 = deep blue gradient sky
+  // over a jagged brown mountain ridge + dark treeline; PP2 = flat bright
+  // blue sky, same ridge language, per-course set dressing.
+  function drawRidge(g, y0) {
+    g.fillStyle = "#6e4630";
+    for (let x = 0; x < W; x += 4) g.fillRect(x, y0 - 4 - (h32(x * 7 + 13) % 12), 4, 20);
+    g.fillStyle = "#7e5238";
+    for (let x = 2; x < W; x += 8) g.fillRect(x, y0 - 2 - (h32(x * 11 + 5) % 8), 5, 18);
+  }
+  function drawTrees(g, y0) {
+    g.fillStyle = "#1d4a1d";
+    g.fillRect(0, y0, W, 8);
+    for (let x = 0; x < W; x += 3) g.fillRect(x, y0 - 2 - (h32(x * 5 + 1) % 4), 3, 6);
+  }
+  function buildBackdrop(kind, grass) {
+    const c = document.createElement("canvas");
+    c.width = W; c.height = HORIZON;
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    // sky
+    if (kind === "fuji") {
+      const bands = ["#10307c", "#16409c", "#1d4aac", "#2558c4", "#2f6fdc"];
+      bands.forEach((col, i) => { g.fillStyle = col; g.fillRect(0, i * 20, W, 20); });
+    } else {
+      g.fillStyle = "#2f6fdc"; g.fillRect(0, 0, W, HORIZON);
+      g.fillStyle = "#2558c4"; g.fillRect(0, 0, W, 16);
+    }
+    // clouds
+    g.fillStyle = "#f4f6f8";
+    const clouds = [[36, 34, 30], [138, 24, 22], [226, 38, 34], [290, 28, 18]];
+    for (const [x, y, w] of clouds) { g.fillRect(x, y, w, 4); g.fillRect(x + 5, y - 3, w - 12, 3); }
+
+    if (kind === "fuji") {
+      // Mt. Fuji behind the ridge, snow-capped
+      for (let i = 0; i < 44; i++) {
+        g.fillStyle = i < 13 ? "#eef2f8" : "#5a6a88";
+        g.fillRect(170 - i * 2.2 | 0, 44 + i, i * 4.4 | 0, 1);
+      }
+      drawRidge(g, 90);
+      drawTrees(g, 90);
+    } else if (kind === "test") {
+      drawRidge(g, 90);
+      // grandstand on the right
+      g.fillStyle = "#c8c8d0"; g.fillRect(216, 66, 78, 22);
+      g.fillStyle = "#e63329"; g.fillRect(216, 62, 78, 4);
+      g.fillStyle = "#3a3a4a";
+      for (let x = 220; x < 290; x += 6) g.fillRect(x, 70, 3, 14);
+      drawTrees(g, 90);
+    } else if (kind === "suzuka") {
+      // city skyline — the reason Jay remembered this one
+      let x = 0; const cols = ["#7a86a0", "#8a96b2", "#68748e", "#93a0bc"];
+      let bi = 0;
+      while (x < W) {
+        const bw = 14 + ((bi * 37) % 22), bh = 18 + ((bi * 53) % 34);
+        g.fillStyle = cols[bi % 4];
+        g.fillRect(x, 90 - bh, bw, bh);
+        g.fillStyle = "#ffe9a0";
+        for (let wy = 94 - bh; wy < 84; wy += 6)
+          for (let wx = x + 2; wx < x + bw - 2; wx += 5)
+            if (((wx * 7 + wy * 13) % 11) < 4) g.fillRect(wx, wy, 2, 2);
+        x += bw + 4; bi++;
+      }
+      // ferris wheel
+      g.strokeStyle = "#d0d8e8"; g.lineWidth = 1;
+      g.beginPath(); g.arc(288, 56, 14, 0, Math.PI * 2); g.stroke();
+      g.beginPath();
+      for (let a = 0; a < 8; a++) {
+        g.moveTo(288, 56);
+        g.lineTo(288 + Math.cos(a * Math.PI / 4) * 14, 56 + Math.sin(a * Math.PI / 4) * 14);
+      }
+      g.stroke();
+      drawTrees(g, 90);
+    } else if (kind === "seaside") {
+      g.fillStyle = "#1d4aac"; g.fillRect(0, 60, W, 30);
+      g.fillStyle = "#4a86e8"; g.fillRect(0, 60, W, 2);
+      // sail boats
+      for (const [x, y] of [[70, 66], [180, 70], [248, 63]]) {
+        g.fillStyle = "#f4f6f8";
+        for (let i = 0; i < 7; i++) g.fillRect(x + i, y + i, 1, 7 - i);
+        g.fillStyle = "#c8c8c8"; g.fillRect(x - 3, y + 7, 13, 2);
+      }
+      // hotel row on the shore
+      const cols = ["#e8d8c0", "#d8c8b0", "#f0e0c8"];
+      for (let i = 0; i < 4; i++) {
+        const x = 8 + i * 26, bh = 24 + (i % 2) * 9;
+        g.fillStyle = cols[i % 3]; g.fillRect(x, 90 - bh, 20, bh);
+        g.fillStyle = "#68a8c8";
+        for (let wy = 94 - bh; wy < 84; wy += 5)
+          for (let wx = x + 2; wx < x + 18; wx += 5) g.fillRect(wx, wy, 2, 2);
+      }
+      g.fillStyle = "#fff4c0"; g.fillRect(24, 12, 10, 10);
+    }
+    // ground strip meets the scanline grass
+    g.fillStyle = grass;
+    g.fillRect(0, kind === "seaside" ? 90 : 96, W, HORIZON);
+    return c;
+  }
+  const backdrops = COURSES.map(c => buildBackdrop(c.backdrop, c.grassA));
+
+  // ── State ──────────────────────────────────────────────
+  let state = "title";   // title | prequal | qualify | grid | race | results
+  let stateT = 0, gt = 0, blink = 0;
+  let courseIdx = 0, course = COURSES[0];
+  let pos = 0, speed = 0, offset = 0, steer = 0, gear = 0; // gear 0=LO 1=HI
+  let curveDisp = 0, bgX = 0;
+  let timeLeft = 0, lap = 0, lapStart = 0, elapsed = 0;
+  let score = 0, passed = 0, crashes = 0;
+  let qualLapT = 0, gridPos = 8, resultKind = ""; // goal | timeup | dnq
+  let crashT = 0, invulnT = 0, shakeT = 0, kerbT = 0, lowGearT = 0;
+  let rivals = [], boards = [];
+  let newBestLap = false, newHi = false, lastLapT = 0, lapFlashT = 0;
+  let botOn = false, beeped = 0;
+
+  const keys = { left: false, right: false, gas: false, brake: false };
+
+  const rowCenter = new Float32Array(ROWS), rowHalf = new Float32Array(ROWS);
+
+  function spawnRivals(n, spread) {
+    rivals = [];
+    for (let i = 0; i < n; i++) {
+      rivals.push({
+        pos: spread ? rand(600, course.len - 200) : 260 + i * 210,
+        lane: rand(-0.55, 0.55),
+        speed: rand(192, 248) + (courseIdx === 2 ? 6 : 0),
+        spr: sprRivals[i % sprRivals.length],
+        prevRel: 1,
+      });
+    }
+  }
+  function placeBillboards() {
+    boards = [];
+    for (let d = 400; d < course.len - 200; d += course.bbEvery * rand(0.8, 1.3)) {
+      boards.push({ pos: d, side: boards.length % 2 ? 1 : -1, spr: BILLBOARDS[boards.length % BILLBOARDS.length] });
+    }
+  }
+
+  function resetCar() {
+    speed = 0; offset = 0; steer = 0; gear = 0; curveDisp = 0;
+    crashT = 0; invulnT = 0;
+  }
+
+  function startCourse(i) {
+    courseIdx = clamp(i, 0, 3);
+    course = COURSES[courseIdx];
+    placeBillboards();
+    spawnRivals(3, true);        // light traffic while qualifying
+    resetCar();
+    pos = 0; lap = 0; elapsed = 0; lapStart = 0;
+    score = 0; passed = 0; crashes = 0;
+    timeLeft = course.par + 16;  // qualifying clock
+    newBestLap = false; newHi = false;
+    state = "prequal"; stateT = 0; beeped = 0;
+    sfx.prepare();
+  }
+  function startRace() {
+    // grid position from qualifying: par pace = front row
+    gridPos = qualLapT === 0 ? 8 : clamp(1 + Math.floor((qualLapT - course.par) / 2.5), 1, 8);
+    spawnRivals(course.rivals, true);
+    // the cars you out-qualified line up ahead of you
+    for (let i = 0; i < gridPos - 1 && i < rivals.length; i++) {
+      rivals[i].pos = 150 + i * 130;
+      rivals[i].lane = (i % 2 ? 0.35 : -0.35);
+    }
+    resetCar();
+    pos = 0; lap = 0; elapsed = 0; lapStart = 0;
+    timeLeft = course.par + 12;
+    state = "grid"; stateT = 0; beeped = 0;
+  }
+  function endRace(kind) {
+    resultKind = kind;
+    if (kind === "goal") {
+      score += Math.floor(timeLeft) * 100;
+      sfx.goal();
+    }
+    score = Math.floor(score); // one quantizer for shown AND stored
+    if (score > hiScores[courseIdx]) {
+      hiScores[courseIdx] = score; newHi = true;
+      saveLS("pp.hi." + courseIdx, String(score));
+    }
+    state = "results"; stateT = 0;
+  }
+  function toTitle() { state = "title"; stateT = 0; resetCar(); }
+
+  function doCrash() {
+    if (crashT > 0 || invulnT > 0) return;
+    crashes++;
+    crashT = 2.2; shakeT = 0.5;
+    speed = 0; gear = 0;
+    sfx.crash();
+  }
+
+  function recordLap(t) {
+    lastLapT = t; lapFlashT = 2.4;
+    const cs = Math.floor(t * 100); // one quantizer for shown AND stored
+    if (bestLaps[courseIdx] === 0 || cs < bestLaps[courseIdx]) {
+      bestLaps[courseIdx] = cs; newBestLap = true;
+      saveLS("pp.best." + courseIdx, String(cs));
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────
+  function fmtLap(t) {
+    t = Math.max(0, Math.min(t, 599.99));
+    const m = (t / 60) | 0, s = (t % 60) | 0, h = ((t * 100) % 100) | 0;
+    return m + ":" + String(s).padStart(2, "0") + "." + String(h).padStart(2, "0");
+  }
+  const fmtBest = (i) => bestLaps[i] ? fmtLap(bestLaps[i] / 100) : "-:--.--";
+
+  // ── Autopilot (difficulty meter + demo driver) ─────────
+  function botDrive(dt) {
+    keys.gas = true; keys.brake = false; keys.left = false; keys.right = false;
+    // default target: the road center, compensating the bend
+    const cv = curveAt(course, pos + 140);
+    let targetLane = 0;
+    // commit to a clear side past the nearest rival (chasing the gap with
+    // a proximity trigger oscillates straight into the car — hold a line)
+    let near = null, nz = 600;
+    for (const r of rivals) {
+      const rel = ((r.pos - pos) % course.len + course.len) % course.len;
+      if (rel > 8 && rel < nz) { nz = rel; near = r; }
+    }
+    if (near && nz < 560) {
+      targetLane = near.lane > 0 ? near.lane - 0.72 : near.lane + 0.72;
+      targetLane = clamp(targetLane, -0.5, 0.5);
+      // boxed in and close: get off the throttle instead of praying
+      if (nz < 130 && Math.abs(near.lane - offset * 0.62) < 0.3 && speed > near.speed - 20) {
+        keys.gas = false; keys.brake = true;
+      }
+    }
+    const want = (targetLane / 0.62 - offset) * 2.4 + cv * 1.15;
+    if (want < -0.12) keys.left = true;
+    else if (want > 0.12) keys.right = true;
+    // brake for the hairpins, shift like a human
+    const sharp = Math.abs(curveAt(course, pos + 260));
+    if (sharp > 0.72 && speed > 212) { keys.gas = false; keys.brake = true; }
+    if (gear === 0 && speed > 148) gear = 1;
+    if (gear === 1 && speed < 100) gear = 0;
+  }
+
+  // ── Update ─────────────────────────────────────────────
+  function update(dt) {
+    gt += dt; stateT += dt; blink += dt;
+    if (shakeT > 0) shakeT -= dt;
+    if (kerbT > 0) kerbT -= dt;
+    if (lapFlashT > 0) lapFlashT -= dt;
+
+    if (state === "title") return;
+
+    if (state === "prequal") {
+      if (stateT >= 2.4) { state = "qualify"; stateT = 0; elapsed = 0; lapStart = 0; }
+      return;
+    }
+    if (state === "grid") {
+      const due = Math.min(3, 1 + (stateT / 0.7) | 0);
+      if (beeped < due) { beeped = due; }
+      if (stateT >= 0.01 && beeped === 1 && stateT < 0.1) sfx.lights();
+      if (stateT >= 2.2) { state = "race"; stateT = 0; elapsed = 0; lapStart = 0; }
+      return;
+    }
+    if (state === "results") {
+      if (stateT > 10) toTitle();
+      return;
+    }
+
+    // qualify | race
+    elapsed += dt;
+    timeLeft -= dt;
+    if (botOn) botDrive(dt);
+
+    if (crashT > 0) {
+      crashT -= dt;
+      if (crashT <= 0) { offset = clamp(offset, -0.5, 0.5); invulnT = 1.4; }
+    } else {
+      if (invulnT > 0) invulnT -= dt;
+      // throttle & gears — LO pulls hard to 158, HI stretches to 300
+      const cap = gear ? 300 : 158;
+      let acc = -30;
+      if (keys.gas) acc = (gear ? 58 : 135) * (speed < cap ? 1 : -1.5);
+      if (keys.brake) acc = -300;
+      speed = clamp(speed + acc * dt, 0, 306);
+
+      // steering vs the road's pull
+      steer = (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
+      const sf = speed / 300;
+      offset += (steer * 1.55 - curveAt(course, pos) * 1.02) * sf * dt * 2.1;
+      offset = clamp(offset, -1.45, 1.45);
+
+      const ao = Math.abs(offset);
+      if (ao > 0.92) {
+        // on the grass — scrub speed hard, rattle the cabinet
+        if (speed > 92) speed -= 260 * dt;
+        if (shakeT <= 0) shakeT = 0.1;
+        // billboards are solid: drift wide where one stands and it's over
+        for (const b of boards) {
+          const rel = ((b.pos - pos) % course.len + course.len) % course.len;
+          if (rel < 40 && Math.sign(offset) === b.side && ao > 1.05) { doCrash(); break; }
+        }
+      } else if (ao > 0.78) {
+        if (kerbT <= 0) { sfx.kerb(); kerbT = 0.12; }
+        speed -= 30 * dt;
+      }
+      // squeal on hard cornering
+      if (skidCool > 0) skidCool -= dt;
+      if (Math.abs(steer) > 0 && speed > 215 && Math.abs(curveAt(course, pos)) > 0.4 && skidCool <= 0) {
+        sfx.skid(); skidCool = 0.28;
+      }
+
+      pos += speed * dt;
+      bgX += curveDisp * speed * dt * 0.05;
+      // pinned at the LO ceiling: the real cabinet's engine note told you
+      // to grab the lever — the keyboard needs an explicit prompt
+      if (gear === 0 && speed > 138) lowGearT += dt; else lowGearT = 0;
+    }
+    curveDisp += (curveAt(course, pos + 130) - curveDisp) * Math.min(1, dt * 3.2);
+
+    // rivals lap the course too
+    for (const r of rivals) {
+      r.pos += r.speed * dt;
+      // relative position, signed around the loop
+      const rel = ((r.pos - pos + course.len * 1.5) % course.len) - course.len * 0.5;
+      if (r.prevRel > 0 && rel <= 0 && crashT <= 0) { passed++; score += 200; sfx.pass(); }
+      r.prevRel = rel;
+      // faster traffic catching a slow player swerves around — in the
+      // arcade rivals never rear-end you; every collision is your doing
+      if (rel > -160 && rel < -8 && r.speed > speed + 4) {
+        const lat = r.lane - offset * 0.62;
+        if (Math.abs(lat) < 0.4) {
+          const side = offset * 0.62 > 0 ? -0.45 : 0.45;
+          r.lane += (side - r.lane) * Math.min(1, dt * 2.4);
+        }
+      }
+      // contact = fireball, but only when YOU are the one closing
+      // (window matches where the sprite visually reaches the player)
+      if (crashT <= 0 && invulnT <= 0 && rel > 0 && rel < 34) {
+        if (Math.abs(r.lane - offset * 0.62) < 0.26 && speed > 25 && speed > r.speed - 5) doCrash();
+      }
+    }
+
+    // laps & clocks
+    const lapNow = (pos / course.len) | 0;
+    if (lapNow > lap) {
+      lap = lapNow;
+      const t = elapsed - lapStart;
+      lapStart = elapsed;
+      recordLap(t);
+      if (state === "qualify") {
+        qualLapT = t;
+        score += Math.floor(2000 - Math.min(2000, (t - course.par) * 50));
+        startRace();
+        return;
+      }
+      if (lap >= course.laps) { endRace("goal"); return; }
+      timeLeft += course.par + 6;   // checkpoint extension
+      sfx.extend();
+    }
+    score += speed * dt * 0.045;
+
+    if (timeLeft <= 0) {
+      timeLeft = 0;
+      if (state === "qualify") { qualLapT = 0; startRace(); }  // DNQ → back row
+      else endRace("timeup");
+    }
+  }
+
+  // ── Draw ───────────────────────────────────────────────
+  function drawRoad() {
+    const bd = backdrops[courseIdx];
+    let bx = ((-bgX % W) + W) % W;
+    ctx.drawImage(bd, -bx, 0);
+    ctx.drawImage(bd, W - bx, 0);
+
+    for (let i = 1; i <= ROWS; i++) {
+      const sy = HORIZON + i - 1;
+      const f = i / ROWS;                 // 0 horizon → 1 bottom
+      const z = 3600 / i;                 // world distance of this scanline
+      const phase = pos + z * (0.6 + f);
+      // road is ~55% of screen width at the bottom, like the arcade
+      const half = 4 + f * 88;
+      const center = CX + curveDisp * Math.pow(1 - f, 3) * 340 - offset * 0.62 * half;
+      rowCenter[i - 1] = center; rowHalf[i - 1] = half;
+
+      // grass — solid, the arcade never banded it
+      ctx.fillStyle = course.grassA;
+      ctx.fillRect(0, sy, W, 1);
+      // kerbs — THE red and white stripes, fine-grained
+      const kband = (phase / 48 | 0) % 2;
+      const kerb = half * 0.13 + 1.5;
+      ctx.fillStyle = kband ? "#e63329" : "#f0f0f0";
+      ctx.fillRect((center - half - kerb) | 0, sy, kerb * 2 | 1, 1);
+      ctx.fillRect((center + half - kerb) | 0, sy, kerb * 2 | 1, 1);
+      // tarmac — solid gray
+      ctx.fillStyle = course.roadA;
+      ctx.fillRect((center - half) | 0, sy, half * 2 | 0, 1);
+      // two dashed lane lines (three lanes, per the reference)
+      if ((phase / 44 | 0) % 2) {
+        const lw = Math.max(1, half * 0.03 | 0);
+        ctx.fillStyle = "#e8e8e8";
+        ctx.fillRect((center - half / 3 - lw / 2) | 0, sy, lw, 1);
+        ctx.fillRect((center + half / 3 - lw / 2) | 0, sy, lw, 1);
+      }
+    }
+  }
+
+  const rowForZ = (z) => clamp(Math.round(3600 / z), 1, ROWS);
+
+  function drawSpriteAtZ(spr, z, laneOff, wScale) {
+    const i = rowForZ(z);
+    const sy = HORIZON + i - 1;
+    // a rival at the player's plane matches the player's size — never
+    // larger (the old 4.4 constant made passing cars balloon)
+    const w = spr.width * wScale * (i / ROWS) * 1.9;
+    if (w < 2) return;
+    const h = w * spr.height / spr.width;
+    const x = rowCenter[i - 1] + laneOff * rowHalf[i - 1] - w / 2;
+    ctx.drawImage(spr, x | 0, (sy - h) | 0, w | 0 || 1, h | 0 || 1);
+  }
+
+  function drawWorldSprites() {
+    const items = [];
+    for (const b of boards) {
+      const rel = ((b.pos - pos) % course.len + course.len) % course.len;
+      if (rel > 4 && rel < 3200) items.push({ z: rel, spr: b.spr, lane: b.side * 1.6, s: 0.62 });
+    }
+    for (const r of rivals) {
+      const rel = ((r.pos - pos + course.len * 1.5) % course.len) - course.len * 0.5;
+      if (rel > 4 && rel < 3200) items.push({ z: rel, spr: r.spr, lane: r.lane, s: 1, rival: r });
+    }
+    // start/finish gantry
+    const rel = ((-pos % course.len) + course.len) % course.len;
+    if (rel > 4 && rel < 3200) items.push({ z: rel, gantry: true });
+
+    items.sort((a, b) => b.z - a.z);
+    for (const it of items) {
+      if (it.gantry) {
+        const i = rowForZ(it.z), sy = HORIZON + i - 1;
+        const half = rowHalf[i - 1] * 1.32, cx2 = rowCenter[i - 1];
+        const ph = Math.max(2, i * 0.42), pw = Math.max(1, i * 0.05);
+        ctx.fillStyle = "#e8e8e8";
+        ctx.fillRect((cx2 - half) | 0, (sy - ph) | 0, pw + 1 | 0, ph | 0);
+        ctx.fillRect((cx2 + half - pw) | 0, (sy - ph) | 0, pw + 1 | 0, ph | 0);
+        const bh = Math.max(2, i * 0.11);
+        ctx.fillStyle = "#e63329";
+        ctx.fillRect((cx2 - half) | 0, (sy - ph) | 0, half * 2 | 0, bh | 0);
+        if (i > 46) {
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold " + Math.max(5, i * 0.07) + "px ui-monospace, Menlo, monospace";
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText(course.name, cx2, sy - ph + bh / 2);
+        }
+      } else {
+        // rowCenter already carries the player's world shift — pass the
+        // sprite's own road lane only, or the shift double-counts
+        drawSpriteAtZ(it.spr, it.z, it.lane, it.s);
+      }
+    }
+  }
+
+  function drawPlayer() {
+    const pose = crashT > 0 ? 1 : (keys.left ? 0 : keys.right ? 2 : 1);
+    const spr = (courseIdx === 0 ? sprPlayerPP1 : sprPlayerPP2)[pose];
+    const wpx = 56, hpx = wpx * spr.height / spr.width;
+    const x = (CX + offset * 26 - wpx / 2) | 0;
+    const y = (H - 14 - hpx) | 0;
+    if (crashT > 0) {
+      // the fireball
+      if (crashT > 0.7) {
+        const fr = sprBoom[((gt * 9) | 0) % 3];
+        ctx.drawImage(fr, x + wpx / 2 - 45, y - 26, 90, 45);
+        // debris smoke
+        ctx.fillStyle = "rgba(60,60,60,0.7)";
+        for (let i = 0; i < 5; i++) {
+          const t = (2.2 - crashT) * (28 + i * 12);
+          ctx.fillRect(x + wpx / 2 - 20 + i * 10, y - 20 - t % 46, 4, 4);
+        }
+      } else {
+        // charred hulk before respawn
+        ctx.globalAlpha = 0.7;
+        ctx.drawImage(spr, x, y, wpx, hpx);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "rgba(40,40,40,0.8)";
+        ctx.fillRect(x + 6, y + 2, wpx - 12, hpx - 8);
+      }
+      return;
+    }
+    if (invulnT > 0 && ((gt * 10) | 0) % 2) ctx.globalAlpha = 0.45;
+    ctx.drawImage(spr, x, y, wpx, hpx);
+    ctx.globalAlpha = 1;
+    // dust when off on the grass
+    if (Math.abs(offset) > 0.92 && speed > 60) {
+      ctx.fillStyle = courseIdx === 3 ? "#d8c890" : "#8a6a3a";
+      for (let i = 0; i < 4; i++)
+        ctx.fillRect(x + (i * 17) % wpx, y + hpx - 3 + (i % 2) * 3, 5, 3);
+    }
+  }
+
+  function drawHUD() {
+    // top strip, arcade-style — solid so backdrop clouds don't bleed
+    // through and crowd the readouts
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, 26);
+    ctx.fillStyle = "#22243a";
+    ctx.fillRect(0, 26, W, 1);
+    // colored label scheme straight from the arcade reference: pink TOP,
+    // yellow TIME, green LAP, white SCORE/SPEED
+    text("TOP", 8, 3, 7, "#ff70c8", "left");
+    drawGlyphs(String(Math.max(hiScores[courseIdx], Math.floor(score))).padStart(6, "0"), 36, 2, 1.5, "#ff70c8");
+    text("TIME", 140, 3, 7, "#ffd21f", "left");
+    text("LAP", 236, 3, 7, "#7fe07f", "left");
+    text(state === "qualify" ? "QUAL" : Math.min(lap + 1, course.laps) + "/" + course.laps,
+      264, 3, 7, "#7fe07f", "left");
+
+    text("SCORE", 8, 14, 7, "#f0f0f0", "left");
+    drawGlyphs(String(Math.floor(score)).padStart(6, "0"), 52, 13, 1.5, "#f0f0f0");
+    drawGlyphs(String(Math.max(0, Math.ceil(timeLeft))).padStart(2, "0"), 144, 12, 2,
+      timeLeft < 10 ? "#e63329" : "#f0f0f0");
+    text("SPEED", 216, 14, 7, "#f0f0f0", "left");
+    drawGlyphs(String(Math.round(speed * 1.06)).padStart(3, "0"), 258, 13, 1.5, "#f0f0f0");
+    text("km", 283, 14, 7, "#f0f0f0", "left");
+    if (lapFlashT > 0)
+      text("LAP " + fmtLap(lastLapT) + (newBestLap ? " ★" : ""), CX, 32, 8, "#ffd21f", "center");
+    // the gear indicator lives at the bottom-right of the glass
+    if (state === "qualify" || state === "race" || state === "grid") {
+      const pinned = lowGearT > 0.8;
+      const gcol = gear ? "#e63329" : (pinned && (blink % 0.4) < 0.2 ? "#e63329" : "#f0f0f0");
+      text("GEAR " + (gear ? "HI" : "LO"), W - 6, H - 13, 9, gcol, "right");
+    }
+    // revving the doors off it in LO — tell them about the lever
+    if (lowGearT > 0.8 && crashT <= 0 && (REDUCED || (blink % 0.6) < 0.38)) {
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.fillRect(CX - 76, 138, 152, 15);
+      text("SHIFT TO HI — PRESS SPACE", CX, 141, 9, "#ffd21f", "center");
+    }
+  }
+
+  function drawTitle() {
+    // frozen course view behind the card
+    drawRoad();
+    drawWorldSprites();
+    ctx.fillStyle = "rgba(0,0,16,0.72)";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.font = "bold 28px ui-monospace, Menlo, monospace";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillStyle = "#2f6fdc"; ctx.fillText("POLE POSITION", CX + 2, 30);
+    ctx.fillStyle = "#e63329"; ctx.fillText("POLE POSITION", CX, 28);
+    // checker rule
+    for (let x = 0; x < 26; x++) {
+      ctx.fillStyle = x % 2 ? "#f0f0f0" : "#c02018";
+      ctx.fillRect(CX - 104 + x * 8, 62, 8, 5);
+    }
+
+    text("— SELECT COURSE —", CX, 78, 8, "#9ab0d0", "center");
+    const rows = [
+      ["POLE POSITION", 0],
+      ["POLE POSITION II", 1], [null, 2], [null, 3],
+    ];
+    let y = 92;
+    for (const [hdr, i] of rows) {
+      if (hdr) { text(hdr, CX - 118, y, 7, "#688", "left"); y += 11; }
+      const sel = i === courseIdx;
+      text((i + 1) + "  " + COURSES[i].name, CX - 104, y, 9, sel ? "#ffffff" : "#7a8296", "left");
+      text("LAP " + fmtBest(i), CX + 30, y, 8, sel ? "#ffd21f" : "#5a6276", "left");
+      text("TOP " + hiScores[i], CX + 118, y, 8, sel ? "#9ad0ff" : "#5a6276", "right");
+      y += 12;
+    }
+
+    if (REDUCED || (blink % 1) < 0.62)
+      text("PRESS SPACE — PREPARE TO QUALIFY", CX, 186, 9, "#ffffff", "center");
+
+    text("© 1982 · 1983 NAMCO LTD · LICENSED TO ATARI, INC.", CX, 214, 8, "#5a6276", "center");
+    text("PERSONAL TRIBUTE — NOT FOR SALE", CX, 226, 8, "#5a6276", "center");
+  }
+
+  function drawCard(lines) {
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(0, 84, W, 64);
+    ctx.fillStyle = "#e63329";
+    ctx.fillRect(0, 84, W, 3); ctx.fillRect(0, 145, W, 3);
+    let y = 96;
+    for (const [s, size, col] of lines) { text(s, CX, y, size, col, "center"); y += size + 8; }
+  }
+
+  function drawResults() {
+    ctx.fillStyle = "rgba(0,0,16,0.78)";
+    ctx.fillRect(0, 26, W, H - 26);
+    if (resultKind === "goal") {
+      text("G O A L", CX, 44, 20, "#ffd21f", "center");
+      text("RACE COMPLETE — " + course.name, CX, 74, 9, "#ffffff", "center");
+    } else {
+      text("TIME UP", CX, 44, 20, "#e63329", "center");
+      text(course.name + " — LAP " + Math.min(lap + 1, course.laps) + " OF " + course.laps, CX, 74, 9, "#ffffff", "center");
+    }
+    text("SCORE", CX - 60, 96, 8, "#9ad0ff", "center");
+    drawGlyphs(String(Math.floor(score)).padStart(6, "0"), CX - 96, 108, 2.4, "#ffffff");
+    text("GRID  P" + gridPos, CX + 66, 96, 8, "#9ad0ff", "center");
+    text("PASSED " + passed + " · CRASHES " + crashes, CX + 66, 110, 8, "#c8c8c8", "center");
+    text("BEST LAP  " + fmtBest(courseIdx) + (newBestLap ? "  ★ NEW" : ""), CX, 140, 10,
+      newBestLap ? "#ffd21f" : "#c8c8c8", "center");
+    if (newHi && (REDUCED || (blink % 0.9) < 0.55))
+      text("NEW TOP SCORE!", CX, 158, 10, "#20d020", "center");
+    text("SPACE — AGAIN   ·   ESC — COURSE SELECT", CX, 190, 8, "#7a8296", "center");
+  }
+
+  function draw() {
+    if (state === "title") { drawTitle(); return; }
+
+    let shx = 0, shy = 0;
+    if (shakeT > 0 && !REDUCED) { shx = rand(-1.6, 1.6) | 0; shy = rand(-1.2, 1.2) | 0; }
+    ctx.save();
+    ctx.translate(shx, shy);
+    drawRoad();
+    drawWorldSprites();
+    drawPlayer();
+    ctx.restore();
+
+    drawHUD();
+
+    if (state === "prequal")
+      drawCard([["PREPARE TO QUALIFY", 13, "#ffd21f"], [course.game + " — " + course.name, 9, "#ffffff"]]);
+    if (state === "grid")
+      drawCard([[qualLapT ? "QUALIFIED  P" + gridPos : "DID NOT QUALIFY — P8", 12, qualLapT ? "#ffd21f" : "#e63329"],
+                [qualLapT ? "LAP " + fmtLap(qualLapT) : "BACK ROW START", 9, "#ffffff"],
+                ["PREPARE TO RACE", 9, "#9ad0ff"]]);
+    if (state === "race" && elapsed < 1) text("GO!", CX, 70, 20, "#20d020", "center");
+    if (state === "results") drawResults();
+  }
+
+  // ── Input ──────────────────────────────────────────────
+  const crtEl = document.querySelector(".crt");
+  function toggleTheater() {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); return; }
+      if (crtEl.classList.contains("theater")) { crtEl.classList.remove("theater"); return; }
+      const p = crtEl.requestFullscreen();
+      if (p && p.catch) p.catch(() => crtEl.classList.add("theater"));
+    } catch (e) { crtEl.classList.toggle("theater"); }
+  }
+
+  const GAME_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space",
+    "KeyW", "KeyS", "KeyA", "KeyD", "KeyR", "KeyM", "KeyF",
+    "Digit1", "Digit2", "Digit3", "Digit4"];
+
+  window.addEventListener("keydown", (e) => {
+    if (GAME_KEYS.includes(e.code)) e.preventDefault();
+    ensureAudio();
+    switch (e.code) {
+      case "ArrowLeft": case "KeyA": keys.left = true; botOn = false; break;
+      case "ArrowRight": case "KeyD": keys.right = true; botOn = false; break;
+      case "ArrowUp": case "KeyW": keys.gas = true; botOn = false; break;
+      case "ArrowDown": case "KeyS": keys.brake = true; botOn = false; break;
+    }
+    if (e.repeat) return;
+    switch (e.code) {
+      case "Space": case "Enter":
+        if (state === "title" || state === "results") startCourse(courseIdx);
+        else if (state === "qualify" || state === "race") gear = 1 - gear; // the 2-position shifter
+        break;
+      case "KeyR":
+        if (state !== "title") startCourse(courseIdx);
+        break;
+      case "KeyM": setMuted(!muted); break;
+      case "KeyF": toggleTheater(); break;
+      case "Digit1": case "Digit2": case "Digit3": case "Digit4":
+        if (state === "title") {
+          courseIdx = parseInt(e.code.slice(5), 10) - 1;
+          course = COURSES[courseIdx];
+          placeBillboards(); spawnRivals(3, true);
+          sfx.select();
+        }
+        break;
+      case "Escape":
+        if (crtEl.classList.contains("theater")) { crtEl.classList.remove("theater"); break; }
+        if (state !== "title") toTitle();
+        break;
+    }
+  });
+  window.addEventListener("keyup", (e) => {
+    switch (e.code) {
+      case "ArrowLeft": case "KeyA": keys.left = false; break;
+      case "ArrowRight": case "KeyD": keys.right = false; break;
+      case "ArrowUp": case "KeyW": keys.gas = false; break;
+      case "ArrowDown": case "KeyS": keys.brake = false; break;
+    }
+  });
+
+  // ── Main loop ──────────────────────────────────────────
+  placeBillboards(); spawnRivals(4, true);
+  const STEP = 1000 / 120;
+  let last = performance.now(), acc = 0;
+  function frame(now) {
+    acc += Math.min(now - last, 100);
+    last = now;
+    while (acc >= STEP) { update(STEP / 1000); acc -= STEP; updateEngine(); }
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // debug/testing hook
+  window.__pp = {
+    state: () => state,
+    course: () => courseIdx,
+    pos: () => pos,
+    len: () => course.len,
+    lap: () => lap,
+    laps: () => course.laps,
+    speed: () => speed,
+    gear: () => gear,
+    offset: () => offset,
+    timeLeft: () => timeLeft,
+    elapsed: () => elapsed,
+    score: () => Math.floor(score),
+    passed: () => passed,
+    crashes: () => crashes,
+    crashT: () => crashT,
+    qualT: () => qualLapT,
+    grid: () => gridPos,
+    result: () => resultKind,
+    bestLap: (i) => bestLaps[i],
+    hi: (i) => hiScores[i],
+    rivals: () => rivals.map(r => ({ pos: r.pos, lane: r.lane, speed: r.speed })),
+    rivalSet: (i, o) => { if (rivals[i]) Object.assign(rivals[i], o); },
+    select: (i) => { courseIdx = clamp(i, 0, 3); course = COURSES[courseIdx]; placeBillboards(); spawnRivals(3, true); },
+    start: (i) => startCourse(i === undefined ? courseIdx : i),
+    toTitle,
+    skipCard: () => {
+      if (state === "prequal") { state = "qualify"; stateT = 0; elapsed = 0; lapStart = 0; }
+      else if (state === "grid") { state = "race"; stateT = 0; elapsed = 0; lapStart = 0; }
+    },
+    input: (o) => { for (const k of ["left", "right", "gas", "brake"]) keys[k] = !!(o && o[k]); },
+    shift: (g) => { gear = g ? 1 : 0; },
+    jump: (d) => { pos = d; },
+    setOffset: (v) => { offset = clamp(v, -1.45, 1.45); },
+    setTime: (t) => { timeLeft = t; },
+    forceCrash: () => { invulnT = 0; doCrash(); },
+    bot: (v) => { botOn = !!v; },
+  };
+})();
+</script>

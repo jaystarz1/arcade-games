@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Arcade</title>
+<style>
+  :root {
+    --bg: #05060a;
+    --panel: #0d1018;
+    --edge: #1e2636;
+    --neon: #22d3ee;
+    --neon2: #f472b6;
+    --text: #e6edf3;
+    --muted: #8b98ad;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    min-height: 100vh;
+    padding: 3rem 1.25rem 4rem;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(180deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; position: relative; z-index: 2; }
+  header { text-align: center; margin-bottom: 3rem; }
+  h1 {
+    font-size: clamp(2rem, 7vw, 3.5rem);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--neon);
+    text-shadow: 0 0 12px rgba(34,211,238,.55), 0 0 34px rgba(34,211,238,.25);
+  }
+  .sub { color: var(--muted); margin-top: .75rem; font-size: .9rem; letter-spacing: .18em; text-transform: uppercase; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.1rem;
+  }
+  a.card {
+    display: block;
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    padding: 1.4rem 1.25rem;
+    text-decoration: none;
+    color: inherit;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  a.card:hover, a.card:focus-visible {
+    transform: translateY(-3px);
+    border-color: var(--neon);
+    box-shadow: 0 0 0 1px rgba(34,211,238,.35), 0 10px 30px rgba(0,0,0,.6);
+    outline: none;
+  }
+  .icon { font-size: 2rem; line-height: 1; }
+  .name {
+    margin-top: .9rem;
+    font-size: 1.05rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .year { color: var(--neon2); font-size: .78rem; letter-spacing: .16em; margin-top: .35rem; }
+  .desc { color: var(--muted); font-size: .82rem; line-height: 1.5; margin-top: .7rem; }
+  footer { text-align: center; color: var(--muted); font-size: .75rem; margin-top: 3.5rem; letter-spacing: .12em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>&#127993; The Arcade</h1>
+    <p class="sub">Insert Coin &middot; 11 Games</p>
+  </header>
+
+  <div class="grid">
+
+    <a class="card" href="./AsteroidsArcade/dist/public/index.html">
+      <div class="icon">&#9732;</div>
+      <div class="name">Asteroids</div>
+      <div class="year">1979 &middot; Atari</div>
+      <div class="desc">Vector rocks, hyperspace, and the flying saucer that always finds you.</div>
+    </a>
+
+    <a class="card" href="./lunar-lander/dist/index.html">
+      <div class="icon">&#128760;</div>
+      <div class="name">Lunar Lander</div>
+      <div class="year">1979 &middot; Atari</div>
+      <div class="desc">Burn fuel, kill your descent rate, touch down soft on the flat bit.</div>
+    </a>
+
+    <a class="card" href="./space-invaders/space-invaders.html">
+      <div class="icon">&#128126;</div>
+      <div class="name">Space Invaders</div>
+      <div class="year">1978 &middot; Taito</div>
+      <div class="desc">The march gets faster the fewer are left. Mobile-ready with PWA install.</div>
+    </a>
+
+    <a class="card" href="./night-driver/night-driver.html">
+      <div class="icon">&#128663;</div>
+      <div class="name">Night Driver</div>
+      <div class="year">1976 &middot; Atari</div>
+      <div class="desc">Pure headlights and roadside pylons. First-person driving, before graphics.</div>
+    </a>
+
+    <a class="card" href="./pole-position.html">
+      <div class="icon">&#127937;</div>
+      <div class="name">Pole Position</div>
+      <div class="year">1982 &middot; Namco</div>
+      <div class="desc">Qualify, then race Fuji Speedway against the clock and the pack.</div>
+    </a>
+
+    <a class="card" href="./tron.html">
+      <div class="icon">&#128302;</div>
+      <div class="name">Tron</div>
+      <div class="year">1982 &middot; Bally Midway</div>
+      <div class="desc">Light cycles, MCP cone, tanks and grid bugs. Derezz or be derezzed.</div>
+    </a>
+
+    <a class="card" href="./galaga.html">
+      <div class="icon">&#128125;</div>
+      <div class="name">Galaga</div>
+      <div class="year">1981 &middot; Namco</div>
+      <div class="desc">Let them capture your fighter, then take it back for dual fire.</div>
+    </a>
+
+    <a class="card" href="./grand-prix.html">
+      <div class="icon">&#127950;</div>
+      <div class="name">Grand Prix</div>
+      <div class="year">1982 &middot; Activision</div>
+      <div class="desc">Top-down formula racing. Clean lines, no brakes, four circuits.</div>
+    </a>
+
+    <a class="card" href="./star-wars.html">
+      <div class="icon">&#9989;</div>
+      <div class="name">Star Wars</div>
+      <div class="year">1983 &middot; Atari</div>
+      <div class="desc">TIE fighters, tower run, trench. Use the Force on the exhaust port.</div>
+    </a>
+
+    <a class="card" href="./after-burner.html">
+      <div class="icon">&#9992;</div>
+      <div class="name">After Burner</div>
+      <div class="year">1987 &middot; Sega</div>
+      <div class="desc">Missile lock, barrel roll, afterburner. Sega's rolling-horizon dogfight.</div>
+    </a>
+
+    <a class="card" href="./mission-command.html">
+      <div class="icon">&#128225;</div>
+      <div class="name">Mission Command</div>
+      <div class="year">Original</div>
+      <div class="desc">Missile-defense: intercept incoming, keep the cities standing.</div>
+    </a>
+
+  </div>
+
+  <footer>Built by Jay Tarzwell &middot; jaystarz1/arcade-games</footer>
+</div>
+</body>
+</html>
