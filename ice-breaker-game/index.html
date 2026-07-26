@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Breaker: Arctic Survival</title>
+    <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Title Screen -->
+        <div id="title-screen" class="screen active">
+            <div class="title-content">
+                <h1>ICE BREAKER</h1>
+                <h2>Arctic Survival</h2>
+                <p class="tagline">Northwest Passage, 2045</p>
+                <div class="menu-buttons">
+                    <button id="btn-new-game">New Game</button>
+                    <button id="btn-continue" disabled>Continue</button>
+                    <button id="btn-scenarios">What-If Scenarios</button>
+                </div>
+                <p class="credit">Based on the novel by Cole Black</p>
+            </div>
+        </div>
+
+        <!-- Scenario Select Screen -->
+        <div id="scenario-screen" class="screen">
+            <div class="scenario-content">
+                <h2>Select Scenario</h2>
+                <div id="scenario-list"></div>
+                <button id="btn-back-title" class="back-btn">Back</button>
+            </div>
+        </div>
+
+        <!-- Main Game Screen -->
+        <div id="game-screen" class="screen">
+            <!-- Top Bar -->
+            <div id="top-bar">
+                <div id="phase-indicator">
+                    <span class="phase-name">SNOW DRAGON</span>
+                    <span class="phase-date">September 2045</span>
+                </div>
+                <div id="time-controls">
+                    <button id="btn-pause" title="Pause">&#10074;&#10074;</button>
+                    <button id="btn-play" title="Play">&#9658;</button>
+                    <button id="btn-fast" title="Fast">&#9658;&#9658;</button>
+                    <span id="current-date">Day 1</span>
+                </div>
+                <div id="perspective-indicator">
+                    <span class="perspective-label">Perspective:</span>
+                    <span id="current-perspective">Lt. Zhao Jianfeng</span>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div id="main-content">
+                <!-- Left Panel: Map -->
+                <div id="map-panel">
+                    <canvas id="game-map"></canvas>
+                    <div id="map-controls">
+                        <button id="btn-zoom-in">+</button>
+                        <button id="btn-zoom-out">-</button>
+                        <button id="btn-center">&#8982;</button>
+                    </div>
+                    <div id="map-legend">
+                        <div class="legend-item"><span class="legend-color ice"></span> Sea Ice</div>
+                        <div class="legend-item"><span class="legend-color land"></span> Land</div>
+                        <div class="legend-item"><span class="legend-color ship"></span> Ships</div>
+                        <div class="legend-item"><span class="legend-color unit"></span> Units</div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Info -->
+                <div id="info-panel">
+                    <!-- Weather & Environment -->
+                    <div class="panel-section" id="environment-panel">
+                        <h3>Environment</h3>
+                        <div class="stat-row">
+                            <span class="stat-label">Temperature:</span>
+                            <span id="stat-temp" class="stat-value">-15°C</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Wind Chill:</span>
+                            <span id="stat-windchill" class="stat-value">-25°C</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Weather:</span>
+                            <span id="stat-weather" class="stat-value">Clear</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Daylight:</span>
+                            <span id="stat-daylight" class="stat-value">8 hours</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Ice Condition:</span>
+                            <span id="stat-ice" class="stat-value">Forming</span>
+                        </div>
+                    </div>
+
+                    <!-- Resources -->
+                    <div class="panel-section" id="resources-panel">
+                        <h3>Resources</h3>
+                        <div class="resource-bar">
+                            <span class="resource-label">Food</span>
+                            <div class="bar-container">
+                                <div id="bar-food" class="bar-fill" style="width: 100%"></div>
+                            </div>
+                            <span id="val-food" class="resource-value">100%</span>
+                        </div>
+                        <div class="resource-bar">
+                            <span class="resource-label">Fuel</span>
+                            <div class="bar-container">
+                                <div id="bar-fuel" class="bar-fill" style="width: 100%"></div>
+                            </div>
+                            <span id="val-fuel" class="resource-value">100%</span>
+                        </div>
+                        <div class="resource-bar">
+                            <span class="resource-label">Medical</span>
+                            <div class="bar-container">
+                                <div id="bar-medical" class="bar-fill" style="width: 100%"></div>
+                            </div>
+                            <span id="val-medical" class="resource-value">100%</span>
+                        </div>
+                        <div class="resource-bar">
+                            <span class="resource-label">Batteries</span>
+                            <div class="bar-container">
+                                <div id="bar-batteries" class="bar-fill" style="width: 100%"></div>
+                            </div>
+                            <span id="val-batteries" class="resource-value">100%</span>
+                        </div>
+                    </div>
+
+                    <!-- Personnel -->
+                    <div class="panel-section" id="personnel-panel">
+                        <h3>Personnel Status</h3>
+                        <div class="personnel-grid">
+                            <div class="personnel-stat">
+                                <span class="personnel-count" id="personnel-fit">1000</span>
+                                <span class="personnel-label">Fit</span>
+                            </div>
+                            <div class="personnel-stat">
+                                <span class="personnel-count warning" id="personnel-frostbite">0</span>
+                                <span class="personnel-label">Frostbite</span>
+                            </div>
+                            <div class="personnel-stat">
+                                <span class="personnel-count danger" id="personnel-critical">0</span>
+                                <span class="personnel-label">Critical</span>
+                            </div>
+                            <div class="personnel-stat">
+                                <span class="personnel-count dead" id="personnel-dead">0</span>
+                                <span class="personnel-label">Dead</span>
+                            </div>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Morale:</span>
+                            <span id="stat-morale" class="stat-value">High</span>
+                        </div>
+                    </div>
+
+                    <!-- Equipment -->
+                    <div class="panel-section" id="equipment-panel">
+                        <h3>Equipment Status</h3>
+                        <div class="equipment-list" id="equipment-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Panel: Narrative -->
+            <div id="narrative-panel">
+                <div id="narrative-log">
+                    <!-- Event log entries -->
+                </div>
+                <div id="decision-area" class="hidden">
+                    <div id="decision-prompt"></div>
+                    <div id="decision-options"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Modal -->
+        <div id="event-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3 id="event-title"></h3>
+                <div id="event-body"></div>
+                <div id="event-choices"></div>
+            </div>
+        </div>
+
+        <!-- Perspective Switch Modal -->
+        <div id="perspective-modal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Switch Perspective</h3>
+                <p>The story continues from a new viewpoint...</p>
+                <div id="perspective-info"></div>
+                <button id="btn-accept-perspective">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/gameState.js"></script>
+    <script src="js/environment.js"></script>
+    <script src="js/resources.js"></script>
+    <script src="js/personnel.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/narrative.js"></script>
+    <script src="js/characters.js"></script>
+    <script src="js/scenarios.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
