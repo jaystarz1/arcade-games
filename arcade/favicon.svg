@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img"
+     aria-label="The Mix It Shop">
+  <!-- Joystick + button. Chosen over a cabinet silhouette because at 16px a
+       cabinet collapses into an indistinct rectangle, while a ball-top stick
+       and a single button still read. Palette matches the neon sign:
+       #ff64c8 pink, #22d3ee cyan, on the room's near-black. -->
+  <defs>
+    <radialGradient id="ball" cx="36%" cy="30%">
+      <stop offset="0%" stop-color="#ffb3e2"/>
+      <stop offset="55%" stop-color="#ff64c8"/>
+      <stop offset="100%" stop-color="#c9247f"/>
+    </radialGradient>
+    <radialGradient id="btn" cx="36%" cy="30%">
+      <stop offset="0%" stop-color="#a9f2ff"/>
+      <stop offset="55%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#0b7f95"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="#0a0e18"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5"
+        fill="none" stroke="#ff64c8" stroke-opacity=".28" stroke-width="2"/>
+
+  <!-- control-panel shadow under the stick -->
+  <ellipse cx="25" cy="52" rx="17" ry="5.5" fill="#131b2b"/>
+  <ellipse cx="25" cy="50.5" rx="12" ry="3.8" fill="#080b13"/>
+
+  <!-- shaft -->
+  <rect x="21.5" y="24" width="7" height="26" rx="3.5" fill="#cbd5e1"/>
+  <rect x="21.5" y="24" width="3" height="26" rx="1.5" fill="#eef2f7"/>
+
+  <!-- ball top -->
+  <circle cx="25" cy="21" r="11" fill="url(#ball)"/>
+  <circle cx="25" cy="21" r="11" fill="none" stroke="#ff8ed4" stroke-opacity=".5"/>
+
+  <!-- action button -->
+  <circle cx="49" cy="43" r="8.5" fill="#0d1422"/>
+  <circle cx="49" cy="42" r="7.5" fill="url(#btn)"/>
+</svg>
