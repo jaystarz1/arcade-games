@@ -608,6 +608,21 @@ html, body {
 @keyframes swingB { 0%,100% { transform: rotate(-17deg); } 50% { transform: rotate(17deg); } }
 @keyframes bob    { 0%,100% { transform: translateY(0); }  50% { transform: translateY(-3px); } }
 
+/* Standing at a cabinet: he turns upstage and watches the attract screen.
+   The head swap does the work; the chin lift and the slow breath keep him
+   from reading as a paused sprite. */
+#player .backhead  { display: none; }
+#player.gazing .facefront { display: none; }
+#player.gazing .backhead  { display: block; }
+#player.gazing .head { transform: translateY(-1px) rotate(-2deg); transform-origin: 32px 22px; }
+#player.gazing .torso { animation: breathe 3.6s infinite ease-in-out; }
+@keyframes breathe { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.4px); } }
+/* screen light spilling onto him, tinted by whichever cabinet he's at */
+#player.gazing svg {
+  filter: drop-shadow(0 -3px 9px color-mix(in srgb, var(--gazeAccent, #6ee7ff) 24%, transparent));
+}
+#player .head, #player.gazing svg { transition: filter .45s ease; }
+
 #playerShadow {
   position: absolute;
   z-index: 1;
@@ -869,13 +884,29 @@ body.touch #touch { display: flex; }
 
             <!-- neck: narrow, so there is a clear step down from the jaw -->
             <rect x="30" y="19" width="4" height="8" fill="#d9a179"/>
-            <!-- head: crown y4, chin y22. Hair comes down the temples so the
-                 face doesn't read as one long column with the neck. -->
-            <rect x="25" y="6" width="14" height="16" rx="5.5" fill="#e8b48c"/>
-            <path d="M24.6 15 Q24.6 4 32 4 Q39.4 4 39.4 15 L39.4 10.5
-                     Q36 7.5 32 8.6 Q28 7.8 24.6 11 Z" fill="#3f2d20"/>
-            <rect x="27.6" y="13" width="2" height="2.5" rx="1" fill="#2b2119"/>
-            <rect x="34.4" y="13" width="2" height="2.5" rx="1" fill="#2b2119"/>
+            <!-- head: crown y4, chin y22. Two states share the same skull —
+                 .facefront looks at the camera, .backhead is the same head
+                 turned upstage to watch the screen. Swapped by #player.gazing. -->
+            <g class="head">
+              <rect x="25" y="6" width="14" height="16" rx="5.5" fill="#e8b48c"/>
+              <g class="facefront">
+                <path d="M24.6 15 Q24.6 4 32 4 Q39.4 4 39.4 15 L39.4 10.5
+                         Q36 7.5 32 8.6 Q28 7.8 24.6 11 Z" fill="#3f2d20"/>
+                <rect x="27.6" y="13" width="2" height="2.5" rx="1" fill="#2b2119"/>
+                <rect x="34.4" y="13" width="2" height="2.5" rx="1" fill="#2b2119"/>
+              </g>
+              <!-- back of the head: hair wraps the whole skull down past the
+                   ears, leaving only a sliver of nape above the collar. No
+                   features, which is the entire tell that he has turned around. -->
+              <g class="backhead">
+                <path d="M24.6 19.4 Q24.6 4 32 4 Q39.4 4 39.4 19.4
+                         Q39.4 21.3 37.2 21.3 L26.8 21.3 Q24.6 21.3 24.6 19.4 Z"
+                      fill="#3f2d20"/>
+                <ellipse cx="32" cy="8" rx="4.4" ry="2.6" fill="#4a3527" opacity=".55"/>
+                <ellipse cx="24.8" cy="15.4" rx="1.4" ry="2.1" fill="#d9a179"/>
+                <ellipse cx="39.2" cy="15.4" rx="1.4" ry="2.1" fill="#d9a179"/>
+              </g>
+            </g>
 
             <!-- near arm, drawn last so it sits in front of the chest -->
             <g class="limb arm-a" style="transform-origin:17px 30px">
@@ -930,7 +961,7 @@ body.touch #touch { display: flex; }
     <div class="tc-sub">PRESS ANY KEY</div>
     <div class="tc-hint">
       ARROW KEYS TO WALK &middot; ENTER TO PLAY<br>
-      C FOR A COIN &middot; M FOR SOUND &middot; ESC TO LEAVE A GAME
+      C FOR A COIN &middot; M TO MUTE THE ROOM &middot; ESC TO LEAVE A GAME
     </div>
   </div>
 </div>
@@ -1269,6 +1300,7 @@ function updateActive() {
   els.pMeta.textContent  = (s.game.year ? s.game.year + "  ·  " : "") + s.game.pub;
   els.pBlurb.textContent = s.game.blurb;
   els.plaque.style.setProperty("--accent-cur", s.game.accent);
+  els.player.style.setProperty("--gazeAccent", s.game.accent);
 
   // debounce so walking past a row doesn't spawn a dozen iframes
   state.attractTimer = setTimeout(() => startAttract(s), 420);
@@ -1412,6 +1444,7 @@ function insertCoin() {
 
 const sound = (() => {
   let ctx = null, master = null, bed = null, on = false, ducked = false;
+  let emitters = [];
 
   function ensure() {
     if (ctx) return;
@@ -1447,24 +1480,150 @@ const sound = (() => {
     const nG = ctx.createGain(); nG.gain.value = 0.035;
     noise.connect(lp).connect(nG).connect(bed); noise.start();
 
-    // distant attract bleeps from the machines you're not standing at
-    (function bleep() {
-      if (!ctx) return;
-      const t = ctx.currentTime;
-      const o = ctx.createOscillator();
-      o.type = Math.random() < .5 ? "square" : "triangle";
-      o.frequency.setValueAtTime(220 + Math.random() * 700, t);
-      o.frequency.exponentialRampToValueAtTime(140 + Math.random() * 260, t + 0.16);
+    buildEmitters();
+  }
+
+  /* ---- the room mix ----
+     Six machines standing at fixed points down the hall, each running its own
+     generative voice. Every one gets a panner and a lowpass whose cutoff and
+     gain track how far it is from the player, so walking the aisle sweeps
+     through the layers instead of hearing one flat wash. Nothing here is a
+     recording of a real game: it's shaped noise and oscillators that sit in
+     the same register, which is what "arcade in the next room" actually is. */
+  function buildEmitters() {
+    const W = Math.max(2200, state.hallWidth || 2600);
+    const kinds = ["shooter", "racer", "jingle", "thump", "shooter", "jingle"];
+    emitters = kinds.map((kind, i) => {
+      // spread across the hall, nudged off a perfect grid so they don't beat
+      // against the cabinet spacing
+      const x = (W * (i + 0.5)) / kinds.length + (i % 2 ? 90 : -90);
+
       const g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.02, t + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-      const bp = ctx.createBiquadFilter();
-      bp.type = "lowpass"; bp.frequency.value = 900;   // muffled, across the room
-      o.connect(bp).connect(g).connect(bed);
-      o.start(t); o.stop(t + 0.25);
-      setTimeout(bleep, 900 + Math.random() * 2600);
+      g.gain.value = 0.0;
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.value = 700;
+      let out = lp;
+      let pan = null;
+      if (ctx.createStereoPanner) {
+        pan = ctx.createStereoPanner();
+        lp.connect(pan).connect(g);
+      } else {
+        lp.connect(g);
+      }
+      g.connect(bed);
+
+      const em = { kind, x, in: lp, gain: g, lp, pan, level: 0 };
+      startVoice(em);
+      return em;
+    });
+    roomAt(state.playerX || 0);
+  }
+
+  function noiseBurst(dest, t, dur, cut, amp) {
+    const nb = ctx.createBuffer(1, Math.max(64, ctx.sampleRate * dur), ctx.sampleRate);
+    const nd = nb.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) {
+      nd[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nd.length, 1.8);
+    }
+    const ns = ctx.createBufferSource(); ns.buffer = nb;
+    const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = cut;
+    const g = ctx.createGain(); g.gain.value = amp;
+    ns.connect(f).connect(g).connect(dest);
+    ns.start(t);
+  }
+
+  function blip(dest, t, f0, f1, dur, type, amp) {
+    const o = ctx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(amp, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(dest);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+
+  const PENT = [0, 2, 4, 7, 9, 12, 14];
+
+  function startVoice(em) {
+    if (em.kind === "racer") {
+      // continuous engine: two detuned saws with a slow wobble on top
+      [0, 3.5].forEach((det) => {
+        const o = ctx.createOscillator();
+        o.type = "sawtooth";
+        o.frequency.value = 82 + det;
+        const g = ctx.createGain(); g.gain.value = 0.055;
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine"; lfo.frequency.value = 0.07 + Math.random() * 0.09;
+        const lg = ctx.createGain(); lg.gain.value = 26;   // Hz of pitch sweep
+        lfo.connect(lg).connect(o.frequency);
+        o.connect(g).connect(em.in);
+        o.start(); lfo.start();
+      });
+      return;
+    }
+
+    // the rest are scheduled patterns; each reschedules itself
+    (function fire() {
+      if (!ctx) return;
+      const t = ctx.currentTime + 0.02;
+      let next;
+
+      if (em.kind === "shooter") {
+        // a four-note descending march, then a couple of shots over it
+        const base = 108 + Math.random() * 30;
+        for (let i = 0; i < 4; i++) {
+          blip(em.in, t + i * 0.34, base * (1 - i * 0.06), base * (1 - i * 0.06),
+               0.16, "square", 0.05);
+        }
+        const shots = 1 + (Math.random() * 3 | 0);
+        for (let i = 0; i < shots; i++) {
+          const st = t + Math.random() * 1.3;
+          blip(em.in, st, 900 + Math.random() * 500, 180, 0.1, "square", 0.03);
+        }
+        if (Math.random() < 0.35) noiseBurst(em.in, t + 1.0, 0.3, 1100, 0.09);
+        next = 1500 + Math.random() * 1800;
+
+      } else if (em.kind === "jingle") {
+        // attract-mode melody: short pentatonic phrase, then a long rest
+        const root = 196 * (Math.random() < 0.5 ? 1 : 1.5);
+        const n = 4 + (Math.random() * 4 | 0);
+        for (let i = 0; i < n; i++) {
+          const semi = PENT[(Math.random() * PENT.length) | 0];
+          const f = root * Math.pow(2, semi / 12);
+          blip(em.in, t + i * 0.15, f, f, 0.13, "triangle", 0.035);
+        }
+        next = 5000 + Math.random() * 7000;
+
+      } else {   // thump: explosions and cabinet knocks
+        noiseBurst(em.in, t, 0.42, 420, 0.16);
+        if (Math.random() < 0.5) noiseBurst(em.in, t + 0.55, 0.22, 700, 0.1);
+        next = 3200 + Math.random() * 5200;
+      }
+
+      em.timer = setTimeout(fire, next);
     })();
+  }
+
+  /* Distance model. Close machines are louder and brighter; the far end of the
+     hall is a muffled rumble. Ramps are short but not instant so a fast walk
+     doesn't zipper the gain. */
+  function roomAt(px) {
+    if (!ctx || !emitters.length) return;
+    const t = ctx.currentTime;
+    for (const em of emitters) {
+      const d = Math.abs(em.x - px);
+      const near = Math.max(0, 1 - d / 1500);           // 1 at the machine, 0 far off
+      const lvl = 0.10 + 0.90 * near * near;
+      em.gain.gain.setTargetAtTime(lvl, t, 0.12);
+      em.lp.frequency.setTargetAtTime(480 + 2200 * near, t, 0.12);
+      if (em.pan) {
+        const p = Math.max(-1, Math.min(1, (em.x - px) / 950));
+        em.pan.pan.setTargetAtTime(p, t, 0.12);
+      }
+    }
   }
 
   function gainTarget() { return on ? (ducked ? 0.05 : 0.5) : 0; }
@@ -1487,10 +1646,15 @@ const sound = (() => {
     unlock() {
       ensure();
       if (ctx && ctx.state === "suspended") ctx.resume();
-      let want = "0";
-      try { want = localStorage.getItem("arcade.sound") || "0"; } catch (_) {}
+      // The room is meant to be running when you walk in — the point of the bed
+      // is that you hear the arcade before you look at it. Autoplay policy is
+      // satisfied because unlock() only ever runs off the keypress or click
+      // that dismisses the title card. M still turns it off, and that sticks.
+      let want = "1";
+      try { want = localStorage.getItem("arcade.sound") || "1"; } catch (_) {}
       if (want === "1" && !on) { on = true; apply(); els.soundState.textContent = "ON"; }
     },
+    roomAt,
     duck(v) { ducked = v; apply(); },
     coin() {
       if (!ctx || !on) return;
@@ -1651,6 +1815,7 @@ function clampX(x) {
 /* ---------- loop ---------- */
 
 let stepAccum = 0;
+let roomAccum = 0;
 
 function tick(t) {
   const dt = Math.min(48, t - (state.lastT || t));
@@ -1674,6 +1839,7 @@ function tick(t) {
       state.playerX = clampX(state.playerX + dir * WALK_SPEED * dt);
       state.facing = dir;
       els.player.classList.add("walking");
+      els.player.classList.remove("gazing");
       stepAccum += dt;
       if (stepAccum > 230) { stepAccum = 0; sound.step(); }
     } else {
@@ -1682,6 +1848,16 @@ function tick(t) {
     }
 
     updateActive();
+
+    // stood still in front of a machine -> turn around and watch it
+    if (dir === 0) {
+      els.player.classList.toggle("gazing", state.activeIdx >= 0);
+    }
+
+    // move the room mix with him: each distant machine pans and fades by
+    // how far down the hall it is
+    roomAccum += dt;
+    if (roomAccum > 120) { roomAccum = 0; sound.roomAt(state.playerX); }
   }
 
   render(false);
