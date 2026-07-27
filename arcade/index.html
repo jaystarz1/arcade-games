@@ -731,8 +731,10 @@ body.touch #touch { display: flex; }
   backdrop-filter: blur(6px);
   transition: opacity .5s ease;
 }
-#stageBack.faded { opacity: .12; }
-#stageBack:hover { opacity: 1; }
+/* stays legible once faded — it is the fallback way out if ESC is ever
+   swallowed, so it must never be invisible */
+#stageBack.faded { opacity: .34; }
+#stageBack:hover, #stageBack:focus-visible { opacity: 1; }
 
 #boot {
   position: absolute;
@@ -1288,6 +1290,22 @@ function play(s) {
     firstLoad = false;
     els.boot.classList.add("gone");
     try { f.contentWindow.focus(); } catch (_) {}
+
+    /* The game needs the keyboard to be playable, which means ESC lands inside
+       the frame and the shell never sees it. Same-origin, so listen in there.
+       Capture phase, so a game that handles or swallows ESC itself can't stop
+       the player getting out. */
+    try {
+      f.contentDocument.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          leave();
+        }
+      }, true);
+    } catch (_) {
+      /* cross-origin game (none today): the EXIT button is the way out */
+    }
   });
 
   f.src = g.src;
