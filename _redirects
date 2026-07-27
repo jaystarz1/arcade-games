@@ -1,0 +1,7 @@
+# AsteroidsArcade's built HTML references absolute /games/... asset paths,
+# left over from when this lived under chatbotgenius. Rewrite rather than
+# edit the Vite build output.
+/games/*  /:splat  200
+
+# Front door is the arcade floor.
+/         /arcade/  302

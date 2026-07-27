@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<title>Returning to the arcade…</title>
+<style>
+  html,body{height:100%;margin:0;background:#04050a;color:#6ee7ff;
+    font:12px/1.8 ui-monospace,"SF Mono",Menlo,monospace;
+    display:grid;place-items:center;letter-spacing:.3em}
+</style>
+</head>
+<body>
+<div>RETURNING TO THE ARCADE&hellip;</div>
+<script>
+/* Exit shim.
+   AsteroidsArcade, lunar-lander and space-invaders each hard-code
+   `window.location.href = '/arcade.html'` on their back button, and two of
+   those are baked into minified dist bundles. Rather than patch the bundles
+   (which any future rebuild would undo), this file catches that navigation.
+
+   Framed  -> tell the arcade shell to close the stage.
+   Direct  -> the player opened a game standalone; send them to the floor. */
+if (window.parent !== window) {
+  parent.postMessage({ type: "arcade:exit" }, "*");
+} else {
+  location.replace("/arcade/");
+}
+</script>
+</body>
+</html>
