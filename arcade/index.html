@@ -567,17 +567,17 @@ html, body {
    player's own z-index cannot lift it above #row. The layer must win. */
 #actor { z-index: 4; }
 
-/* Sized so the top of his head lands at the bottom edge of a horizontal
-   cabinet's screen: cabinet top is y=194, its screen runs 275..486, and the
-   SVG's head starts 2/128 into the box. Feet at ~745 keep him forward of the
-   cabinet bases (690), which is what sells the depth. */
+/* Seven heads tall (was ~4.8, which read as chibi). The viewBox is 64x136 with
+   a head unit of 18: hair crown at y=4, soles at y=130, so the figure is 126
+   units = exactly 7 heads. Sized and offset to keep his feet at design y~742,
+   forward of the cabinet bases at 690, which is what sells the depth. */
 #player {
   position: absolute;
   z-index: 2;
-  bottom: 100px;
-  width: 135px;
-  height: 320px;
-  margin-left: -68px;
+  bottom: 141px;
+  width: 182px;
+  height: 386px;
+  margin-left: -91px;
   will-change: transform;
 }
 #player svg { width: 100%; height: 100%; overflow: visible; }
@@ -587,16 +587,17 @@ html, body {
 #player.walking .arm-a { animation: swingB .46s infinite ease-in-out; }
 #player.walking .arm-b { animation: swingA .46s infinite ease-in-out; }
 #player.walking .torso { animation: bob .23s infinite ease-in-out; }
-@keyframes swingA { 0%,100% { transform: rotate(24deg); } 50% { transform: rotate(-24deg); } }
-@keyframes swingB { 0%,100% { transform: rotate(-24deg); } 50% { transform: rotate(24deg); } }
-@keyframes bob    { 0%,100% { transform: translateY(0); }  50% { transform: translateY(-2.5px); } }
+/* limbs are ~50% longer at 7 heads, so the same angle threw a much bigger arc */
+@keyframes swingA { 0%,100% { transform: rotate(17deg); } 50% { transform: rotate(-17deg); } }
+@keyframes swingB { 0%,100% { transform: rotate(-17deg); } 50% { transform: rotate(17deg); } }
+@keyframes bob    { 0%,100% { transform: translateY(0); }  50% { transform: translateY(-3px); } }
 
 #playerShadow {
   position: absolute;
   z-index: 1;
-  bottom: 146px;          /* under his feet at y~745, not the box bottom */
-  width: 150px; height: 30px;
-  margin-left: -75px;
+  bottom: 148px;          /* under his soles at y~742, not the box bottom */
+  width: 168px; height: 32px;
+  margin-left: -84px;
   border-radius: 50%;
   background: radial-gradient(ellipse at center, rgba(0,0,0,.72), transparent 70%);
   filter: blur(3px);
@@ -807,45 +808,54 @@ body.touch #touch { display: flex; }
     <div class="layer" id="actor">
       <div id="playerShadow"></div>
       <div id="player">
-        <!-- Drawn back-to-front so limbs read separately at full size.
-             viewBox is unchanged (54x128) so the sizing math above still holds:
-             hair starts at y=2, shoes end at y=105. -->
-        <svg viewBox="0 0 54 128" aria-hidden="true">
-          <!-- far leg + far arm sit behind everything, in darker shades -->
-          <g class="limb leg-b" style="transform-origin:31px 62px">
-            <rect x="28" y="60" width="6" height="40" rx="2" fill="#131c29"/>
-            <rect x="26" y="98" width="11" height="7" rx="2.5" fill="#94a3b8"/>
+        <!-- Seven-head armature on a 64x136 viewBox, head unit = 18:
+               crown y4 · chin y22 · shoulders y27 · waist y52 · hip y73
+               knee  y98 · sole y130
+             Drawn back-to-front, near limbs lighter than far ones so nothing
+             merges into a single silhouette. -->
+        <svg viewBox="0 0 64 136" aria-hidden="true">
+          <!-- far leg (3-unit gap to the near leg so they never read as one) -->
+          <g class="limb leg-b" style="transform-origin:37.5px 72px">
+            <rect x="33" y="70" width="9" height="53" rx="4" fill="#131c29"/>
+            <rect x="31" y="120" width="13" height="10" rx="3.5" fill="#8d99ab"/>
           </g>
 
           <g class="torso">
-            <g class="limb arm-b" style="transform-origin:38px 30px">
-              <rect x="35" y="29" width="6" height="24" rx="3" fill="#1a44b8"/>
-              <rect x="35" y="49" width="6" height="7" rx="3" fill="#d9a179"/>
+            <!-- far arm, drawn before the torso so the shoulder overlaps it -->
+            <g class="limb arm-b" style="transform-origin:47px 30px">
+              <rect x="43" y="28" width="8" height="38" rx="4" fill="#1a44b8"/>
+              <rect x="43" y="62" width="8" height="10" rx="4" fill="#d9a179"/>
             </g>
 
-            <!-- body -->
-            <rect x="18" y="28" width="18" height="34" rx="4" fill="#2563eb"/>
-            <rect x="18" y="28" width="18" height="7" rx="3.5" fill="#1d4ed8"/>
-            <rect x="18" y="55" width="18" height="4" fill="#1b3fa8"/>
+            <!-- torso, tapered: shoulders 30 wide, waist 24, hips 27 -->
+            <path d="M18 31 C18 27.5 20.5 26 23.5 26 L40.5 26 C43.5 26 46 27.5 46 31
+                     L44 54 L45 72 L19 72 L20 54 Z" fill="#2563eb"/>
+            <path d="M18 31 C18 27.5 20.5 26 23.5 26 L40.5 26 C43.5 26 46 27.5 46 31
+                     L45.7 36 L18.3 36 Z" fill="#1d4ed8"/>
+            <rect x="19.4" y="62" width="25.2" height="4" fill="#1b3fa8"/>
+            <path d="M19.2 66 L44.8 66 L45 72 L19 72 Z" fill="#20304a"/>
 
-            <!-- neck + head -->
-            <rect x="24" y="24" width="6" height="5" fill="#d9a179"/>
-            <rect x="20" y="9" width="14" height="16" rx="4.5" fill="#e8b48c"/>
-            <!-- hair, sized to the head instead of overhanging it -->
-            <path d="M20 14 Q20 4 27 4 Q34 4 34 14 L34 11 Q30 8 27 9 Q23 9 20 12 Z" fill="#3f2d20"/>
-            <rect x="22.5" y="16" width="2" height="2" rx="1" fill="#2b2119"/>
-            <rect x="29.5" y="16" width="2" height="2" rx="1" fill="#2b2119"/>
+            <!-- neck: narrow, so there is a clear step down from the jaw -->
+            <rect x="30" y="19" width="4" height="8" fill="#d9a179"/>
+            <!-- head: crown y4, chin y22. Hair comes down the temples so the
+                 face doesn't read as one long column with the neck. -->
+            <rect x="25" y="6" width="14" height="16" rx="5.5" fill="#e8b48c"/>
+            <path d="M24.6 15 Q24.6 4 32 4 Q39.4 4 39.4 15 L39.4 10.5
+                     Q36 7.5 32 8.6 Q28 7.8 24.6 11 Z" fill="#3f2d20"/>
+            <rect x="27.6" y="13" width="2" height="2.5" rx="1" fill="#2b2119"/>
+            <rect x="34.4" y="13" width="2" height="2.5" rx="1" fill="#2b2119"/>
 
-            <g class="limb arm-a" style="transform-origin:16px 30px">
-              <rect x="13" y="29" width="6" height="24" rx="3" fill="#3b82f6"/>
-              <rect x="13" y="49" width="6" height="7" rx="3" fill="#e8b48c"/>
+            <!-- near arm, drawn last so it sits in front of the chest -->
+            <g class="limb arm-a" style="transform-origin:17px 30px">
+              <rect x="13" y="28" width="8" height="38" rx="4" fill="#3b82f6"/>
+              <rect x="13" y="62" width="8" height="10" rx="4" fill="#e8b48c"/>
             </g>
           </g>
 
-          <!-- near leg, lighter so the two never merge -->
-          <g class="limb leg-a" style="transform-origin:23px 62px">
-            <rect x="20" y="60" width="6" height="40" rx="2" fill="#20304a"/>
-            <rect x="18" y="98" width="11" height="7" rx="2.5" fill="#e2e8f0"/>
+          <!-- near leg -->
+          <g class="limb leg-a" style="transform-origin:26.5px 72px">
+            <rect x="22" y="70" width="9" height="53" rx="4" fill="#20304a"/>
+            <rect x="20" y="120" width="13" height="10" rx="3.5" fill="#e2e8f0"/>
           </g>
         </svg>
       </div>
@@ -1258,6 +1268,7 @@ function startAttract(s) {
   const ox = (s.aw - s.game.w * k) / 2;
   const oy = (s.ah - s.game.h * k) / 2;
   f.style.transform = "translate(" + ox + "px," + oy + "px) scale(" + k + ")";
+  f.addEventListener("load", () => bindKeysInto(f));
   f.src = s.game.src;
 
   // z-index puts it above the poster; the CRT/glass overlays stay on top
@@ -1504,7 +1515,7 @@ function startIfNeeded() {
   return false;   // swallow the key that dismissed the title card
 }
 
-window.addEventListener("keydown", (e) => {
+function onKeyDown(e) {
   if (state.playing) {
     if (e.key === "Escape") { e.preventDefault(); leave(); }
     return;
@@ -1520,13 +1531,31 @@ window.addEventListener("keydown", (e) => {
   }
   if (k === "c" || k === "C") { e.preventDefault(); insertCoin(); }
   if (k === "m" || k === "M") { e.preventDefault(); sound.toggle(); }
-});
+}
 
-window.addEventListener("keyup", (e) => {
+function onKeyUp(e) {
   const k = e.key;
   if (k === "ArrowLeft"  || k === "a" || k === "A") keys.left = false;
   if (k === "ArrowRight" || k === "d" || k === "D") keys.right = false;
-});
+}
+
+window.addEventListener("keydown", onKeyDown);
+window.addEventListener("keyup", onKeyUp);
+
+/* An attract cabinet can grab focus for a frame before the loop takes it back
+   (Space Invaders and Lunar Lander both call canvas.focus()). If the player
+   happens to RELEASE an arrow key during that frame, the keyup lands in the
+   game's document and the shell never hears it — the key sticks down and the
+   little guy walks to the end of the hall on his own. Listening in the frame
+   too means a keyup can never be lost. Same-origin, so this is allowed. */
+function bindKeysInto(frame) {
+  try {
+    const d = frame.contentDocument;
+    if (!d) return;
+    d.addEventListener("keydown", onKeyDown, true);
+    d.addEventListener("keyup", onKeyUp, true);
+  } catch (_) { /* cross-origin: the loop's focus reclaim is the fallback */ }
+}
 
 /* If the window loses focus mid-stride the keyup never arrives and the player
    walks off down the hall forever. Drop every held key on blur. */
