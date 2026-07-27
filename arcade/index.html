@@ -871,6 +871,15 @@ body.touch #touch { display: flex; }
 <script>
 "use strict";
 
+/* Cloudflare Pages strips ".html", so a game's hardcoded back button to
+   /arcade.html becomes /arcade — which could resolve to either the exit shim
+   (arcade.html) or this file (arcade/index.html). It currently picks the shim,
+   but that precedence is undocumented. If this shell ever finds itself inside
+   a frame, it was loaded by mistake: behave like the shim and get out. */
+if (window.parent !== window) {
+  parent.postMessage({ type: "arcade:exit" }, "*");
+}
+
 /* ============================================================
    GAME MANIFEST
    ratio = native width / height. Drives cabinet orientation.
