@@ -567,13 +567,17 @@ html, body {
    player's own z-index cannot lift it above #row. The layer must win. */
 #actor { z-index: 4; }
 
+/* Sized so the top of his head lands at the bottom edge of a horizontal
+   cabinet's screen: cabinet top is y=194, its screen runs 275..486, and the
+   SVG's head starts 2/128 into the box. Feet at ~745 keep him forward of the
+   cabinet bases (690), which is what sells the depth. */
 #player {
   position: absolute;
   z-index: 2;
-  bottom: 132px;          /* stands forward of the cabinet bases (210) */
-  width: 76px;
-  height: 182px;          /* nearer the camera, so taller than a cabinet reads */
-  margin-left: -38px;
+  bottom: 100px;
+  width: 135px;
+  height: 320px;
+  margin-left: -68px;
   will-change: transform;
 }
 #player svg { width: 100%; height: 100%; overflow: visible; }
@@ -590,9 +594,9 @@ html, body {
 #playerShadow {
   position: absolute;
   z-index: 1;
-  bottom: 122px;
-  width: 104px; height: 22px;
-  margin-left: -52px;
+  bottom: 146px;          /* under his feet at y~745, not the box bottom */
+  width: 150px; height: 30px;
+  margin-left: -75px;
   border-radius: 50%;
   background: radial-gradient(ellipse at center, rgba(0,0,0,.72), transparent 70%);
   filter: blur(3px);
@@ -803,26 +807,45 @@ body.touch #touch { display: flex; }
     <div class="layer" id="actor">
       <div id="playerShadow"></div>
       <div id="player">
+        <!-- Drawn back-to-front so limbs read separately at full size.
+             viewBox is unchanged (54x128) so the sizing math above still holds:
+             hair starts at y=2, shoes end at y=105. -->
         <svg viewBox="0 0 54 128" aria-hidden="true">
+          <!-- far leg + far arm sit behind everything, in darker shades -->
+          <g class="limb leg-b" style="transform-origin:31px 62px">
+            <rect x="28" y="60" width="6" height="40" rx="2" fill="#131c29"/>
+            <rect x="26" y="98" width="11" height="7" rx="2.5" fill="#94a3b8"/>
+          </g>
+
           <g class="torso">
-            <!-- head -->
-            <rect x="19" y="4" width="16" height="16" rx="4" fill="#e8b48c"/>
-            <rect x="17" y="2" width="20" height="8" rx="3" fill="#1f2937"/>
-            <!-- jacket -->
-            <rect x="14" y="20" width="26" height="40" rx="6" fill="#2563eb"/>
-            <rect x="14" y="20" width="26" height="9" rx="4" fill="#1d4ed8"/>
-            <!-- arms -->
-            <g class="limb arm-a"><rect x="9" y="24" width="8" height="30" rx="4" fill="#1d4ed8"/></g>
-            <g class="limb arm-b"><rect x="37" y="24" width="8" height="30" rx="4" fill="#3b82f6"/></g>
+            <g class="limb arm-b" style="transform-origin:38px 30px">
+              <rect x="35" y="29" width="6" height="24" rx="3" fill="#1a44b8"/>
+              <rect x="35" y="49" width="6" height="7" rx="3" fill="#d9a179"/>
+            </g>
+
+            <!-- body -->
+            <rect x="18" y="28" width="18" height="34" rx="4" fill="#2563eb"/>
+            <rect x="18" y="28" width="18" height="7" rx="3.5" fill="#1d4ed8"/>
+            <rect x="18" y="55" width="18" height="4" fill="#1b3fa8"/>
+
+            <!-- neck + head -->
+            <rect x="24" y="24" width="6" height="5" fill="#d9a179"/>
+            <rect x="20" y="9" width="14" height="16" rx="4.5" fill="#e8b48c"/>
+            <!-- hair, sized to the head instead of overhanging it -->
+            <path d="M20 14 Q20 4 27 4 Q34 4 34 14 L34 11 Q30 8 27 9 Q23 9 20 12 Z" fill="#3f2d20"/>
+            <rect x="22.5" y="16" width="2" height="2" rx="1" fill="#2b2119"/>
+            <rect x="29.5" y="16" width="2" height="2" rx="1" fill="#2b2119"/>
+
+            <g class="limb arm-a" style="transform-origin:16px 30px">
+              <rect x="13" y="29" width="6" height="24" rx="3" fill="#3b82f6"/>
+              <rect x="13" y="49" width="6" height="7" rx="3" fill="#e8b48c"/>
+            </g>
           </g>
-          <!-- legs -->
-          <g class="limb leg-a" style="transform-origin:22px 60px">
-            <rect x="17" y="58" width="10" height="44" rx="4" fill="#0f172a"/>
-            <rect x="15" y="98" width="14" height="8" rx="3" fill="#e2e8f0"/>
-          </g>
-          <g class="limb leg-b" style="transform-origin:32px 60px">
-            <rect x="27" y="58" width="10" height="44" rx="4" fill="#1e293b"/>
-            <rect x="25" y="98" width="14" height="8" rx="3" fill="#cbd5e1"/>
+
+          <!-- near leg, lighter so the two never merge -->
+          <g class="limb leg-a" style="transform-origin:23px 62px">
+            <rect x="20" y="60" width="6" height="40" rx="2" fill="#20304a"/>
+            <rect x="18" y="98" width="11" height="7" rx="2.5" fill="#e2e8f0"/>
           </g>
         </svg>
       </div>
