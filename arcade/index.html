@@ -1221,6 +1221,12 @@ function startAttract(s) {
   f.setAttribute("scrolling", "no");
   f.setAttribute("tabindex", "-1");
   f.setAttribute("aria-hidden", "true");
+  // An attract cabinet must never be able to take the keyboard. Space Invaders
+  // and Lunar Lander both call canvas.focus() on load because they listen for
+  // keydown on the canvas itself; without this the floor freezes the moment you
+  // walk up to them. `inert` blocks focus entering the subtree; the tick loop
+  // reclaims focus as a backstop if a game grabs it anyway.
+  f.inert = true;
   f.style.width  = s.game.w + "px";
   f.style.height = s.game.h + "px";
   const k = Math.min(s.aw / s.game.w, s.ah / s.game.h);
@@ -1484,7 +1490,18 @@ window.addEventListener("keyup", (e) => {
 /* If the window loses focus mid-stride the keyup never arrives and the player
    walks off down the hall forever. Drop every held key on blur. */
 function releaseAll() { keys.left = false; keys.right = false; }
-window.addEventListener("blur", releaseAll);
+
+/* Distinguish "the player alt-tabbed away" from "an attract cabinet stole the
+   keyboard". Only the first should drop the keys the player is holding. */
+function attractHasFocus() {
+  const ae = document.activeElement;
+  return !!(ae && ae.tagName === "IFRAME" && ae.id !== "stageFrame");
+}
+
+window.addEventListener("blur", () => {
+  // wait a tick: activeElement is not updated yet when blur fires
+  setTimeout(() => { if (!attractHasFocus()) releaseAll(); }, 0);
+});
 document.addEventListener("visibilitychange", () => { if (document.hidden) releaseAll(); });
 
 els.stageBack.addEventListener("click", leave);
@@ -1544,6 +1561,15 @@ function tick(t) {
   state.lastT = t;
 
   if (!state.playing) {
+    // Backstop for focus theft by an attract cabinet (see attractHasFocus).
+    // `inert` should prevent it, but a game calling focus() from inside its own
+    // document can still win in some browsers, and losing the keyboard here
+    // strands the player mid-aisle.
+    if (attractHasFocus()) {
+      document.activeElement.blur();
+      window.focus();
+    }
+
     let dir = 0;
     if (keys.left)  dir -= 1;
     if (keys.right) dir += 1;
