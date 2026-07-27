@@ -1270,11 +1270,21 @@ function play(s) {
   const f = document.createElement("iframe");
   f.id = "stageFrame";
   f.setAttribute("allow", "autoplay; fullscreen; gamepad");
-  f.src = g.src;
+
+  /* Several games navigate away on their own back button — three of them to a
+     hard-coded absolute "/arcade.html", which resolves outside the site when
+     Pages serves us from a subpath like /arcade-games/. Rather than patch each
+     game (two are minified bundles), treat ANY navigation after the first load
+     as "the player asked to leave". Covers the known three and anything future. */
+  let firstLoad = true;
   f.addEventListener("load", () => {
+    if (!firstLoad) { leave(); return; }
+    firstLoad = false;
     els.boot.classList.add("gone");
     try { f.contentWindow.focus(); } catch (_) {}
   });
+
+  f.src = g.src;
   els.stage.insertBefore(f, els.stage.firstChild);
 
   els.stageBack.classList.remove("faded");

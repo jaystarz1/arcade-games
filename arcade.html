@@ -24,7 +24,9 @@
 if (window.parent !== window) {
   parent.postMessage({ type: "arcade:exit" }, "*");
 } else {
-  location.replace("/arcade/");
+  // relative, so it works whether the site is served from the domain root or
+  // from a subpath like /arcade-games/ on GitHub Pages
+  location.replace("./arcade/");
 }
 </script>
 </body>
