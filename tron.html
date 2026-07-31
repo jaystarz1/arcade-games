@@ -956,15 +956,25 @@
   //  I/O TOWER  (grid bugs + countdown; reach the tower)
   // ═══════════════════════════════════════════════════════
   const IO_TX=CX, IO_TY=132, IO_TW=120, IO_TH=96;        // tower rect
+  const IO_GRID_TOP=IO_TY+IO_TH+12, IO_GRID_BOTTOM=H-24, IO_RUNG_GAP=32;
+  const IO_THREAD_X=Array.from({length:12},(_,i)=>42+i*36);
+  const ioLaneX=(lane)=>IO_THREAD_X[clamp(lane|0,0,IO_THREAD_X.length-1)];
+  const ioNearestLane=(x)=>clamp(Math.round((x-IO_THREAD_X[0])/36),0,IO_THREAD_X.length-1);
+  function makeIOBug(lane,y,splitT){
+    lane=clamp(lane|0,0,IO_THREAD_X.length-1);
+    return { x:ioLaneX(lane), y, lane, targetLane:lane, axis:"v", alive:true,
+      ph:rnd(0,TAU), splitT:splitT??rnd(5.5,8) };
+  }
   function startIO(){
     const t0 = diff()===0?500:1000;
     io={ timer:t0, tmax:t0, bugs:[], disc:null, dead:false, won:false,
-      px:CX, py:430, bitT:rnd(4,9), bit:null, ticks:0 };
-    const nBug = clamp(10+diff()*3,10,34);
+      px:CX, py:430, bitT:rnd(4,9), bit:null, ticks:0, clearBonus:false };
+    const nBug = clamp(6+diff()*2,6,28);
+    const lanes=shuffle(Array.from({length:IO_THREAD_X.length},(_,i)=>i));
     for(let i=0;i<nBug;i++){
-      const col=i%2, row=(i/2)|0;
-      io.bugs.push({ x:CX-150+ (i%7)*46 + rnd(-8,8), y:250+ ((i/7)|0)*34 + rnd(-6,6),
-        vx:rnd(-10,10), vy:rnd(6,16)+diff()*1.5, alive:true, ph:rnd(0,TAU) });
+      const lane=lanes[i%lanes.length];
+      const row=(i/lanes.length)|0;
+      io.bugs.push(makeIOBug(lane,IO_GRID_TOP+row*IO_RUNG_GAP,rnd(3.5,7)));
     }
     state="io"; stateT=-1.4;
   }
@@ -1000,19 +1010,46 @@
       else { const dx=io.px-d.x, dy=io.py-d.y, L=Math.hypot(dx,dy)||1; d.x+=dx/L*380*dt; d.y+=dy/L*380*dt; if(L<12) io.disc=null; }
       if(io.disc) for(const b of io.bugs){ if(b.alive && Math.hypot(b.x-d.x,b.y-d.y)<12){ b.alive=false; addScore(60+diff()*10); spawnDerez(b.x,b.y,C.amber,5); sfx.bug(); } }
     }
-    // bugs
+    // Grid bugs crawl on the vertical threads and only change columns along horizontal rungs.
+    // They reproduce as they descend, so waiting at the bottom becomes steadily more dangerous.
     let alive=0;
-    for(const b of io.bugs){ if(!b.alive) continue; alive++;
+    const bugCap=clamp(26+diff()*2,26,48), bugCount=io.bugs.length;
+    for(let i=0;i<bugCount;i++){ const b=io.bugs[i]; if(!b.alive) continue; alive++;
       b.ph+=dt*6;
-      const dx=io.px-b.x, dy=io.py-b.y, L=Math.hypot(dx,dy)||1;
-      b.x+=(dx/L*(16+diff()*2)+b.vx*0.3)*dt; b.y+=(dy/L*(14+diff()*2))*dt;
+      if(b.axis==="h"){
+        const tx=ioLaneX(b.targetLane), dx=tx-b.x;
+        const step=(42+diff()*2.6)*dt;
+        if(Math.abs(dx)<=step){ b.x=tx; b.lane=b.targetLane; b.axis="v"; }
+        else b.x+=Math.sign(dx)*step;
+      } else {
+        const dir=Math.sign(io.py-b.y)||1;
+        const rel=(b.y-IO_GRID_TOP)/IO_RUNG_GAP;
+        const ri=dir>0?Math.floor(rel+1e-5)+1:Math.ceil(rel-1e-5)-1;
+        const rung=clamp(IO_GRID_TOP+ri*IO_RUNG_GAP,IO_GRID_TOP,IO_GRID_BOTTOM);
+        const step=(32+diff()*2.4)*dt;
+        if(Math.abs(rung-b.y)<=step){
+          b.y=rung;
+          const playerLane=ioNearestLane(io.px);
+          if(playerLane!==b.lane && Math.random()<0.82){
+            b.targetLane=b.lane+Math.sign(playerLane-b.lane); b.axis="h";
+          }
+        } else b.y+=dir*step;
+      }
+      b.splitT-=dt;
+      if(b.splitT<=0 && io.bugs.length<bugCap){
+        const child=makeIOBug(b.lane,b.y-7);
+        child.targetLane=clamp(b.lane+(Math.random()<0.5?-1:1),0,IO_THREAD_X.length-1);
+        io.bugs.push(child);
+        b.splitT=rnd(Math.max(3.1,6.2-diff()*0.2),Math.max(4.5,8.2-diff()*0.22));
+      }
       if(Math.hypot(b.x-io.px,b.y-io.py)<13){ if(!io.dead){ io.dead=true; spawnDerez(io.px,io.py,C.blue); subgameLost(); } return; }
     }
-    // win: reach tower entrance, or clear all bugs (early levels auto-enter)
+    // Entering the tower ends the phase. Clearing the current swarm earns the cabinet bonus but
+    // does not teleport Tron into the tower or bypass the objective.
     const e=ioTowerEntrance();
     const atTower = Math.abs(io.px-e.x)<e.w/2 && io.py<e.y+e.h && io.py>IO_TY;
     if(atTower && !io.won){ io.won=true; addScore(1000+diff()*150); subgameWon(); return; }
-    if(alive===0 && !io.won){ io.won=true; addScore(1500); addFloat("ALL BUGS CLEARED",CX,CY,C.green); subgameWon(); return; }
+    if(alive===0 && !io.clearBonus){ io.clearBonus=true; addScore(1000); addFloat("ALL BUGS +1000",CX,CY,C.green); }
     if(io.timer<=0 && !io.dead){ io.dead=true; spawnDerez(io.px,io.py,C.blue); addFloat("TIME UP",CX,CY,C.red); subgameLost(); }
   }
   function botDriveIO(dt){
@@ -1032,9 +1069,11 @@
     }
   }
   function drawIO(){
-    // faint cross-hatch background
+    // The cabinet presents this as a vertical grid: bugs descend the long threads and can move
+    // sideways only where a horizontal rung joins them.
     ctx.strokeStyle=C.grid; ctx.lineWidth=1; ctx.globalAlpha=0.5;
-    for(let x=-H;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,IO_TY-40); ctx.lineTo(x+H,H); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x+H,IO_TY-40); ctx.lineTo(x,H); ctx.stroke(); }
+    for(const x of IO_THREAD_X){ ctx.beginPath(); ctx.moveTo(x,IO_GRID_TOP); ctx.lineTo(x,IO_GRID_BOTTOM); ctx.stroke(); }
+    for(let y=IO_GRID_TOP;y<=IO_GRID_BOTTOM;y+=IO_RUNG_GAP){ ctx.beginPath(); ctx.moveTo(IO_THREAD_X[0],y); ctx.lineTo(IO_THREAD_X[IO_THREAD_X.length-1],y); ctx.stroke(); }
     ctx.globalAlpha=1;
     // tower — dark structural slab, two thick blue horseshoe arcs, red pillars, top diamond,
     // dark entrance oval, boxed yellow counter (matches the reference structure)
@@ -1547,6 +1586,13 @@
       tanks:tk.tanks.map(t=>({x:t.x,y:t.y,r:t.r,hp:t.hp,isPlayer:!!t.isPlayer}))
     }:null,
     warpTank:(x,y)=>{ if(state==="tanks"){ tk.player.x=x; tk.player.y=y; } },
+    ioSnapshot:()=>state==="io"?{
+      px:io.px, py:io.py, clearBonus:io.clearBonus,
+      grid:{top:IO_GRID_TOP,bottom:IO_GRID_BOTTOM,rungGap:IO_RUNG_GAP,threads:IO_THREAD_X.slice()},
+      bugs:io.bugs.map(b=>({x:b.x,y:b.y,lane:b.lane,targetLane:b.targetLane,axis:b.axis,alive:b.alive}))
+    }:null,
+    clearIOBugs:()=>{ if(state==="io") for(const b of io.bugs) b.alive=false; },
+    warpIO:(x,y)=>{ if(state==="io"){ io.px=x; io.py=y; } },
     setLevel:(n)=>{ level=clamp(n|0,0,11); },
   };
 })();
