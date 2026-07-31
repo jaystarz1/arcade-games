@@ -702,6 +702,7 @@
   //  BATTLE TANKS  (top-down maze, bouncing shots, 3 hits per tank)
   // ═══════════════════════════════════════════════════════
   const TK_COLS=13, TK_ROWS=12, TK_CELL=34, TK_X0=(W-TK_COLS*TK_CELL)/2|0, TK_Y0=52;
+  const TK_ENEMY_SPOTS=[[2,2],[10,2],[2,9],[10,9],[6,2],[2,6],[10,6],[6,4]];
   function startTanks(){
     const wall=new Uint8Array(TK_COLS*TK_ROWS);
     const W_ = (c,r)=>wall[r*TK_COLS+c];
@@ -717,15 +718,18 @@
     }
     // central teleporter chamber (open)
     for(let r=6;r<=7;r++) for(let c=5;c<=7;c++) setW(c,r,0);
+    // Enemy starts must be traversable. Most starts are even/even cells, which are also the
+    // cells randomized above; without this, a tank can spawn sealed inside a wall and make the
+    // destroy-all-enemies objective impossible.
+    for(const [c,r] of TK_ENEMY_SPOTS) setW(c,r,0);
     tk={ wall, tanks:[], shots:[], dead:false, winT:0 };
     const cellC=(c)=>TK_X0+c*TK_CELL+TK_CELL/2, cellR=(r)=>TK_Y0+r*TK_CELL+TK_CELL/2;
     tk.player={ x:cellC(6), y:cellR(9), dir:0, r:11, hp:1, gun:-Math.PI/2, fireCd:0, col:C.red, isPlayer:true };
     tk.tanks.push(tk.player);
     const nEnemy=clamp(2+Math.floor(diff()/2),2,7);
     const recog = diff()>=4;
-    const spots=[[2,2],[10,2],[2,9],[10,9],[6,2],[2,6],[10,6],[6,4]];
     for(let i=0;i<nEnemy;i++){
-      const [c,r]=spots[i%spots.length];
+      const [c,r]=TK_ENEMY_SPOTS[i%TK_ENEMY_SPOTS.length];
       const isR = recog && i%3===2;
       tk.tanks.push({ x:cellC(c), y:cellR(r), dir:irnd(0,3), r:11,
         hp:isR?2:3, gun:0, fireCd:rnd(0.5,2), moveCd:0, col:isR?C.amber:C.blue,
@@ -1537,6 +1541,11 @@
     win:()=>subgameWon(),
     kill:()=>subgameLost(),
     tankPos:()=>state==="tanks"?{x:tk.player.x,y:tk.player.y}:null,
+    tankSnapshot:()=>state==="tanks"?{
+      cols:TK_COLS, rows:TK_ROWS, cell:TK_CELL, x0:TK_X0, y0:TK_Y0,
+      wall:Array.from(tk.wall),
+      tanks:tk.tanks.map(t=>({x:t.x,y:t.y,r:t.r,hp:t.hp,isPlayer:!!t.isPlayer}))
+    }:null,
     warpTank:(x,y)=>{ if(state==="tanks"){ tk.player.x=x; tk.player.y=y; } },
     setLevel:(n)=>{ level=clamp(n|0,0,11); },
   };
