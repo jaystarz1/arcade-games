@@ -248,6 +248,7 @@ const Game = {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.OUT_OF_ORDER) return; // lockout — see FIX-PLAN.md
     Game.init();
 });
 
