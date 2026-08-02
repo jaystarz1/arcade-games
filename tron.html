@@ -1118,7 +1118,7 @@
     for(let c=0;c<cols;c++){ alive[c]=[]; for(let r=0;r<rows;r++) alive[c][r]=true; }
     mcp={ cols, rows, alive, offset:0, rotSpeed:(0.22+diff()*0.03)*(Math.random()<0.5?1:-1),
       wallY:145, descend:(6+diff()*0.7), crushY:300, px:CX, py:430, disc:null, dead:false, won:false,
-      total:cols*rows, destroyed:0, gapCol:-1, targetC:-1, dither:[] };
+      lift:(14+diff()*0.55), total:cols*rows, destroyed:0, gapCol:-1, targetC:-1, dither:[] };
     // static dither points for the cone (fractions of the triangle — the reference cone is a
     // STABLE speckle pattern; per-frame randomness shimmers)
     for(let i=0;i<240;i++) mcp.dither.push({fx:Math.random()*2-1, fy:Math.random(), col:["#ff3b30","#3dff7a","#ff9c1a"][i%3]});
@@ -1135,6 +1135,9 @@
     if(stateT<0) return;
     mcp.offset += mcp.rotSpeed*dt;
     mcp.wallY += mcp.descend*dt;
+    // The cone's energy stream continuously draws Tron upward toward the rotating shield.
+    const liftedY=mcp.py-mcp.lift*dt;
+    if(!mcpBlockAt(mcp.px,liftedY,MCP_R)) mcp.py=liftedY;
     // control — movement is blocked by live blocks (you can walk up through a cleared column)
     if(botTier==="off"){
       const sp=132*dt;
@@ -1242,8 +1245,21 @@
     seg(CX-coneHalf,coneBaseY,CX-coneHalf+30,H,C.magenta);
     seg(CX+coneHalf,coneBaseY,CX+coneHalf-30,H,C.magenta);
     flush();
+    // Rising energy motes make the cone's constant upward pull legible even when Tron is not
+    // pressing a direction. They stay inside the tapering sides of the funnel.
+    const flowTop=mcp.wallY+mcp.rows*22+18, flowSpan=Math.max(1,H-flowTop);
+    for(let i=0;i<14;i++){
+      const fy=flowTop+((i*43-gt*38)%flowSpan+flowSpan)%flowSpan;
+      const f=(fy-coneBaseY)/Math.max(1,H-coneBaseY);
+      const half=coneHalf-30*clamp(f,0,1);
+      const fx=CX+(((i*73)%101)/100*2-1)*(half-12);
+      ctx.globalAlpha=0.28+0.22*((i%3)/2);
+      ctx.fillStyle=i%2?C.magenta:C.cyan; ctx.fillRect(fx,fy,2,7);
+    }
+    ctx.globalAlpha=1;
     // blocks — each COLUMN is one rainbow color (the reference wall reads as vertical striped
-    // bars), with dark stripe texture inside each block
+    // bars). A fast chase-light runs around the upper rim as the cylinder rotates.
+    const chase=(gt*12|0)%mcp.cols;
     for(let c=0;c<mcp.cols;c++){
       const col=RAINBOW[c%7];
       for(let r=0;r<mcp.rows;r++){ if(!mcp.alive[c][r]) continue;
@@ -1251,13 +1267,16 @@
         ctx.fillStyle=col; ctx.fillRect(b.x,b.y,b.w-1,b.h-1);
         ctx.fillStyle="rgba(0,0,0,0.35)";
         ctx.fillRect(b.x+4,b.y,2,b.h-1); ctx.fillRect(b.x+12,b.y,2,b.h-1); ctx.fillRect(b.x+18,b.y,2,b.h-1);
+        if(r===0 && (c===chase||c===(chase+5)%mcp.cols)){
+          ctx.fillStyle="rgba(255,255,255,0.82)"; ctx.fillRect(b.x+2,b.y+2,b.w-5,3);
+        }
       }
     }
     // disc
     if(mcp.disc) glowDisc(mcp.disc.x,mcp.disc.y,5,C.yellow);
     // player
     drawTron(mcp.px,mcp.py,aimAng);
-    if(stateT<0){ text("MCP CONE", CX, CY+70, 24, C.magenta); text("BREAK THROUGH THE WALL — REACH THE CONE", CX, CY+94, 11, C.dim); }
+    if(stateT<0){ text("MCP CONE", CX, CY+70, 24, C.magenta); text("THE CONE PULLS YOU UP — BREAK THROUGH", CX, CY+94, 11, C.dim); }
   }
 
   // ── Tron figure + shared FX ────────────────────────────
@@ -1593,6 +1612,15 @@
     }:null,
     clearIOBugs:()=>{ if(state==="io") for(const b of io.bugs) b.alive=false; },
     warpIO:(x,y)=>{ if(state==="io"){ io.px=x; io.py=y; } },
+    mcpSnapshot:()=>state==="mcp"?{
+      px:mcp.px, py:mcp.py, wallY:mcp.wallY, lift:mcp.lift, rows:mcp.rows, cols:mcp.cols,
+      offset:mcp.offset, destroyed:mcp.destroyed, columnX:Array.from({length:mcp.cols},(_,c)=>mcpBlockX(c)),
+      alive:mcp.alive.map(col=>col.slice())
+    }:null,
+    clearMCPColumn:(c)=>{ if(state==="mcp"&&c>=0&&c<mcp.cols) for(let r=0;r<mcp.rows;r++){
+      if(mcp.alive[c][r]){ mcp.alive[c][r]=false; mcp.destroyed++; }
+    } },
+    warpMCP:(x,y)=>{ if(state==="mcp"){ mcp.px=x; mcp.py=y; } },
     setLevel:(n)=>{ level=clamp(n|0,0,11); },
   };
 })();
