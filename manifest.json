@@ -1,0 +1,16 @@
+{
+  "name": "The Mix It Shop",
+  "short_name": "Mix It Shop",
+  "description": "A 2.5D arcade floor of playable classics.",
+  "start_url": "./arcade/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#04050a",
+  "theme_color": "#0a0e18",
+  "icons": [
+    { "src": "arcade/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "arcade/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "arcade/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

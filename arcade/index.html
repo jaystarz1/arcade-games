@@ -8,6 +8,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-64.png" type="image/png" sizes="64x64">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="../manifest.json">
 <meta name="theme-color" content="#0a0e18">
 <style>
 /* ============================================================
@@ -1944,6 +1945,13 @@ resize();
 window.addEventListener("resize", resize);
 window.addEventListener("orientationchange", () => setTimeout(resize, 120));
 requestAnimationFrame(tick);
+
+/* PWA — root-scoped worker so it covers the shell and the game files beside it */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("../sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
