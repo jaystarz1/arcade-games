@@ -1,5 +1,5 @@
 // Space Invaders Service Worker - Enables offline play and PWA features
-const CACHE_NAME = 'space-invaders-v16';
+const CACHE_NAME = 'space-invaders-v17';
 const urlsToCache = [
   './space-invaders.html',
   './manifest.json',
